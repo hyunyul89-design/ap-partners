@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /admin.html
+
+Sitemap: https://hyunyul89-design.github.io/ap-partners/sitemap.xml
