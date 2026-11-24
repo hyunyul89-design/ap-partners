@@ -635,6 +635,8 @@
       payload.stores = ctx.stores.map(function (L) {
         return ((L.area || '') + ' ' + (L.brand || '')).trim();
       });
+    } else if (ctx && ctx.store) {
+      payload.stores = [((ctx.store.area || '') + ' ' + (ctx.store.brand || '')).trim()];
     }
     return payload;
   }
@@ -782,7 +784,7 @@
       ['④ 연락처', (ct.phone || '-') + (ct.consent ? '  (동의 완료)' : '')]
     ];
     if (payload.stores && payload.stores.length) {
-      rows.push(['비교 점포', payload.stores.map(storeName).join(' / ')]);
+      rows.push([payload.source === 'detail' ? '조회 점포' : '비교 점포', payload.stores.map(storeName).join(' / ')]);
     }
     return rows.map(function (r) {
       return '<div><span>' + r[0] + '</span><b>' + esc(r[1]) + '</b></div>';
