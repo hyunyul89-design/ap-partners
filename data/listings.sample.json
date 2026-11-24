@@ -1,0 +1,406 @@
+{
+  "updated_at": "2026-11-25",
+  "version": "1.1-sample-average",
+  "notice": "아래 점포 4곳은 사이트 구조를 보여드리기 위한 가상 샘플입니다. 실제 양도양수 점포가 아니며, 표시된 수치도 예시입니다.",
+  "listings": [
+    {
+      "id": "ap-sample-01",
+      "status": "sample",
+      "region": "서울",
+      "district": "마포구",
+      "area": "서울 마포구",
+      "area_note": "대학가 인접 상권 · 테이크아웃 중심 · 평일 08:00~19:30 영업",
+      "category": "카페",
+      "brand": "커피 프랜차이즈",
+      "brand_note": "국내 대형 브랜드",
+      "store_spec": "1층 · 12평",
+      "store_floor": "1층",
+      "store_pyeong": 12,
+      "initial_cost": {
+        "total_manwon": 21000,
+        "label": "2억 1,000만 원",
+        "items": [
+          {
+            "label": "점포 예치금",
+            "value": "1,000만 원"
+          },
+          {
+            "label": "시설·영업권",
+            "value": "2억 원"
+          }
+        ]
+      },
+      "monthly_sales": {
+        "avg_manwon": 3200,
+        "label": "월 평균 3,200만 원"
+      },
+      "profit": {
+        "label": "월 약 1,250만 원",
+        "avg_manwon": 1250,
+        "note": "점주 제시 자료 기준"
+      },
+      "expenses": [
+        {
+          "label": "재료비",
+          "unit": "pct",
+          "pct": [
+            34.0,
+            34.0
+          ],
+          "range": "1,088만 원",
+          "share": "매출의 34%"
+        },
+        {
+          "label": "인건비",
+          "unit": "manwon",
+          "amount": [
+            520,
+            520
+          ],
+          "range": "520만 원",
+          "share": "매출의 16.2%"
+        },
+        {
+          "label": "매장 고정비",
+          "unit": "manwon",
+          "amount": [
+            180,
+            180
+          ],
+          "range": "180만 원",
+          "share": "매출의 5.6%"
+        },
+        {
+          "label": "기타잡비",
+          "unit": "manwon",
+          "amount": [
+            115,
+            115
+          ],
+          "range": "115만 원",
+          "share": "매출의 3.6%"
+        }
+      ],
+      "points": [
+        "학기·방학 인력 운영 매뉴얼이 정리되어 있습니다",
+        "2인 테이블 4개와 키오스크 1대 구성",
+        "계약 기간 2년, 매장 고정비 변동이 적은 편입니다"
+      ],
+      "check_note": "방학 4개월은 매출이 학기 평균의 37% 수준까지 내려갑니다. 학기·방학 인력 계획을 함께 확인하세요.",
+      "keywords": [
+        "대학가",
+        "테이크아웃",
+        "키오스크",
+        "학기",
+        "방학"
+      ],
+      "private_deals": [
+        {
+          "label": "같은 상권 비공개 매물",
+          "detail": "1층 10평 카페 · 인수 조건 조율 중 (목록 미공개)"
+        }
+      ],
+      "visible": true
+    },
+    {
+      "id": "ap-sample-02",
+      "status": "sample",
+      "region": "경기",
+      "district": "성남시 분당구",
+      "area": "경기 성남시 분당구",
+      "area_note": "주차 가능한 단지 상권 · 주차 2대 · 매일 09:00~01:30 (16시간 반 영업)",
+      "category": "디저트",
+      "brand": "디저트 카페",
+      "brand_note": "자체 브랜드",
+      "store_spec": "1층 · 14평",
+      "store_floor": "1층",
+      "store_pyeong": 14,
+      "initial_cost": {
+        "total_manwon": 6300,
+        "label": "6,300만 원",
+        "items": [
+          {
+            "label": "점포 예치금",
+            "value": "3,000만 원"
+          },
+          {
+            "label": "시설·영업권",
+            "value": "2,500만 원"
+          },
+          {
+            "label": "본사 비용",
+            "value": "800만 원 (예치금 500 + 교육 300)"
+          }
+        ]
+      },
+      "monthly_sales": {
+        "avg_manwon": 3470,
+        "label": "월 평균 3,470만 원"
+      },
+      "profit": {
+        "label": "월 약 725만 원",
+        "avg_manwon": 725,
+        "note": "점주 제시 자료 기준"
+      },
+      "expenses": [
+        {
+          "label": "재료비",
+          "unit": "pct",
+          "pct": [
+            35.5,
+            35.5
+          ],
+          "range": "1,232만 원",
+          "share": "매출의 35.5%"
+        },
+        {
+          "label": "인건비",
+          "unit": "manwon",
+          "amount": [
+            600,
+            600
+          ],
+          "range": "600만 원",
+          "share": "매출의 17.3%"
+        },
+        {
+          "label": "매장 고정비",
+          "unit": "manwon",
+          "amount": [
+            370,
+            370
+          ],
+          "range": "370만 원",
+          "share": "매출의 10.7%"
+        },
+        {
+          "label": "기타잡비",
+          "unit": "manwon",
+          "amount": [
+            520,
+            520
+          ],
+          "range": "520만 원",
+          "share": "매출의 15%"
+        }
+      ],
+      "points": [
+        "16시간 영업을 3인 파트타임으로 돌리는 구조입니다",
+        "배달 비중 60%, 단가 방어가 가능한 메뉴 구성",
+        "본사 예치금 500만 원은 계약 종료 시 돌려받습니다"
+      ],
+      "check_note": "최근 3개월 매출이 직전 3개월보다 8.7% 낮습니다. 배달 수수료 정책을 함께 확인하세요.",
+      "keywords": [
+        "주차",
+        "배달",
+        "16시간",
+        "파트타임",
+        "단지"
+      ],
+      "private_deals": [
+        {
+          "label": "본사 재계약 조건",
+          "detail": "2027년 3월 재계약 · 예치금 500만 원 유지 조건"
+        }
+      ],
+      "visible": true
+    },
+    {
+      "id": "ap-sample-03",
+      "status": "sample",
+      "region": "인천",
+      "district": "부평구",
+      "area": "인천 부평구",
+      "area_note": "주거 밀집 배달 상권 · 홀 8테이블 · 매일 16:00~02:00 영업",
+      "category": "음식점",
+      "brand": "치킨 프랜차이즈",
+      "brand_note": "중견 브랜드",
+      "store_spec": "1층 · 15평",
+      "store_floor": "1층",
+      "store_pyeong": 15,
+      "initial_cost": {
+        "total_manwon": 18000,
+        "label": "1억 8,000만 원",
+        "items": [
+          {
+            "label": "점포 예치금",
+            "value": "2,000만 원"
+          },
+          {
+            "label": "시설·영업권",
+            "value": "1억 6,000만 원"
+          }
+        ]
+      },
+      "monthly_sales": {
+        "avg_manwon": 2450,
+        "label": "월 평균 2,450만 원"
+      },
+      "profit": {
+        "label": "월 약 625만 원",
+        "avg_manwon": 625,
+        "note": "점주 제시 자료 기준"
+      },
+      "expenses": [
+        {
+          "label": "재료비",
+          "unit": "pct",
+          "pct": [
+            38.5,
+            38.5
+          ],
+          "range": "943만 원",
+          "share": "매출의 38.5%"
+        },
+        {
+          "label": "인건비",
+          "unit": "manwon",
+          "amount": [
+            405,
+            405
+          ],
+          "range": "405만 원",
+          "share": "매출의 16.5%"
+        },
+        {
+          "label": "매장 고정비",
+          "unit": "manwon",
+          "amount": [
+            160,
+            160
+          ],
+          "range": "160만 원",
+          "share": "매출의 6.5%"
+        },
+        {
+          "label": "기타잡비",
+          "unit": "manwon",
+          "amount": [
+            315,
+            315
+          ],
+          "range": "315만 원",
+          "share": "매출의 12.9%"
+        }
+      ],
+      "points": [
+        "배달 65%, 홀 비중이 낮아 인력 운영이 단순합니다",
+        "주방 2인 로테이션, 점주는 발주와 관리 중심",
+        "주차 2대, 저녁 피크 회전 3회 수준"
+      ],
+      "check_note": "배달 수수료와 광고비가 매출의 12~13%를 차지합니다. 배달 비중 조절이 수익의 핵심입니다.",
+      "keywords": [
+        "배달",
+        "주거",
+        "주차",
+        "저녁",
+        "피크"
+      ],
+      "private_deals": [
+        {
+          "label": "야간 전용 비공개 매물",
+          "detail": "동일 상권 2층 · 주방 설비 포함 (목록 미공개)"
+        }
+      ],
+      "visible": true
+    },
+    {
+      "id": "ap-sample-04",
+      "status": "sample",
+      "region": "경기",
+      "district": "수원시 영통구",
+      "area": "경기 수원시 영통구",
+      "area_note": "신축 오피스 배후 상권 · 테이크아웃·배달 중심 · 매일 08:00~21:30 영업",
+      "category": "카페",
+      "brand": "저가 커피 프랜차이즈",
+      "brand_note": "국내 대형 브랜드",
+      "store_spec": "1층 · 11평",
+      "store_floor": "1층",
+      "store_pyeong": 11,
+      "initial_cost": {
+        "total_manwon": 30000,
+        "label": "3억 원",
+        "items": [
+          {
+            "label": "점포 예치금",
+            "value": "3,000만 원"
+          },
+          {
+            "label": "시설·영업권",
+            "value": "2억 7,000만 원"
+          }
+        ]
+      },
+      "monthly_sales": {
+        "avg_manwon": 7750,
+        "label": "월 평균 7,750만 원"
+      },
+      "profit": {
+        "label": "월 약 1,925만 원",
+        "avg_manwon": 1925,
+        "note": "점주 제시 자료 기준"
+      },
+      "expenses": [
+        {
+          "label": "재료비",
+          "unit": "pct",
+          "pct": [
+            38.0,
+            38.0
+          ],
+          "range": "2,945만 원",
+          "share": "매출의 38%"
+        },
+        {
+          "label": "인건비",
+          "unit": "manwon",
+          "amount": [
+            950,
+            950
+          ],
+          "range": "950만 원",
+          "share": "매출의 12.3%"
+        },
+        {
+          "label": "매장 고정비",
+          "unit": "manwon",
+          "amount": [
+            190,
+            190
+          ],
+          "range": "190만 원",
+          "share": "매출의 2.5%"
+        },
+        {
+          "label": "기타잡비",
+          "unit": "manwon",
+          "amount": [
+            1750,
+            1750
+          ],
+          "range": "1,750만 원",
+          "share": "매출의 22.6%"
+        }
+      ],
+      "points": [
+        "매니저 운영으로 점주 개입을 줄인 구조입니다",
+        "배달 62%, 단가 방어형 메뉴 구성",
+        "최근 3년 매출이 꾸준히 올라온 매장입니다"
+      ],
+      "check_note": "매출 규모가 큰 만큼 재료비와 배달 수수료의 절대 금액도 큽니다. 원자료 확인이 필요합니다.",
+      "keywords": [
+        "매니저",
+        "배달",
+        "오피스",
+        "주거"
+      ],
+      "private_deals": [
+        {
+          "label": "매니저 근속 조건",
+          "detail": "현 매니저 2년 근속 · 인수 후 3개월 인수인계"
+        }
+      ],
+      "visible": true
+    }
+  ]
+}

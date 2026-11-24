@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>관리자 | 에이피파트너 · 점포 관리 · 손님 DB</title>
+<meta name="robots" content="noindex, nofollow" />
+<meta name="theme-color" content="#0F1E36" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%230F1E36'/%3E%3Ctext x='32' y='43' font-family='Helvetica,Arial' font-size='30' font-weight='700' fill='%23fff' text-anchor='middle'%3EAP%3C/text%3E%3Cpath d='M10 40 L54 26' stroke='%23C8A45D' stroke-width='4'/%3E%3C/svg%3E" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body class="admin-body">
+
+<header class="admin-header">
+  <div class="wrap admin-header-inner">
+    <span class="brand">
+      <span class="logo-mark" aria-hidden="true">AP</span>
+      <span class="brand-text">
+        <strong>AP PARTNERS</strong>
+        <em>에이피파트너</em>
+      </span>
+    </span>
+    <span class="admin-badge">ADMIN</span>
+    <div class="admin-header-links">
+      <a href="index.html" target="_blank" rel="noopener">사이트 보기 ↗</a>
+      <button type="button" id="logoutBtn" hidden>로그아웃</button>
+    </div>
+  </div>
+</header>
+
+<main class="admin-main">
+
+  <!-- ============ LOGIN ============ -->
+  <section class="admin-login" id="adminLogin">
+    <div class="admin-login-card">
+      <span class="login-lock" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8.2 10.5V8a3.8 3.8 0 0 1 7.6 0v2.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </span>
+      <p class="eyebrow dark"><span class="eyebrow-line"></span>ADMIN ACCESS</p>
+      <h1>관리자 로그인</h1>
+      <p class="login-lead">점포 등록과 손님 DB는 담당자만 확인합니다. 시안용 비밀번호로 열어 보세요.</p>
+      <form id="loginForm" novalidate>
+        <label for="adminPw">비밀번호</label>
+        <input id="adminPw" type="password" autocomplete="current-password" placeholder="비밀번호 입력" />
+        <p class="login-error" id="loginError" hidden></p>
+        <button class="btn btn-gold btn-lg" type="submit">로그인</button>
+      </form>
+      <div class="login-note">
+        <b>시안용 안내</b>
+        <p>아직 서버 인증이 없는 시안입니다. 확인용 비밀번호는 <code>ap2026</code> 이고, 실제 오픈 전에는 서버 인증(구글 로그인·아이디/비밀번호)으로 교체해야 합니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ APP ============ -->
+  <div id="adminApp" hidden>
+    <div class="wrap">
+
+      <div class="admin-title-row">
+        <div>
+          <p class="eyebrow dark"><span class="eyebrow-line"></span>CONTROL ROOM</p>
+          <h1>에이피파트너 관리자</h1>
+          <p class="lead">점포를 등록하면 사이트 목록에 바로 반영되고, 4항목 게이트로 들어온 손님 DB를 여기서 정리합니다.</p>
+        </div>
+        <a class="admin-site-link" href="index.html" target="_blank" rel="noopener">사이트에서 확인하기 ↗</a>
+      </div>
+
+      <div class="admin-stats">
+        <div class="admin-stat"><span>등록 점포</span><b id="statTotal">0<small>곳</small></b></div>
+        <div class="admin-stat"><span>노출 중</span><b id="statLive">0<small>곳</small></b></div>
+        <div class="admin-stat accent"><span>손님 DB</span><b id="statLeads">0<small>건</small></b></div>
+        <div class="admin-stat"><span>신규 (미상담)</span><b id="statNew">0<small>건</small></b></div>
+        <div class="admin-stat"><span>양도 의뢰</span><b id="statSell">0<small>건</small></b></div>
+      </div>
+
+      <div class="admin-tabs" role="tablist" aria-label="관리자 메뉴">
+        <button class="admin-tab" type="button" role="tab" id="tabStores" aria-controls="panelStores" aria-selected="true">
+          점포 관리 <span id="tabStoreCount">0</span>
+        </button>
+        <button class="admin-tab" type="button" role="tab" id="tabLeads" aria-controls="panelLeads" aria-selected="false">
+          손님 DB <span id="tabLeadCount">0</span>
+        </button>
+        <button class="admin-tab" type="button" role="tab" id="tabSell" aria-controls="panelSell" aria-selected="false">
+          양도 의뢰 <span id="tabSellCount">0</span>
+        </button>
+        <button class="admin-tab" type="button" role="tab" id="tabNotify" aria-controls="panelNotify" aria-selected="false">
+          알림 설정
+        </button>
+      </div>
+
+      <!-- ---------- 점포 관리 ---------- -->
+      <section id="panelStores" role="tabpanel" aria-labelledby="tabStores">
+        <div class="admin-panel-head">
+          <div>
+            <h2>점포 관리</h2>
+            <p>등록·수정한 내용은 사이트 점포 목록에 바로 반영됩니다. 거래완료로 돌리면 사이트에서 감춰집니다.</p>
+          </div>
+          <div class="admin-head-actions">
+            <button class="btn btn-quiet" type="button" id="btnCsvTemplate">샘플 양식(CSV) 다운로드</button>
+            <button class="btn btn-navy" type="button" id="btnCsvBulk" aria-expanded="false" aria-controls="bulkPanel">CSV 일괄 등록</button>
+            <button class="btn btn-gold" type="button" id="btnNewStore">+ 새 점포 등록</button>
+          </div>
+        </div>
+
+        <p class="admin-note" id="catalogNote">
+          <b>시안 데이터</b> · 지금은 <code>data/listings.sample.json</code>의 샘플 4곳을 불러온 상태입니다.
+          한 곳이라도 저장하면 이후에는 브라우저에 저장된 목록을 사이트가 사용합니다.
+        </p>
+
+        <section class="admin-bulk" id="bulkPanel" hidden aria-labelledby="bulkTitle">
+          <div class="admin-form-head">
+            <h3 id="bulkTitle">엑셀(CSV) 일괄 등록</h3>
+            <button class="btn btn-quiet" type="button" id="btnBulkClose">닫기</button>
+          </div>
+
+          <div class="bulk-drop" id="bulkDrop" tabindex="0" role="button" aria-label="CSV 파일 선택 또는 끌어다 놓기">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15.5v3A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5v-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            <b>CSV 파일을 여기에 끌어다 놓거나 눌러서 선택하세요</b>
+            <span>한 파일에 여러 점포를 담을 수 있습니다 · UTF-8(권장) 또는 EUC-KR · 5MB 이하 · 최대 300행</span>
+          </div>
+          <input type="file" id="bulkFile" accept=".csv,text/csv" hidden />
+          <p class="admin-hint">
+            엑셀에서 저장할 때 <b>CSV UTF-8(쉼표로 분리)</b>를 고르면 한글이 깨지지 않습니다.
+            열 이름과 순서는 <b>샘플 양식(CSV) 다운로드</b> 파일을 그대로 쓰면 되고, 내려받은 양식의 <b>예시 2행</b>은 실제 점포로 바꾸거나 지운 뒤 올리세요.
+            층수·평수·비율·특징한줄평·비공개전용 칸은 비워도 됩니다.
+          </p>
+          <p class="admin-error" id="bulkError" hidden></p>
+          <p class="admin-hint" id="bulkLegacy" hidden></p>
+
+          <div class="bulk-result" id="bulkResult" hidden>
+            <div class="bulk-summary">
+              <span>총 <b id="bulkTotalRows">0</b>행</span>
+              <span class="ok">등록 가능 <b id="bulkOkRows">0</b></span>
+              <span class="bad">오류 <b id="bulkErrRows">0</b></span>
+              <span class="bulk-file" id="bulkFileInfo"></span>
+            </div>
+            <div class="admin-table-wrap bulk-table-wrap">
+              <table class="admin-table bulk-table" id="bulkTable">
+                <thead>
+                  <tr>
+                    <th>행</th><th>상태</th><th>지역</th><th>업종</th><th>브랜드</th>
+                    <th>매장 규모</th><th>초기 인수</th><th>월 매출</th><th>예상 수익(만원)</th><th>확인</th>
+                  </tr>
+                </thead>
+                <tbody id="bulkRows"></tbody>
+              </table>
+            </div>
+            <div class="admin-form-actions">
+              <button class="btn btn-gold" type="button" id="btnBulkCommit" disabled>일괄 등록하기</button>
+              <button class="btn btn-quiet" type="button" id="btnBulkReset">다른 파일 선택</button>
+            </div>
+          </div>
+        </section>
+
+        <form class="admin-form" id="storeForm" hidden novalidate>
+          <div class="admin-form-head">
+            <h3 id="storeFormTitle">새 점포 등록</h3>
+            <button class="btn btn-quiet" type="button" data-cancel-store>닫기</button>
+          </div>
+
+          <fieldset>
+            <legend>기본 정보</legend>
+            <div class="admin-grid">
+              <label>지역
+                <select id="fRegion">
+                  <option value="서울">서울</option>
+                  <option value="경기">경기</option>
+                  <option value="인천">인천</option>
+                  <option value="기타">기타</option>
+                </select>
+              </label>
+              <label>지역구 · 상권
+                <input id="fDistrict" type="text" placeholder="마포구" />
+              </label>
+              <label>업종
+                <select id="fCategory">
+                  <option value="카페">카페</option>
+                  <option value="디저트">디저트</option>
+                  <option value="음식점">음식점</option>
+                  <option value="치킨">치킨</option>
+                  <option value="기타">기타</option>
+                </select>
+              </label>
+              <label>브랜드 · 유형
+                <input id="fBrand" type="text" placeholder="메가커피" />
+              </label>
+              <div class="admin-spec">
+                <span class="admin-spec-title">매장 규모</span>
+                <div class="admin-spec-inputs">
+                  <input id="fFloor" type="text" placeholder="1층" aria-label="층수 (예: 1층, 2층, 지하 1층)" />
+                  <span class="admin-spec-sep" aria-hidden="true">·</span>
+                  <input id="fPyeong" type="text" inputmode="decimal" placeholder="13" aria-label="평수" />
+                  <span class="admin-spec-unit">평</span>
+                </div>
+                <small class="field-preview" id="fSpecPreview"></small>
+              </div>
+              <label style="grid-column: span 2;">공개 범위
+                <select id="fPrivate">
+                  <option value="N">공개 (사이트 목록 노출)</option>
+                  <option value="Y">비공개전용 표시</option>
+                </select>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>금액 (만 원 단위)</legend>
+            <div class="admin-grid">
+              <label>점포 예치금
+                <input id="fDeposit" type="number" min="0" step="10" placeholder="1000" />
+              </label>
+              <label>권리금 · 시설
+                <input id="fPremium" type="number" min="0" step="10" placeholder="20000" />
+              </label>
+              <div class="admin-total"><span>초기 인수 비용 합계</span><b id="fTotal">0만 원</b></div>
+              <label>월 평균 매출
+                <input id="fSales" type="number" min="0" step="10" placeholder="3200" />
+              </label>
+              <label>예상 월 수익(만 원)
+                <input id="fProfit" type="number" min="0" step="10" placeholder="1250" />
+                <small class="field-preview" id="fProfitShare">매출 대비 순수익률 자동 계산</small>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>지출 항목 평균치 (재료비는 %, 나머지는 만 원)</legend>
+            <div class="expense-grid">
+              <div class="exp-row"><strong>재료비</strong>
+                <div class="exp-inputs"><input id="fMat" type="number" min="0" max="100" step="0.1" placeholder="34" /><span>%</span></div>
+                <small id="fMatWon">금액 자동 계산</small>
+              </div>
+              <div class="exp-row"><strong>인건비</strong>
+                <div class="exp-inputs"><input id="fLabor" type="number" min="0" step="10" placeholder="520" /><span>만 원</span></div>
+                <small id="fLaborWon">매출 대비 비중 자동 계산</small>
+              </div>
+              <div class="exp-row"><strong>매장 고정비 <em>(만원)</em></strong>
+                <small class="exp-desc">임대료·점포 사용료</small>
+                <div class="exp-inputs"><input id="fFixed" type="number" min="0" step="10" placeholder="180" /><span>만 원</span></div>
+                <small id="fFixedWon">매출 대비 비중 자동 계산</small>
+              </div>
+              <div class="exp-row"><strong>기타잡비 <em>(만원)</em></strong>
+                <small class="exp-desc">공과금·일반관리비 등</small>
+                <div class="exp-inputs"><input id="fEtc" type="number" min="0" step="10" placeholder="115" /><span>만 원</span></div>
+                <small id="fEtcWon">매출 대비 비중 자동 계산</small>
+              </div>
+            </div>
+            <p class="admin-hint">최소·최대 대신 <b>평균치 하나</b>만 적으면 됩니다. 재료비는 매출 대비 %, 인건비·매장 고정비·기타잡비는 월 금액(만 원)으로 넣으면 금액과 비중, 사이트 막대 길이가 자동으로 계산됩니다.</p>
+          </fieldset>
+
+          <fieldset>
+            <legend>특징 · 확인 포인트</legend>
+            <div class="admin-grid">
+              <label style="grid-column: 1 / -1;">특징 · 한줄평
+                <input id="fNote" type="text" placeholder="주차 2대 · 평일 08:00~19:30 영업 · 대학가 인접 상권" />
+                <small class="field-note">영업시간, 주차, 상권 특이사항 등을 자유롭게 적으세요. 카드·상세 화면에 매장 규모와 함께 한 줄로 표시됩니다.</small>
+              </label>
+              <label style="grid-column: 1 / -1;">확인할 점 (한 줄)
+                <input id="fCheckNote" type="text" placeholder="방학 4개월은 학기 평균의 37% 수준까지 내려갑니다." />
+              </label>
+              <label style="grid-column: 1 / -1;">상세 특징 (한 줄에 하나씩)
+                <textarea id="fPoints" rows="3" placeholder="학기·방학 인력 운영 매뉴얼이 정리되어 있습니다&#10;2인 테이블 4개와 키오스크 1대 구성"></textarea>
+              </label>
+            </div>
+          </fieldset>
+
+          <p class="admin-error" id="storeError" hidden></p>
+          <div class="admin-form-actions">
+            <button class="btn btn-gold btn-lg" type="submit">저장하고 사이트에 반영</button>
+            <button class="btn btn-quiet" type="button" data-cancel-store>취소</button>
+          </div>
+        </form>
+
+        <div class="admin-table-wrap">
+          <table class="admin-table" id="storeTable">
+            <thead>
+              <tr><th>점포</th><th>업종</th><th>초기 인수</th><th>월 매출</th><th>상태</th><th>관리</th></tr>
+            </thead>
+            <tbody id="storeRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ---------- 손님 DB ---------- -->
+      <section id="panelLeads" role="tabpanel" aria-labelledby="tabLeads" hidden>
+        <div class="admin-panel-head">
+          <div>
+            <h2>손님 DB</h2>
+            <p>사이트의 4항목 게이트(업종·지역·예산·연락처)로 수집된 DB입니다. 상담 상태를 바꾸고 엑셀용 CSV로 내려받으세요.</p>
+          </div>
+          <button class="btn btn-navy" type="button" id="btnCsv">CSV 다운로드</button>
+        </div>
+
+        <div class="lead-filters" role="group" aria-label="상태 필터" id="leadFilters">
+          <button class="chip" type="button" data-filter="all" aria-pressed="true">전체 <b>0</b></button>
+          <button class="chip" type="button" data-filter="new" aria-pressed="false">신규 <b>0</b></button>
+          <button class="chip" type="button" data-filter="done" aria-pressed="false">상담완료 <b>0</b></button>
+        </div>
+
+        <div class="admin-table-wrap" id="leadTableWrap">
+          <table class="admin-table leads" id="leadTable">
+            <thead>
+              <tr><th>접수</th><th>업종 · 브랜드</th><th>지역</th><th>예산</th><th>연락처</th><th>유입</th><th>상태</th></tr>
+            </thead>
+            <tbody id="leadRows"></tbody>
+          </table>
+        </div>
+
+        <div class="admin-empty" id="leadEmpty" hidden>
+          <strong>아직 수집된 손님 DB가 없습니다</strong>
+          <p>사이트에서 AI 매칭 결과나 상세 지출을 열 때 4항목을 입력하면 이곳에 쌓입니다.<br />
+            <a href="index.html" target="_blank" rel="noopener">사이트에서 게이트 통과해 보기 ↗</a></p>
+        </div>
+      </section>
+
+      <!-- ---------- 양도 의뢰 ---------- -->
+      <section id="panelSell" role="tabpanel" aria-labelledby="tabSell" hidden>
+        <div class="admin-panel-head">
+          <div>
+            <h2>양도 의뢰 DB</h2>
+            <p>점주님이 사이트의 '내 매장 양도 의뢰'로 남긴 접수입니다. 매출·권리금 규모를 보고 상담 순서를 정하세요.</p>
+          </div>
+          <button class="btn btn-navy" type="button" id="btnSellCsv">CSV 다운로드</button>
+        </div>
+
+        <div class="admin-table-wrap" id="sellTableWrap">
+          <table class="admin-table" id="sellTable">
+            <thead>
+              <tr><th>접수</th><th>브랜드</th><th>지역</th><th>월 매출</th><th>희망 권리금</th><th>연락처</th></tr>
+            </thead>
+            <tbody id="sellRows"></tbody>
+          </table>
+        </div>
+
+        <div class="admin-empty" id="sellEmpty" hidden>
+          <strong>아직 양도 의뢰가 없습니다</strong>
+          <p>사이트 헤더나 상담 섹션의 <b>내 매장 양도 의뢰</b> 버튼으로 접수되면 이곳에 쌓입니다.<br />
+            <a href="index.html" target="_blank" rel="noopener">사이트에서 의뢰 화면 보기 ↗</a></p>
+        </div>
+      </section>
+
+      <!-- ---------- 알림 설정 ---------- -->
+      <section id="panelNotify" role="tabpanel" aria-labelledby="tabNotify" hidden>
+        <div class="admin-panel-head">
+          <div>
+            <h2>텔레그램 알림 설정</h2>
+            <p>손님 DB와 양도 의뢰가 접수될 때 텔레그램으로 바로 받아보기 위한 설정입니다.</p>
+          </div>
+        </div>
+
+        <div class="settings-grid">
+          <form class="admin-form settings-card" id="tgForm" novalidate>
+            <div class="admin-form-head">
+              <h3>봇 연결</h3>
+              <span class="status-badge closed" id="tgStatus">미설정</span>
+            </div>
+            <div class="admin-grid two">
+              <label style="grid-column: 1 / -1;">Bot Token
+                <input id="tgToken" type="password" autocomplete="off" placeholder="123456789:AAH... (BotFather에서 발급)" />
+              </label>
+              <label>Chat ID
+                <input id="tgChat" type="text" autocomplete="off" placeholder="예: 123456789" />
+              </label>
+              <label>알림 대상
+                <select id="tgEvents">
+                  <option value="all">손님 DB + 양도 의뢰</option>
+                  <option value="lead">손님 DB만</option>
+                  <option value="sell">양도 의뢰만</option>
+                </select>
+              </label>
+            </div>
+            <p class="admin-hint">BotFather에서 봇을 만들고 <b>/start</b> 후 <b>getUpdates</b>로 chat id를 확인할 수 있습니다. Chat ID는 본인 또는 단체방 ID를 넣으세요.</p>
+            <p class="admin-error" id="tgError" hidden></p>
+            <p class="admin-hint" id="tgResult" hidden></p>
+            <div class="admin-form-actions">
+              <button class="btn btn-gold" type="submit">설정 저장</button>
+              <button class="btn btn-quiet" type="button" id="tgTest">테스트 전송</button>
+              <button class="btn btn-quiet" type="button" id="tgClear">삭제</button>
+            </div>
+          </form>
+
+          <div class="settings-card preview">
+            <h3>알림 미리보기</h3>
+            <p class="admin-hint" style="margin-top:0;margin-bottom:8px;">접수 시 텔레그램으로 이렇게 도착합니다.</p>
+            <pre class="payload" id="tgPreview"></pre>
+            <div class="admin-note" style="margin:14px 0 0;">
+              <b>배포 시 연결 방법</b> · 사이트의 4항목 DB와 양도 의뢰는 <code>LEAD_ENDPOINT</code>(웹훅)로 전송되고,
+              웹훅 서버(Google Apps Script · Vercel 함수)가 아래 토큰으로 <code>sendMessage</code>를 호출해 텔레그램을 보냅니다.
+              브라우저에 토큰을 두면 누구나 볼 수 있으므로, 실제 오픈 전에는 서버 쪽 보관으로 옮기세요.
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="admin.js"></script>
+</body>
+</html>
