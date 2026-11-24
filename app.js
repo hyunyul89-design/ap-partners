@@ -650,7 +650,8 @@
 
   /* 구글 시트(Apps Script) · Formspree · 자체 웹훅 모두 JSON POST 로 받습니다.
      text/plain 은 CORS 사전요청(OPTIONS)을 만들지 않아 Apps Script가 그대로 e.postData.contents 로 받습니다.
-     응답을 읽지 못하는 환경(프리플라이트 차단 등)에서는 no-cors 로 한 번 더 보내 전송 자체를 보장합니다. */
+     응답을 받지 못했을 때(네트워크·CORS 차단)만 no-cors 로 한 번 더 보내 전송을 보장합니다.
+     서버가 응답한 경우에는 다시 보내지 않습니다(같은 접수가 두 번 알림되는 것을 막기 위해). */
   function sendLead(payload) {
     if (!LEAD_ENDPOINT) { queueLead(payload); return Promise.resolve({ sent: false, reason: 'no-endpoint' }); }
     var body = JSON.stringify(payload);
@@ -660,8 +661,14 @@
       body: body
     }).then(function (res) {
       if (res && (res.ok || res.type === 'opaque')) return { sent: true };
-      throw new Error('HTTP ' + (res ? res.status : '?'));
+      var e = new Error('HTTP ' + (res ? res.status : '?'));
+      e.received = true;   // 서버가 응답한 경우 — 다시 보내면 같은 접수가 두 번 알림될 수 있음
+      throw e;
     }).catch(function (err) {
+      if (err && err.received) {
+        queueLead(payload);
+        return { sent: false, reason: String(err.message || err) };
+      }
       return fetch(LEAD_ENDPOINT, {
         method: 'POST',
         mode: 'no-cors',
