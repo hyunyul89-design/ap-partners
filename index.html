@@ -111,7 +111,7 @@
         <h2>조건을 말하면, 맞는 점포부터 보여드립니다</h2>
         <p class="section-lead">
           지역·예산을 고르거나 문장으로 적어 주세요.
-          컨시어지가 샘플 점포 중 조건에 가까운 후보를 1~2곳 골라 드립니다.
+          컨시어지가 등록된 점포 중 조건에 가까운 후보를 1~2곳 골라 드립니다.
           세부 수익 구조와 실제 위치는 상담에서 안내합니다.
         </p>
       </header>
@@ -124,7 +124,7 @@
               <strong>AP 매칭 컨시어지</strong>
               <span>조건을 분석해 후보를 골라 드립니다</span>
             </div>
-            <span class="chat-status">샘플 매칭</span>
+            <span class="chat-status">실시간 매칭</span>
           </div>
 
           <div class="chat-log" id="chatLog" role="log" aria-live="polite" aria-label="AI 컨시어지 대화">
@@ -165,7 +165,7 @@
                 <svg viewBox="0 0 24 24" aria-hidden="true" class="ico"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </button>
             </div>
-            <p class="chat-foot">샘플 데이터 기준으로 안내합니다. 맞춤 매칭 결과와 상세 지출은 업종·지역·예산·연락처 4항목 입력 후 열립니다.</p>
+            <p class="chat-foot">현재 등록된 점포를 기준으로 안내합니다. 맞춤 매칭 결과와 상세 지출은 업종·지역·예산·연락처 4항목 입력 후 열립니다.</p>
           </form>
         </div>
 
@@ -173,10 +173,10 @@
           <h3>이렇게 물어보세요</h3>
           <ul class="example-list">
             <li><button type="button" class="example" data-example="서울 2억대 카페">서울 2억대 카페</button></li>
-            <li><button type="button" class="example" data-example="경기 1억 미만 디저트">경기 1억 미만 디저트</button></li>
-            <li><button type="button" class="example" data-example="인천 배달 위주 점포">인천 배달 위주 점포</button></li>
-            <li><button type="button" class="example" data-example="매니저에게 맡길 만한 카페">매니저에게 맡길 만한 카페</button></li>
-            <li><button type="button" class="example" data-example="매출 큰 카페 3억 이상">매출 큰 카페 3억 이상</button></li>
+            <li><button type="button" class="example" data-example="경기 1억 미만 카페">경기 1억 미만 카페</button></li>
+            <li><button type="button" class="example" data-example="주차 되는 경기 카페">주차 되는 경기 카페</button></li>
+            <li><button type="button" class="example" data-example="풀오토로 돌릴 만한 카페">풀오토로 돌릴 만한 카페</button></li>
+            <li><button type="button" class="example" data-example="매출 큰 카페 2억대">매출 큰 카페 2억대</button></li>
           </ul>
           <div class="side-note">
             <strong>컨시어지가 하지 않는 것</strong>
@@ -184,7 +184,7 @@
           </div>
           <div class="side-note step-note">
             <strong>2단계에서 받는 4가지</strong>
-            <p>① 희망 업종·브랜드 ② 희망 지역 ③ 가용 예산 ④ 연락처. 한 번 입력하면 다시 묻지 않고, 상세 지출과 비공개 매물이 바로 열립니다.</p>
+            <p>① 희망 업종·브랜드 ② 희망 지역 ③ 가용 예산 ④ 연락처. 한 번 입력하면 다시 묻지 않고, 상세 지출과 확인 포인트가 바로 열립니다.</p>
           </div>
           <a class="side-call" href="tel:010-2885-5553">
             <span>바로 통화하기</span>
@@ -202,9 +202,9 @@
         <div>
           <p class="eyebrow dark"><span class="eyebrow-line"></span>STORE LISTINGS</p>
           <h2>점포 둘러보기</h2>
-          <p class="section-lead">지역과 업종, 초기 인수 비용으로 좁혀 보세요. 목록과 기본 정보는 연락처 없이 바로 열람하고, 상세 지출·비공개 매물은 4항목 입력 후 확인하실 수 있습니다.</p>
+          <p class="section-lead">지역과 업종, 초기 인수 비용으로 좁혀 보세요. 목록과 기본 정보는 연락처 없이 바로 열람하고, 상세 지출·확인 포인트는 4항목 입력 후 확인하실 수 있습니다.</p>
         </div>
-        <div class="listing-count"><b id="listingCount">4</b><span>곳의 점포</span></div>
+        <div class="listing-count"><b id="listingCount">3</b><span>곳의 점포</span></div>
       </header>
 
       <ol class="flow-strip" aria-label="이용 단계">
@@ -237,15 +237,15 @@
       </div>
 
       <div class="sample-notice" role="note">
-        <span class="sample-tag">SAMPLE</span>
-        <p><b>SAMPLE</b> 표시가 붙은 점포는 사이트 구조를 보여드리기 위한 <b>가상 샘플</b>입니다. 실제 양도양수 점포가 아니며, 수치도 예시입니다. 상담 시 실제 조건을 안내드립니다.</p>
+        <span class="sample-tag">현장 실사</span>
+        <p><b>현재 등록된 3곳</b>은 김현율 팀장이 현장 실사를 마친 실제 점포입니다. 지점명과 상세 지번은 점주 보호를 위해 공개하지 않으며, 표시된 수치는 점주 제시 자료를 기준으로 정리했습니다. 세부 조건은 상담에서 안내합니다.</p>
       </div>
 
       <div class="filter-bar" role="search">
         <div class="filter-search">
           <svg viewBox="0 0 24 24" aria-hidden="true" class="ico"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="m16 16 4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           <label class="visually-hidden" for="searchInput">키워드 검색</label>
-          <input id="searchInput" type="search" placeholder="지역·업종·특징으로 검색 (예: 마포 카페, 주차, 배달)" />
+          <input id="searchInput" type="search" placeholder="지역·업종·특징으로 검색 (예: 종로 카페, 주차, 배달)" />
         </div>
         <div class="filter-selects">
           <label class="select-wrap">
@@ -342,12 +342,12 @@
           <li>
             <span class="guide-num">03</span>
             <h4>본사 가맹 승계 점검</h4>
-            <p>가맹본부 승계 가능 여부, 재계약 시점, 교육·위약금·보증금 조건을 계약 전에 서면으로 확인합니다.</p>
+            <p>가맹본부 승계 가능 여부, 재계약 시점, 교육·위약금·예치금 조건을 계약 전에 서면으로 확인합니다.</p>
           </li>
           <li>
             <span class="guide-num">04</span>
             <h4>계약 체크포인트</h4>
-            <p>잔금·명도·시설 이전·직원 승계·보증금 반환 조건을 체크리스트로 정리하고, 특약 사항까지 문서에 남깁니다.</p>
+            <p>잔금·명도·시설 이전·직원 승계·예치금 반환 조건을 체크리스트로 정리하고, 특약 사항까지 문서에 남깁니다.</p>
           </li>
         </ol>
         <div class="guide-foot">
@@ -407,7 +407,7 @@
   </div>
   <div class="wrap footer-fine">
     <p>에이피파트너 · 김현율 팀장 · 010-2885-5553 · 카카오톡 hyunyul89 · 등록 M-019448</p>
-    <p>SAMPLE 표시가 붙은 점포 정보는 서비스 구조를 보여드리기 위한 가상 샘플이며 실제 점포가 아닙니다. 표시된 수치는 점주 제시 자료를 기준으로 한 값이고, 인력 운영과 배달 비중에 따라 실제 수익은 달라질 수 있습니다. 상세 원자료와 정확한 위치는 상담 시 공개됩니다.</p>
+    <p>등록된 점포 정보는 김현율 팀장이 현장 실사를 마친 뒤 점주 제시 자료를 기준으로 정리한 값이며, 인력 운영과 배달 비중에 따라 실제 수익은 달라질 수 있습니다. 지점명과 상세 위치는 점주 보호를 위해 공개하지 않고 상담 시 안내합니다.</p>
     <p>© 2026 AP PARTNERS. All rights reserved.</p>
   </div>
 </footer>

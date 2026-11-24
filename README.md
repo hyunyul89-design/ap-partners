@@ -1,6 +1,6 @@
-# AP PARTNERS · 에이피파트너 — 홍보 사이트 + 관리자 시안
+# AP PARTNERS · 에이피파트너 — 홍보 사이트 + 관리자 페이지
 
-프랜차이즈 양도양수 홍보 사이트의 정적 프로토타입입니다.
+프랜차이즈 양도양수 홍보 사이트의 정적 사이트입니다. 등록 점포 3곳은 실제 현장 실사를 마친 매장입니다.
 빌드 도구 없이 `index.html` 하나로 열리며, GitHub Pages · Vercel 같은 정적 호스팅에 그대로 올릴 수 있습니다.
 
 ## 파일 구조
@@ -14,7 +14,7 @@ site/
 ├─ admin.js                   관리자 로그인 · 점포 CRUD · DB 목록 · CSV · 텔레그램 설정
 ├─ assets/business-card.jpg   명함 이미지 (상담 섹션)
 └─ data/
-   └─ listings.sample.json    기본 점포 데이터 (관리자에서 저장하면 브라우저 목록이 우선)
+   └─ listings.json         등록 점포 데이터 3곳 (관리자에서 저장하면 브라우저 목록이 우선)
 ```
 
 ## 로컬에서 확인하기
@@ -164,7 +164,7 @@ function doPost(e) {
 
 ## 실제 오픈 전에 확인할 것
 
-1. `listings.sample.json`을 실제 점포로 교체하고, `SAMPLE` 배지·샘플 안내 문구를 실제 운영 문구로 바꾸기
+1. ~~`listings.sample.json`을 실제 점포로 교체~~ → 완료: `listings.json`에 실사 점포 3곳 반영, `SAMPLE` 배지·샘플 안내 문구 제거
 2. 관리자 비밀번호(`ap2026`)를 서버 인증으로 교체하고, `admin.html`을 검색엔진에서 막기 (`noindex` 유지)
 3. 손님 DB·양도 의뢰 접수를 Formspree · Google Apps Script · 서버 API로 실제 전송 (현재는 브라우저 저장)
 4. 개인정보 수집·이용 동의 문구를 실제 수집 항목·보관 기간에 맞춰 법률 검토 후 확정하기

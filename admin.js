@@ -224,7 +224,7 @@
       state.listings = cat.listings;
       state.managed = true;
     } else {
-      return fetch('data/listings.sample.json', { cache: 'no-store' })
+      return fetch('data/listings.json', { cache: 'no-store' })
         .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
         .then(function (json) { state.listings = (json && json.listings) || []; state.managed = false; })
         .catch(function () { state.listings = []; state.managed = false; });
@@ -1260,7 +1260,7 @@
         var L = findListing(b.getAttribute('data-toggle'));
         if (!L) return;
         if (L.status === 'closed' || L.visible === false) {
-          L.status = L.status_prev || 'sample';
+          L.status = L.status_prev || 'live';
           L.visible = true;
           delete L.status_prev;
           toast('거래완료를 해제했습니다. 사이트에 다시 노출됩니다.');

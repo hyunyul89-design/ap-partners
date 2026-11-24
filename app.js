@@ -1,6 +1,6 @@
 /* ==========================================================================
-   AP PARTNERS · 에이피파트너 — 1차 시안 스크립트
-   - 점포 데이터: data/listings.sample.json (이 파일만 수정하면 목록에 자동 반영)
+   AP PARTNERS · 에이피파트너 — 사이트 스크립트
+   - 점포 데이터: data/listings.json (이 파일만 수정하면 목록에 자동 반영)
    - AI 컨시어지: 브라우저 안에서 조건을 해석하는 규칙 기반 매칭 (외부 API 없음)
    ========================================================================== */
 (function () {
@@ -13,7 +13,7 @@
   /* ---------------------------------------------------------------------
      4항목 손님 DB · 2단계 잠금 해제 (Lead Gate)
      - 1단계: 점포 목록·검색·필터는 연락처 없이 바로 열람
-     - 2단계: '맞춤 매칭 결과' 또는 '상세 지출·비공개 매물'을 누를 때
+     - 2단계: '맞춤 매칭 결과' 또는 '상세 지출'을 누를 때
        ① 업종/브랜드 ② 지역 ③ 예산 ④ 연락처(동의) 4항목 입력
      - 입력값은 JSON 페이로드로 localStorage / sessionStorage 에 저장되고,
        LEAD_ENDPOINT 를 채우면 그대로 전송(구글 시트 · 이메일 · 웹훅)됩니다.
@@ -34,27 +34,27 @@
   var gateFormState = { category: [], area: [], budget: '', brand: '' };
 
   /* ---------------------------------------------------------------------
-     예비 데이터: data/listings.sample.json 을 fetch 할 수 없을 때만 사용됩니다.
+     예비 데이터: data/listings.json 을 fetch 할 수 없을 때만 사용됩니다.
      (index.html 을 파일로 직접 열면 브라우저가 fetch 를 막습니다.)
      실제 데이터 관리는 JSON 한 곳에서 하세요. 배포 후에는 항상 JSON 을 읽습니다.
      --------------------------------------------------------------------- */
   var FALLBACK = [
     {
-      "id": "ap-sample-01",
-      "status": "sample",
+      "id": "ap-001",
+      "status": "live",
       "region": "서울",
-      "district": "마포구",
-      "area": "서울 마포구",
-      "area_note": "대학가 인접 상권 · 테이크아웃 중심 · 평일 08:00~19:30 영업",
+      "district": "종로구",
+      "area": "서울 종로구 대학가 상권",
+      "area_note": "대학가·인근 주민 상권 · 주차 없음 · 평일 08:00~19:30 / 주말 09:00~17:00",
       "category": "카페",
-      "brand": "커피 프랜차이즈",
-      "brand_note": "국내 대형 브랜드",
-      "store_spec": "1층 · 12평",
+      "brand": "메가커피",
+      "brand_note": "저가 커피 프랜차이즈",
+      "store_spec": "1층 · 13평",
       "store_floor": "1층",
-      "store_pyeong": 12,
+      "store_pyeong": 13,
       "initial_cost": {
-        "total_manwon": 21000,
-        "label": "2억 1,000만 원",
+        "total_manwon": 23000,
+        "label": "2억 3,000만 원",
         "items": [
           {
             "label": "점포 예치금",
@@ -62,17 +62,17 @@
           },
           {
             "label": "시설·영업권",
-            "value": "2억 원"
+            "value": "2억 2,000만 원"
           }
         ]
       },
       "monthly_sales": {
-        "avg_manwon": 3200,
-        "label": "월 평균 3,200만 원"
+        "avg_manwon": 3141,
+        "label": "월 평균 3,141만 원"
       },
       "profit": {
-        "label": "월 약 1,250만 원",
-        "avg_manwon": 1250,
+        "label": "월 약 1,242만 원",
+        "avg_manwon": 1242,
         "note": "점주 제시 자료 기준"
       },
       "expenses": [
@@ -80,80 +80,75 @@
           "label": "재료비",
           "unit": "pct",
           "pct": [
-            34.0,
-            34.0
+            35.0,
+            35.0
           ],
-          "range": "1,088만 원",
-          "share": "매출의 34%"
+          "range": "1,099만 원",
+          "share": "매출의 35%"
         },
         {
           "label": "인건비",
           "unit": "manwon",
           "amount": [
-            520,
-            520
+            500,
+            500
           ],
-          "range": "520만 원",
-          "share": "매출의 16.2%"
+          "range": "500만 원",
+          "share": "매출의 15.9%"
         },
         {
           "label": "매장 고정비",
           "unit": "manwon",
           "amount": [
-            180,
-            180
+            95,
+            95
           ],
-          "range": "180만 원",
-          "share": "매출의 5.6%"
+          "range": "95만 원",
+          "share": "매출의 3%"
         },
         {
           "label": "기타잡비",
           "unit": "manwon",
           "amount": [
-            115,
-            115
+            205,
+            205
           ],
-          "range": "115만 원",
-          "share": "매출의 3.6%"
+          "range": "205만 원",
+          "share": "매출의 6.5%"
         }
       ],
       "points": [
-        "학기·방학 인력 운영 매뉴얼이 정리되어 있습니다",
-        "2인 테이블 4개와 키오스크 1대 구성",
-        "계약 기간 2년, 매장 고정비 변동이 적은 편입니다"
+        "키오스크 1대, 2인 테이블 4개 구성 · 평일은 점주가 07:30~15:00 근무",
+        "학기 중 인건비 월 520만 원, 방학에는 140~220만 원으로 줄어듭니다",
+        "배달 비중 13% · 주말은 오전·오후 1명씩 운영",
+        "2023년 10월 개업, 2025년 5월 인수한 매장입니다"
       ],
-      "check_note": "방학 4개월은 매출이 학기 평균의 37% 수준까지 내려갑니다. 학기·방학 인력 계획을 함께 확인하세요.",
+      "check_note": "방학 4개월은 인건비를 520만 원에서 140~220만 원으로 줄여 운영합니다. 방학 중 매출 하락 폭과 주말 1인 운영 계획을 함께 확인하세요.",
       "keywords": [
         "대학가",
-        "테이크아웃",
         "키오스크",
-        "학기",
-        "방학"
-      ],
-      "private_deals": [
-        {
-          "label": "같은 상권 비공개 매물",
-          "detail": "1층 10평 카페 · 인수 조건 조율 중 (목록 미공개)"
-        }
+        "방학",
+        "테이크아웃",
+        "주말"
       ],
       "visible": true
     },
     {
-      "id": "ap-sample-02",
-      "status": "sample",
+      "id": "ap-002",
+      "status": "live",
       "region": "경기",
-      "district": "성남시 분당구",
-      "area": "경기 성남시 분당구",
-      "area_note": "주차 가능한 단지 상권 · 주차 2대 · 매일 09:00~01:30 (16시간 반 영업)",
-      "category": "디저트",
-      "brand": "디저트 카페",
-      "brand_note": "자체 브랜드",
+      "district": "성남시 위례",
+      "area": "경기 성남시 위례신도시",
+      "area_note": "신도시 아파트 배후 상권 · 주차 가능 · 매일 07:30~24:00",
+      "category": "카페",
+      "brand": "백억커피",
+      "brand_note": "커피 프랜차이즈",
       "store_spec": "1층 · 14평",
       "store_floor": "1층",
       "store_pyeong": 14,
       "initial_cost": {
-        "total_manwon": 6300,
-        "label": "6,300만 원",
+        "total_manwon": 5000,
+        "label": "5,000만 원",
         "items": [
           {
             "label": "점포 예치금",
@@ -161,21 +156,17 @@
           },
           {
             "label": "시설·영업권",
-            "value": "2,500만 원"
-          },
-          {
-            "label": "본사 비용",
-            "value": "800만 원 (예치금 500 + 교육 300)"
+            "value": "2,000만 원"
           }
         ]
       },
       "monthly_sales": {
-        "avg_manwon": 3470,
-        "label": "월 평균 3,470만 원"
+        "avg_manwon": 3472,
+        "label": "월 평균 3,472만 원"
       },
       "profit": {
-        "label": "월 약 725만 원",
-        "avg_manwon": 725,
+        "label": "월 약 747만 원",
+        "avg_manwon": 747,
         "note": "점주 제시 자료 기준"
       },
       "expenses": [
@@ -183,11 +174,11 @@
           "label": "재료비",
           "unit": "pct",
           "pct": [
-            35.5,
-            35.5
+            35.0,
+            35.0
           ],
-          "range": "1,232만 원",
-          "share": "매출의 35.5%"
+          "range": "1,215만 원",
+          "share": "매출의 35%"
         },
         {
           "label": "인건비",
@@ -203,159 +194,55 @@
           "label": "매장 고정비",
           "unit": "manwon",
           "amount": [
-            370,
-            370
+            270,
+            270
           ],
-          "range": "370만 원",
-          "share": "매출의 10.7%"
+          "range": "270만 원",
+          "share": "매출의 7.8%"
         },
         {
           "label": "기타잡비",
           "unit": "manwon",
           "amount": [
-            520,
-            520
+            640,
+            640
           ],
-          "range": "520만 원",
-          "share": "매출의 15%"
+          "range": "640만 원",
+          "share": "매출의 18.4%"
         }
       ],
       "points": [
-        "16시간 영업을 3인 파트타임으로 돌리는 구조입니다",
-        "배달 비중 60%, 단가 방어가 가능한 메뉴 구성",
-        "본사 예치금 500만 원은 계약 종료 시 돌려받습니다"
+        "오픈·미들·마감 각 1명으로 돌아가는 최소 인력 구조입니다",
+        "점주는 발주와 관리만 보고, 현장은 인력이 운영합니다",
+        "키오스크 1대 · 2인석 6개, 6인석 1개 · 주차 가능",
+        "배달 비중 60%(쿠팡·요기요·배민) · 최소주문 9,900원"
       ],
-      "check_note": "최근 3개월 매출이 직전 3개월보다 8.7% 낮습니다. 배달 수수료 정책을 함께 확인하세요.",
+      "check_note": "배달 비중이 60%이고 배달지출이 월 520만 원입니다. 배달 채널 수수료와 최소주문 9,900원 기준 객단가를 함께 확인하세요.",
       "keywords": [
+        "매니저",
         "주차",
         "배달",
-        "16시간",
-        "파트타임",
-        "단지"
-      ],
-      "private_deals": [
-        {
-          "label": "본사 재계약 조건",
-          "detail": "2027년 3월 재계약 · 예치금 500만 원 유지 조건"
-        }
+        "신도시",
+        "키오스크"
       ],
       "visible": true
     },
     {
-      "id": "ap-sample-03",
-      "status": "sample",
-      "region": "인천",
-      "district": "부평구",
-      "area": "인천 부평구",
-      "area_note": "주거 밀집 배달 상권 · 홀 8테이블 · 매일 16:00~02:00 영업",
-      "category": "음식점",
-      "brand": "치킨 프랜차이즈",
-      "brand_note": "중견 브랜드",
-      "store_spec": "1층 · 15평",
-      "store_floor": "1층",
-      "store_pyeong": 15,
-      "initial_cost": {
-        "total_manwon": 18000,
-        "label": "1억 8,000만 원",
-        "items": [
-          {
-            "label": "점포 예치금",
-            "value": "2,000만 원"
-          },
-          {
-            "label": "시설·영업권",
-            "value": "1억 6,000만 원"
-          }
-        ]
-      },
-      "monthly_sales": {
-        "avg_manwon": 2450,
-        "label": "월 평균 2,450만 원"
-      },
-      "profit": {
-        "label": "월 약 625만 원",
-        "avg_manwon": 625,
-        "note": "점주 제시 자료 기준"
-      },
-      "expenses": [
-        {
-          "label": "재료비",
-          "unit": "pct",
-          "pct": [
-            38.5,
-            38.5
-          ],
-          "range": "943만 원",
-          "share": "매출의 38.5%"
-        },
-        {
-          "label": "인건비",
-          "unit": "manwon",
-          "amount": [
-            405,
-            405
-          ],
-          "range": "405만 원",
-          "share": "매출의 16.5%"
-        },
-        {
-          "label": "매장 고정비",
-          "unit": "manwon",
-          "amount": [
-            160,
-            160
-          ],
-          "range": "160만 원",
-          "share": "매출의 6.5%"
-        },
-        {
-          "label": "기타잡비",
-          "unit": "manwon",
-          "amount": [
-            315,
-            315
-          ],
-          "range": "315만 원",
-          "share": "매출의 12.9%"
-        }
-      ],
-      "points": [
-        "배달 65%, 홀 비중이 낮아 인력 운영이 단순합니다",
-        "주방 2인 로테이션, 점주는 발주와 관리 중심",
-        "주차 2대, 저녁 피크 회전 3회 수준"
-      ],
-      "check_note": "배달 수수료와 광고비가 매출의 12~13%를 차지합니다. 배달 비중 조절이 수익의 핵심입니다.",
-      "keywords": [
-        "배달",
-        "주거",
-        "주차",
-        "저녁",
-        "피크"
-      ],
-      "private_deals": [
-        {
-          "label": "야간 전용 비공개 매물",
-          "detail": "동일 상권 2층 · 주방 설비 포함 (목록 미공개)"
-        }
-      ],
-      "visible": true
-    },
-    {
-      "id": "ap-sample-04",
-      "status": "sample",
-      "region": "경기",
-      "district": "수원시 영통구",
-      "area": "경기 수원시 영통구",
-      "area_note": "신축 오피스 배후 상권 · 테이크아웃·배달 중심 · 매일 08:00~21:30 영업",
+      "id": "ap-003",
+      "status": "live",
+      "region": "서울",
+      "district": "금천구",
+      "area": "서울 금천구 주거상권",
+      "area_note": "아파트 단지 배후 주거 상권 · 매일 08:00~21:30",
       "category": "카페",
-      "brand": "저가 커피 프랜차이즈",
-      "brand_note": "국내 대형 브랜드",
+      "brand": "메가커피",
+      "brand_note": "저가 커피 프랜차이즈",
       "store_spec": "1층 · 11평",
       "store_floor": "1층",
       "store_pyeong": 11,
       "initial_cost": {
-        "total_manwon": 30000,
-        "label": "3억 원",
+        "total_manwon": 26000,
+        "label": "2억 6,000만 원",
         "items": [
           {
             "label": "점포 예치금",
@@ -363,7 +250,7 @@
           },
           {
             "label": "시설·영업권",
-            "value": "2억 7,000만 원"
+            "value": "2억 3,000만 원"
           }
         ]
       },
@@ -372,8 +259,8 @@
         "label": "월 평균 7,750만 원"
       },
       "profit": {
-        "label": "월 약 1,925만 원",
-        "avg_manwon": 1925,
+        "label": "월 약 1,898만 원",
+        "avg_manwon": 1898,
         "note": "점주 제시 자료 기준"
       },
       "expenses": [
@@ -411,30 +298,26 @@
           "label": "기타잡비",
           "unit": "manwon",
           "amount": [
-            1750,
-            1750
+            1767,
+            1767
           ],
-          "range": "1,750만 원",
-          "share": "매출의 22.6%"
+          "range": "1,767만 원",
+          "share": "매출의 22.8%"
         }
       ],
       "points": [
-        "매니저 운영으로 점주 개입을 줄인 구조입니다",
-        "배달 62%, 단가 방어형 메뉴 구성",
-        "최근 3년 매출이 꾸준히 올라온 매장입니다"
+        "매니저 1명이 오픈부터 16시까지 근무하고, 점주는 바쁠 때만 잠깐 출근해 관리합니다",
+        "배달 비중 62% · 배달지출은 배달 매출의 30% 이내",
+        "2024년 2월 인수 후 2년 운영한 매장입니다",
+        "제빙기, 롤 아이스크림 제조기 등 시설 포함"
       ],
-      "check_note": "매출 규모가 큰 만큼 재료비와 배달 수수료의 절대 금액도 큽니다. 원자료 확인이 필요합니다.",
+      "check_note": "배달지출이 월 1,441만 원으로 매출의 18.6%를 차지합니다. 배달 비중 62%와 카드·부가세 월 181만 원을 함께 확인하세요.",
       "keywords": [
         "매니저",
         "배달",
-        "오피스",
-        "주거"
-      ],
-      "private_deals": [
-        {
-          "label": "매니저 근속 조건",
-          "detail": "현 매니저 2년 근속 · 인수 후 3개월 인수인계"
-        }
+        "주거",
+        "아파트",
+        "고매출"
       ],
       "visible": true
     }
@@ -801,7 +684,7 @@
 
   function gateFormHTML(ctx) {
     var sub = ctx && ctx.store
-      ? esc(ctx.store.area + ' · ' + ctx.store.brand) + '의 상세 지출 구성과 비공개 매물을 확인합니다.'
+      ? esc(ctx.store.area + ' · ' + ctx.store.brand) + '의 상세 지출 구성과 인력 운영 포인트를 확인합니다.'
       : (ctx && ctx.source === 'compare' && ctx.stores && ctx.stores.length)
         ? '선택한 점포 ' + ctx.stores.length + '곳의 비교 상담을 준비합니다.'
         : '조건에 맞는 후보의 매칭 이유와 상세 내용을 바로 확인합니다.';
@@ -836,7 +719,7 @@
             '<div class="gate-legend"><span class="g-num">04</span><b>연락처</b><em>휴대폰 번호</em></div>' +
             '<input class="gate-input" id="leadPhone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="13" placeholder="010-0000-0000" />' +
             '<label class="consent gate-consent"><input type="checkbox" id="leadConsent" />' +
-              '<span><b>(필수)</b> 상담 안내를 위한 휴대폰 번호 수집·이용에 동의합니다. 번호는 상담 목적으로만 사용하며, 이 시안에서는 이 브라우저에만 저장됩니다.</span></label>' +
+              '<span><b>(필수)</b> 상담 안내를 위한 휴대폰 번호 수집·이용에 동의합니다. 번호는 상담 목적으로만 사용합니다.</span></label>' +
           '</div>' +
           '<p class="gate-error" id="gateError" hidden></p>' +
           '<div class="gate-actions">' +
@@ -876,7 +759,7 @@
         '<h3 id="gateTitle">' + (isView ? '저장된 4항목 DB' : '잠금이 해제됐습니다') + '</h3>' +
         '<p>' + (isView
           ? '이 브라우저에 저장된 4항목 입력값과 전송용 JSON 페이로드입니다.'
-          : '이제 매칭 이유 · 상세 지출 · 비공개 매물을 바로 확인하실 수 있습니다.') + '</p>' +
+          : '이제 매칭 이유 · 상세 지출 · 인력 운영 포인트를 바로 확인하실 수 있습니다.') + '</p>' +
       '</div>' +
       '<div class="gate-body">' +
         '<div class="gate-receipt">' +
@@ -890,7 +773,7 @@
           '<div class="payload-head"><strong>4항목 DB · JSON 페이로드</strong>' +
             '<button type="button" class="btn btn-quiet btn-xs" data-copy-payload>JSON 복사</button></div>' +
           '<pre class="payload" id="leadPayload">' + esc(json) + '</pre>' +
-          '<p class="payload-note">이 JSON 그대로 구글 시트 · 이메일 · 웹훅으로 보낼 수 있습니다. 지금은 브라우저에 저장되고 전송 대기열에 함께 쌓입니다. (전송 주소: <code>app.js</code>의 <code>LEAD_ENDPOINT</code>)</p>' +
+          '<p class="payload-note">접수 내용은 이 브라우저에 저장됩니다. 전화·카카오톡으로 연결하시면 김현율 팀장이 바로 확인합니다.</p>' +
         '</div>' +
         '<div class="gate-actions">' +
           (isView
@@ -1100,7 +983,7 @@
           respond(pending.criteria);
         } else if (pending && pending.type === 'detail') {
           refreshOpenModal();
-          toast('잠금이 해제되었습니다. 상세 지출과 비공개 매물을 확인하세요.');
+          toast('잠금이 해제되었습니다. 상세 지출과 운영 포인트를 확인하세요.');
         } else if (pending && pending.type === 'compare') {
           openCompareReceipt(pending.stores || []);
         }
@@ -1133,7 +1016,7 @@
 
   /* ---------------- data ---------------- */
   /* 예상 순수익은 평균치 한 값으로 다룬다. 범위가 아닌 한 값짜리 표기에는 '약'을 붙여 평균임을 드러낸다
-     (관리자·CSV에서 평균치 하나로 등록한 매물도, 예전 범위 표기 매물도 같은 방식으로 표시된다). */
+     (관리자·CSV에서 평균치 하나로 등록한 점포도, 예전 범위 표기 점포도 같은 방식으로 표시된다). */
   function normalizeProfit(L) {
     var p = (L.profit && typeof L.profit === 'object') ? L.profit : null;
     if (!p) {
@@ -1185,7 +1068,7 @@
     if (managed) {
       return Promise.resolve({ listings: normalize(managed), local: false, managed: true });
     }
-    return fetch('data/listings.sample.json', { cache: 'no-store' })
+    return fetch('data/listings.json', { cache: 'no-store' })
       .then(function (res) {
         if (!res.ok) throw new Error('HTTP ' + res.status);
         return res.json();
@@ -1401,7 +1284,7 @@
             }).join('') +
             (lead && lead.contact ? '<div><span>연락처</span><b>' + esc(lead.contact.phone) + '</b></div>' : '') +
           '</div>' +
-          '<div class="receipt-note"><b>다음 단계</b><br />김현율 팀장이 남겨주신 번호로 연락해 선택한 ' + stores.length + '곳의 실사 일정과 비교 자료를 정리해 드립니다. 시안에서는 실제 전송 없이 이 브라우저에만 저장됩니다.</div>' +
+          '<div class="receipt-note"><b>다음 단계</b><br />선택한 ' + stores.length + '곳의 실사 일정과 비교 자료를 정리해 드립니다. 아래 <b>전화</b> 또는 <b>문자</b>로 연결하시면 김현율 팀장이 바로 확인합니다.</div>' +
           '<div class="form-actions">' +
             '<a class="btn btn-navy" href="' + PHONE_TEL + '">전화 상담</a>' +
             '<a class="btn btn-gold" href="' + smsHref + '">문자로 보내기</a>' +
@@ -1487,7 +1370,7 @@
           '<div class="field"><label for="sellPhone">연락처 <span class="req">*</span></label>' +
             '<input id="sellPhone" type="tel" inputmode="numeric" maxlength="13" autocomplete="tel" placeholder="010-0000-0000" /></div>' +
           '<label class="consent"><input type="checkbox" id="sellConsent" />' +
-            '<span><b>(필수)</b> 양도 상담을 위한 연락처 수집·이용에 동의합니다. 번호는 상담 목적으로만 사용하며, 이 시안에서는 이 브라우저에만 저장됩니다.</span></label>' +
+            '<span><b>(필수)</b> 양도 상담을 위한 연락처 수집·이용에 동의합니다. 번호는 상담 목적으로만 사용합니다.</span></label>' +
           '<p class="form-error" id="sellError" hidden></p>' +
           '<div class="form-actions">' +
             '<button type="submit" class="btn btn-gold">양도 의뢰 접수</button>' +
@@ -1520,7 +1403,7 @@
             '<div><span>희망 권리금</span><b>' + manwonLabel(payload.premium_manwon) + '</b></div>' +
             '<div><span>연락처</span><b>' + esc(payload.contact.phone) + '</b></div>' +
           '</div>' +
-          '<div class="receipt-note"><b>다음 단계</b><br />김현율 팀장이 남겨주신 번호로 연락해 매출·지출 원자료와 권리금 근거를 함께 확인합니다. 시안에서는 실제 전송 없이 이 브라우저에만 저장됩니다.</div>' +
+          '<div class="receipt-note"><b>다음 단계</b><br />매출·지출 원자료와 인수 조건의 근거를 함께 확인합니다. 아래 <b>전화</b> 또는 <b>문자</b>로 연결하시면 김현율 팀장이 바로 확인합니다.</div>' +
           '<div class="form-actions">' +
             '<a class="btn btn-navy" href="' + PHONE_TEL + '">전화 상담</a>' +
             '<a class="btn btn-gold" href="' + smsHref + '">문자로 보내기</a>' +
@@ -1681,7 +1564,7 @@
             '<strong>' + esc(L.area) + '</strong>' +
           '</div>' +
           '<div class="card-badges">' +
-            '<span class="badge-sample' + (isSample(L) ? '' : ' live') + '">' + (isSample(L) ? 'SAMPLE' : '등록') + '</span>' +
+            '<span class="badge-sample live">현장 실사</span>' +
             (L.private_only ? '<span class="badge-private">비공개전용</span>' : '') +
             '<span class="badge-cat">' + esc(bandLabel(band)) + '</span>' +
           '</div>' +
@@ -1834,7 +1717,7 @@
         '<ul class="check-list">' + points + '</ul>' +
         (L.check_note ? '<p class="check-note"><b>확인할 점</b><br />' + esc(L.check_note) + '</p>' : '') +
       '</section>' +
-      (deals ? '<section class="modal-section"><h4>비공개 매물</h4><div class="private-list">' + deals + '</div></section>' : '');
+      (deals ? '<section class="modal-section"><h4>상담 시 추가 안내</h4><div class="private-list">' + deals + '</div></section>' : '');
   }
 
   function modalDetailHTML(L) {
@@ -1845,11 +1728,12 @@
 
     return '' +
       '<div class="modal-hero">' +
-        '<p class="eyebrow"><span class="eyebrow-line"></span>STORE DETAIL' + (isSample(L) ? ' · SAMPLE' : '') + '</p>' +
+        '<p class="eyebrow"><span class="eyebrow-line"></span>STORE DETAIL</p>' +
         '<h3 id="modalTitle">' + esc(L.area) + ' · ' + esc(L.brand) + '</h3>' +
         '<p>' + esc(storeLineText(L)) + '</p>' +
         '<div class="modal-hero-tags">' +
-          '<span class="gold">' + (isSample(L) ? '가상 샘플' : '등록 매물') + '</span>' +
+          '<span class="gold">현장 실사 완료</span>' +
+          '<span>상세 위치 비공개</span>' +
           (L.private_only ? '<span>비공개 전용</span>' : '') +
           '<span>' + esc(L.category) + '</span>' +
         '</div>' +
@@ -1868,9 +1752,9 @@
               '<div class="detail-lock-blur" aria-hidden="true" inert>' + detailSectionsHTML(L) + '</div>' +
               '<div class="detail-lock-overlay">' +
                 '<span class="lock-badge">' + lockIcon() + '2단계 잠금</span>' +
-                '<strong>상세 지출과 비공개 매물은<br />4항목 입력 후 열립니다</strong>' +
-                '<p>희망 업종·지역·예산·연락처를 한 번만 남기시면 항목별 지출 금액과 비율, 확인 포인트, 같은 상권의 비공개 매물까지 바로 보실 수 있습니다.</p>' +
-                '<button class="btn btn-gold btn-lg" type="button" data-open-gate="detail">상세 지출·비공개 매물 더 보기</button>' +
+                '<strong>상세 지출 구성은<br />4항목 입력 후 열립니다</strong>' +
+                '<p>희망 업종·지역·예산·연락처를 한 번만 남기시면 항목별 지출 금액과 비율, 인력 운영 포인트까지 바로 보실 수 있습니다.</p>' +
+                '<button class="btn btn-gold btn-lg" type="button" data-open-gate="detail">상세 지출 더 보기</button>' +
                 '<span class="lock-foot">30초 이내 · 한 번 입력하면 다시 묻지 않습니다</span>' +
               '</div>' +
             '</div>') +
@@ -1885,9 +1769,7 @@
           compareButtonHTML(L, true) +
           (unlocked ? '<button class="btn btn-quiet" type="button" data-view-lead>내 입력 정보</button>' : '') +
         '</div>' +
-        '<p class="modal-sample-line">' + (isSample(L)
-          ? '이 점포는 사이트 구조를 보여드리기 위한 가상 샘플이며 실제 점포가 아닙니다. (' + esc(bandLabel(band)) + ' 구간)'
-          : '등록 매물 · 표시 수치는 점주 제시 자료 기준입니다. (' + esc(bandLabel(band)) + ' 구간)') + '</p>' +
+        '<p class="modal-sample-line">현장 실사 완료 · 지점명과 상세 위치는 상담에서 안내합니다. 표시 수치는 점주 제시 자료 기준입니다. (' + esc(bandLabel(band)) + ' 구간)</p>' +
       '</div>';
   }
 
@@ -1897,7 +1779,7 @@
         '<p class="eyebrow"><span class="eyebrow-line"></span>REQUEST DETAILS</p>' +
         '<h3 id="modalTitle">상세 자료 요청</h3>' +
         '<p>' + esc(L.area) + ' · ' + esc(L.brand) + ' · ' + esc(L.initial_cost.label) + '</p>' +
-        '<div class="modal-hero-tags"><span class="gold">가상 샘플</span><span>' + esc(L.category) + '</span></div>' +
+        '<div class="modal-hero-tags"><span class="gold">현장 실사 완료</span><span>' + esc(L.category) + '</span></div>' +
       '</div>' +
       '<div class="modal-content">' +
         '<div class="form-head">' +
@@ -1926,7 +1808,7 @@
           '<div class="field"><label for="reqMsg">문의 내용</label>' +
             '<textarea id="reqMsg" name="message" placeholder="예: 배달 비중을 줄일 수 있는지, 주말 방문 가능한지 궁금합니다"></textarea></div>' +
           '<label class="consent"><input type="checkbox" id="reqConsent" />' +
-            '<span>상담을 위한 이름·연락처 수집 및 이용에 동의합니다. (시안 버전에서는 입력 내용이 이 브라우저에만 저장됩니다.)</span></label>' +
+            '<span>상담을 위한 이름·연락처 수집 및 이용에 동의합니다. 입력한 내용은 이 브라우저에 저장됩니다.</span></label>' +
           '<p class="form-error" id="formError" hidden></p>' +
           '<div class="form-actions">' +
             '<button type="button" class="btn btn-quiet" data-back="' + esc(L.id) + '">이전</button>' +
@@ -1940,7 +1822,7 @@
     var no = 'AP-' + new Date().toISOString().slice(2, 10).replace(/-/g, '') + '-' + String(Math.floor(Math.random() * 9000) + 1000);
     var bodyLines = [
       '[에이피파트너 상담 요청]',
-      '점포: ' + L.area + ' ' + L.brand + ' (샘플)',
+      '점포: ' + L.area + ' ' + L.brand,
       '이름: ' + data.name,
       '연락처: ' + data.phone,
       '희망 예산: ' + (data.budget || '미선택'),
@@ -1963,13 +1845,13 @@
           '<h4>확인했습니다, ' + esc(data.name) + '님</h4>' +
           '<p class="no">' + esc(L.area) + ' · ' + esc(L.brand) + '</p>' +
           '<div class="receipt-summary">' +
-            '<div><span>점포</span><b>' + esc(L.area) + ' ' + esc(L.brand) + ' (샘플)</b></div>' +
+            '<div><span>점포</span><b>' + esc(L.area) + ' ' + esc(L.brand) + '</b></div>' +
             '<div><span>연락처</span><b>' + esc(data.phone) + '</b></div>' +
             '<div><span>희망 예산</span><b>' + esc(data.budget || '미선택') + '</b></div>' +
             '<div><span>상담 희망</span><b>' + esc(data.when || '언제든 괜찮습니다') + '</b></div>' +
           '</div>' +
           '<div class="receipt-note">' +
-            '<b>1차 시안 안내</b><br />지금은 실제로 전송되지 않고 입력 내용이 이 브라우저에만 저장됩니다. ' +
+            '<b>상담 연결 안내</b><br />입력하신 내용은 이 브라우저에 저장됩니다. ' +
             '바로 상담을 원하시면 아래 <b>전화</b> 또는 <b>문자</b> 버튼을 눌러 주세요. 문자는 입력하신 내용이 그대로 채워집니다.' +
           '</div>' +
           '<div class="form-actions">' +
@@ -2393,11 +2275,11 @@
 
     var intro;
     if (!cond) {
-      intro = '<p>조건을 조금 더 알려주시면 딱 맞는 후보를 골라 드릴 수 있어요. 우선 <b>샘플 점포</b> 중에서 조건을 넓게 봤을 때 비교적 무난한 두 곳을 골랐습니다.</p>';
+      intro = '<p>조건을 조금 더 알려주시면 딱 맞는 후보를 골라 드릴 수 있어요. 우선 <b>등록된 점포</b> 중에서 조건을 넓게 봤을 때 비교적 무난한 두 곳을 골랐습니다.</p>';
     } else if (res.loose) {
-      intro = '<p>말씀하신 <b>' + esc(cond) + '</b> 조건에 정확히 맞는 점포는 아직 샘플에 없습니다. 대신 조건에 가까운 순서로 <b>' + res.matches.length + '곳</b>을 추렸습니다.</p>';
+      intro = '<p>말씀하신 <b>' + esc(cond) + '</b> 조건에 정확히 맞는 점포는 아직 등록되어 있지 않습니다. 대신 조건에 가까운 순서로 <b>' + res.matches.length + '곳</b>을 추렸습니다.</p>';
     } else {
-      intro = '<p>말씀하신 <b>' + esc(cond) + '</b> 조건으로 샘플 점포를 비교했어요. 조건에 가까운 후보 <b>' + res.matches.length + '곳</b>입니다.</p>';
+      intro = '<p>말씀하신 <b>' + esc(cond) + '</b> 조건으로 등록된 점포를 비교했어요. 조건에 가까운 후보 <b>' + res.matches.length + '곳</b>입니다.</p>';
     }
     if (criteria.operation) {
       intro += '<p class="op-note">점포마다 운영 형태를 따로 표시하지는 않습니다. 대신 <b>매출 규모 · 인건비 비중 · 매장 규모</b>를 보고 말씀하신 운영 계획이 통할 점포를 골라, 아래 카드에 판단 이유를 적었습니다.</p>';
@@ -2430,7 +2312,7 @@
       );
     } else {
       addMessage(
-        '<p>지금은 조건에 맞는 샘플 점포가 없습니다. 어떤 조건까지 조정 가능한지 알려주시면 후보를 다시 정리해 드릴게요.</p>' +
+        '<p>지금은 조건에 맞는 등록 점포가 없습니다. 어떤 조건까지 조정 가능한지 알려주시면 후보를 다시 정리해 드릴게요.</p>' +
         '<div class="msg-cta"><a class="btn btn-navy" href="' + PHONE_TEL + '">전화 상담 010-2885-5553</a></div>'
       );
     }
@@ -2634,7 +2516,7 @@
         var notice = document.createElement('p');
         notice.className = 'sample-notice-fallback';
         notice.style.cssText = 'margin:-8px 0 18px;font-size:12px;color:#8A6D3B;';
-        notice.textContent = '지금은 파일로 직접 열려 예비 데이터를 보여드리고 있습니다. 로컬 서버나 배포 환경에서는 data/listings.sample.json 내용이 그대로 반영됩니다.';
+        notice.textContent = '지금은 파일로 직접 열려 예비 데이터를 보여드리고 있습니다. 로컬 서버나 배포 환경에서는 data/listings.json 내용이 그대로 반영됩니다.';
         var anchor = $('.sample-notice');
         if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(notice, anchor.nextSibling);
       }
