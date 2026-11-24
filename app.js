@@ -18,7 +18,7 @@
      - 입력값은 JSON 페이로드로 localStorage / sessionStorage 에 저장되고,
        LEAD_ENDPOINT 를 채우면 그대로 전송(구글 시트 · 이메일 · 웹훅)됩니다.
      --------------------------------------------------------------------- */
-  var LEAD_ENDPOINT = '';                    // 예: https://script.google.com/macros/s/xxxx/exec
+  var LEAD_ENDPOINT = 'https://script.google.com/macros/s/AKfycby46wERwxPPkkGeOXVO0zyerX4DWgua0tqBRbtgN3eh-aDJGLJ7ggNewUUY8sTl7EGHUA/exec';
   var LEAD_STORAGE_KEY = 'apPartnerLead';
   var LEAD_SESSION_KEY = 'apPartnerLeadSession';
   var LEAD_QUEUE_KEY = 'apPartnerLeadQueue';
@@ -593,19 +593,32 @@
     return parts.join(' · ');
   }
 
+  /* 웹훅(Apps Script → 텔레그램)이 읽는 필수 필드
+     : type · source · criteria · phone · stores · brand · region · monthly_sales · key_money
+     - 손님 DB 접수: type 'lead', source 'site' | 'detail' | 'matching' | 'compare'
+     - 내 매장 양도 의뢰: type 'sell_request', source 'sell' (brand · region · monthly_sales · key_money) */
   function buildLeadPayload(form, ctx) {
     var now = new Date();
+    var cats = (form.category || []).slice();
+    var areas = (form.area || []).slice();
+    var brandText = (form.brand || '').trim();
     var crit = {
-      category: (form.category || []).slice(),
-      brand_text: (form.brand || '').trim(),
-      area: (form.area || []).slice(),
+      industry: cats.length ? cats.join('/') : brandText,
+      category: cats,
+      brand_text: brandText,
+      region: areas.join('/'),
+      area: areas,
       budget: form.budget || ''
     };
     var payload = {
+      type: 'lead',
       form_version: 'lead-gate-v1',
       lead_id: leadId(),
       submitted_at: now.toISOString(),
       source: (ctx && ctx.source) || 'site',
+      phone: form.phone,
+      brand: brandText || crit.industry,
+      region: crit.region,
       store: ctx && ctx.store
         ? { id: ctx.store.id, area: ctx.store.area, brand: ctx.store.brand, category: ctx.store.category }
         : null,
@@ -620,7 +633,7 @@
     };
     if (ctx && ctx.stores && ctx.stores.length) {
       payload.stores = ctx.stores.map(function (L) {
-        return { id: L.id, area: L.area, brand: L.brand, initial_cost: L.initial_cost.label };
+        return ((L.area || '') + ' ' + (L.brand || '')).trim();
       });
     }
     return payload;
@@ -635,19 +648,31 @@
     } catch (e) { /* 무시 */ }
   }
 
-  /* 구글 시트(Apps Script) · Formspree · 자체 웹훅 모두 JSON POST 로 받습니다. */
+  /* 구글 시트(Apps Script) · Formspree · 자체 웹훅 모두 JSON POST 로 받습니다.
+     text/plain 은 CORS 사전요청(OPTIONS)을 만들지 않아 Apps Script가 그대로 e.postData.contents 로 받습니다.
+     응답을 읽지 못하는 환경(프리플라이트 차단 등)에서는 no-cors 로 한 번 더 보내 전송 자체를 보장합니다. */
   function sendLead(payload) {
     if (!LEAD_ENDPOINT) { queueLead(payload); return Promise.resolve({ sent: false, reason: 'no-endpoint' }); }
+    var body = JSON.stringify(payload);
     return fetch(LEAD_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(payload)
+      body: body
     }).then(function (res) {
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return { sent: true };
+      if (res && (res.ok || res.type === 'opaque')) return { sent: true };
+      throw new Error('HTTP ' + (res ? res.status : '?'));
     }).catch(function (err) {
-      queueLead(payload);
-      return { sent: false, reason: String((err && err.message) || err) };
+      return fetch(LEAD_ENDPOINT, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: body
+      }).then(function () {
+        return { sent: true, transport: 'no-cors' };
+      }).catch(function (err2) {
+        queueLead(payload);
+        return { sent: false, reason: String((err2 && err2.message) || (err && err.message) || err2 || err) };
+      });
     });
   }
 
@@ -733,6 +758,13 @@
       '</div>';
   }
 
+  /* stores 항목은 문자열('지역 브랜드')과 객체({area, brand}) 둘 다 올 수 있습니다. */
+  function storeName(s) {
+    if (!s) return '';
+    if (typeof s === 'string') return s;
+    return ((s.area || '') + ' ' + (s.brand || '')).trim();
+  }
+
   function gateSummaryRows(payload) {
     var c = payload.criteria || {};
     var ct = payload.contact || {};
@@ -743,7 +775,7 @@
       ['④ 연락처', (ct.phone || '-') + (ct.consent ? '  (동의 완료)' : '')]
     ];
     if (payload.stores && payload.stores.length) {
-      rows.push(['비교 점포', payload.stores.map(function (s) { return s.area + ' ' + s.brand; }).join(' / ')]);
+      rows.push(['비교 점포', payload.stores.map(storeName).join(' / ')]);
     }
     return rows.map(function (r) {
       return '<div><span>' + r[0] + '</span><b>' + esc(r[1]) + '</b></div>';
@@ -775,7 +807,7 @@
           '<div class="payload-head"><strong>4항목 DB · JSON 페이로드</strong>' +
             '<button type="button" class="btn btn-quiet btn-xs" data-copy-payload>JSON 복사</button></div>' +
           '<pre class="payload" id="leadPayload">' + esc(json) + '</pre>' +
-          '<p class="payload-note">접수 내용은 이 브라우저에 저장됩니다. 전화·카카오톡으로 연결하시면 김현율 팀장이 바로 확인합니다.</p>' +
+          '<p class="payload-note">접수 내용은 이 브라우저에 저장되고 담당자에게 알림이 전송됩니다. 남겨주신 번호로 김현율 팀장이 바로 확인합니다.</p>' +
         '</div>' +
         '<div class="gate-actions">' +
           (isView
@@ -1405,7 +1437,7 @@
             '<div><span>희망 권리금</span><b>' + manwonLabel(payload.premium_manwon) + '</b></div>' +
             '<div><span>연락처</span><b>' + esc(payload.contact.phone) + '</b></div>' +
           '</div>' +
-          '<div class="receipt-note"><b>다음 단계</b><br />매출·지출 원자료와 인수 조건의 근거를 함께 확인합니다. 아래 <b>전화</b> 또는 <b>문자</b>로 연결하시면 김현율 팀장이 바로 확인합니다.</div>' +
+          '<div class="receipt-note"><b>다음 단계</b><br />접수 내용은 담당자에게 바로 전달되었습니다. 매출·지출 원자료와 인수 조건의 근거를 함께 확인하며, 아래 <b>전화</b> 또는 <b>문자</b>로 연결하시면 김현율 팀장이 바로 확인합니다.</div>' +
           '<div class="form-actions">' +
             '<a class="btn btn-navy" href="' + PHONE_TEL + '">전화 상담</a>' +
             '<a class="btn btn-gold" href="' + smsHref + '">문자로 보내기</a>' +
@@ -1480,10 +1512,16 @@
 
     var now = new Date();
     var payload = {
+      type: 'sell_request',
+      source: 'sell',
       form_version: 'sell-request-v1',
       request_id: 'SELL-' + leadStamp(now) + '-' + String(Math.floor(Math.random() * 9000) + 1000),
       submitted_at: now.toISOString(),
       brand: brand.trim(),
+      region: area.trim(),
+      phone: phone,
+      monthly_sales: '월 ' + manwonLabel(sales),
+      key_money: '권리금 ' + manwonLabel(premium),
       area: area.trim(),
       monthly_sales_manwon: Math.round(sales),
       premium_manwon: Math.round(premium),
@@ -1498,6 +1536,7 @@
       localStorage.setItem(SELL_KEY, JSON.stringify(list.slice(0, 200)));
     } catch (e2) { /* 무시 */ }
 
+    sendLead(payload);
     $('#sellBody').innerHTML = sellReceiptHTML(payload);
     var panel = $('.modal-panel', $('#sellModal'));
     if (panel) panel.scrollTop = 0;

@@ -1312,6 +1312,13 @@
 
   function leadStatusOf(L) { return state.leadStatus[L.lead_id] || 'new'; }
 
+  /* stores 항목은 문자열('지역 브랜드')과 객체({area, brand}) 둘 다 올 수 있습니다. */
+  function storeNameOf(s) {
+    if (!s) return '';
+    if (typeof s === 'string') return s;
+    return ((s.area || '') + ' ' + (s.brand || '')).trim();
+  }
+
   function renderLeads() {
     loadLeads();
     var body = $('#leadRows');
@@ -1353,7 +1360,7 @@
         : L.source === 'matching' ? 'AI 매칭'
         : L.source === 'compare' ? '비교 상담' : '사이트';
       var storeLine = L.store ? (L.store.area + ' · ' + L.store.brand)
-        : (L.stores && L.stores.length ? L.stores.map(function (s) { return s.area + ' ' + s.brand; }).join(' / ') : '');
+        : (L.stores && L.stores.length ? L.stores.map(storeNameOf).join(' / ') : '');
       var st = leadStatusOf(L);
       return '' +
         '<tr data-lead="' + esc(L.lead_id) + '">' +
@@ -1583,7 +1590,7 @@
           : L.source === 'matching' ? 'AI 맞춤 매칭'
           : L.source === 'compare' ? '비교 상담 신청' : '사이트',
         L.store ? (L.store.area + ' ' + L.store.brand)
-          : (L.stores && L.stores.length ? L.stores.map(function (x) { return x.area + ' ' + x.brand; }).join(' / ') : ''),
+          : (L.stores && L.stores.length ? L.stores.map(storeNameOf).join(' / ') : ''),
         [(c.category || []).join(' / '), c.brand_text].filter(Boolean).join(' · '),
         (c.area || []).join(' / '),
         c.budget || '',
