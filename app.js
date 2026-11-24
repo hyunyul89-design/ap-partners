@@ -551,10 +551,8 @@
 
   function hasLead() { return !!readLead(); }
 
-  function saveLead(payload) {
-    state.lead = payload;
-    try { localStorage.setItem(LEAD_STORAGE_KEY, JSON.stringify(payload)); } catch (e) { /* 저장 불가 환경 무시 */ }
-    try { sessionStorage.setItem(LEAD_SESSION_KEY, JSON.stringify(payload)); } catch (e2) { /* 무시 */ }
+  /* 접수 기록만 관리자 목록(손님 DB)에 쌓고 현재 방문자 상태(잠금 해제)는 건드리지 않습니다. */
+  function recordLeadEntry(payload) {
     try {
       var all = safeParse(localStorage.getItem(LEAD_ALL_KEY));
       if (!(all instanceof Array)) all = [];
@@ -562,6 +560,13 @@
       all.unshift(payload);
       localStorage.setItem(LEAD_ALL_KEY, JSON.stringify(all.slice(0, 300)));
     } catch (e3) { /* 무시 */ }
+  }
+
+  function saveLead(payload) {
+    state.lead = payload;
+    try { localStorage.setItem(LEAD_STORAGE_KEY, JSON.stringify(payload)); } catch (e) { /* 저장 불가 환경 무시 */ }
+    try { sessionStorage.setItem(LEAD_SESSION_KEY, JSON.stringify(payload)); } catch (e2) { /* 무시 */ }
+    recordLeadEntry(payload);
     updateLeadStatus();
   }
 
@@ -1858,7 +1863,7 @@
           '<div class="field"><label for="reqMsg">문의 내용</label>' +
             '<textarea id="reqMsg" name="message" placeholder="예: 배달 비중을 줄일 수 있는지, 주말 방문 가능한지 궁금합니다"></textarea></div>' +
           '<label class="consent"><input type="checkbox" id="reqConsent" />' +
-            '<span>상담을 위한 이름·연락처 수집 및 이용에 동의합니다. 입력한 내용은 이 브라우저에 저장됩니다.</span></label>' +
+            '<span>상담을 위한 이름·연락처 수집 및 이용에 동의합니다. 입력하신 내용은 담당 컨설턴트에게 즉시 전달됩니다.</span></label>' +
           '<p class="form-error" id="formError" hidden></p>' +
           '<div class="form-actions">' +
             '<button type="button" class="btn btn-quiet" data-back="' + esc(L.id) + '">이전</button>' +
@@ -1901,7 +1906,7 @@
             '<div><span>상담 희망</span><b>' + esc(data.when || '언제든 괜찮습니다') + '</b></div>' +
           '</div>' +
           '<div class="receipt-note">' +
-            '<b>상담 연결 안내</b><br />입력하신 내용은 이 브라우저에 저장됩니다. ' +
+            '<b>상담 연결 안내</b><br />입력하신 내용은 담당 컨설턴트에게 즉시 전달됩니다. ' +
             '바로 상담을 원하시면 아래 <b>전화</b> 또는 <b>문자</b> 버튼을 눌러 주세요. 문자는 입력하신 내용이 그대로 채워집니다.' +
           '</div>' +
           '<div class="form-actions">' +
@@ -2030,12 +2035,42 @@
         }
         if (err) err.hidden = true;
 
-        var data = { name: name, phone: phone, budget: budget, when: when, message: message, listing: L.id, at: new Date().toISOString() };
+        var now = new Date();
+        var storeName = ((L.area || '') + ' ' + (L.brand || '')).trim();
+        var data = { name: name, phone: phone, budget: budget, when: when, message: message, listing: L.id, at: now.toISOString() };
         try {
           var saved = JSON.parse(localStorage.getItem('apPartnerRequests') || '[]');
           saved.push(data);
           localStorage.setItem('apPartnerRequests', JSON.stringify(saved));
         } catch (e) { /* 저장 실패는 무시 */ }
+
+        /* 상세 모달 상담 요청도 다른 접수 경로와 같은 웹훅(텔레그램)으로 보냅니다.
+           Apps Script 는 c = data.criteria || data 에서 industry · region · budget · phone · stores 를 읽습니다. */
+        var payload = {
+          type: 'store_consult',
+          source: 'store_detail',
+          form_version: 'store-consult-v1',
+          lead_id: leadId(),
+          submitted_at: now.toISOString(),
+          store: { id: L.id, area: L.area, brand: L.brand, category: L.category, name: storeName },
+          stores: [storeName],
+          name: name,
+          phone: phone,
+          when: when || '',
+          message: message || '',
+          brand: L.brand || '',
+          region: L.area || '',
+          criteria: {
+            industry: L.brand || '',
+            region: L.area || '',
+            budget: budget || (L.initial_cost && L.initial_cost.label) || '',
+            phone: phone
+          },
+          contact: { phone: phone, phone_digits: phone.replace(/[^0-9]/g, ''), consent: true, consent_at: now.toISOString() },
+          page: location.href
+        };
+        recordLeadEntry(payload);
+        sendLead(payload);
 
         $('#modalBody').innerHTML = receiptHTML(L, data);
         $('.modal-panel', modal).scrollTop = 0;

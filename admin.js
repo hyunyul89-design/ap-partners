@@ -1357,6 +1357,7 @@
       var c = L.criteria || {};
       var brandText = [(c.category || []).join(', '), c.brand_text].filter(Boolean).join(' · ') || '-';
       var sourceLabel = L.source === 'detail' ? '상세 보기'
+        : L.source === 'store_detail' ? '상세 상담'
         : L.source === 'matching' ? 'AI 매칭'
         : L.source === 'compare' ? '비교 상담' : '사이트';
       var storeLine = L.store ? (L.store.area + ' · ' + L.store.brand)
