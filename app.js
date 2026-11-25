@@ -886,18 +886,17 @@
     }).join('');
   }
 
+  /* 내 입력 정보 다시 보기 화면. 손님에게는 입력한 4항목과 접수번호만 요약해 보여 주고,
+     개발자용 JSON 페이로드는 화면에 노출하지 않습니다. */
   function gateSuccessHTML(payload, isView) {
-    var json = JSON.stringify(payload, null, 2);
     var sourceLabel = payload.source === 'detail' ? '상세 보기 잠금 해제'
       : payload.source === 'matching' ? '맞춤 매칭 잠금 해제'
       : payload.source === 'compare' ? '비교 상담 신청' : '4항목 접수';
     return '' +
       '<div class="gate-hero">' +
-        '<p class="eyebrow"><span class="eyebrow-line"></span>' + (isView ? 'LEAD DB · SAVED' : 'UNLOCKED') + '</p>' +
-        '<h3 id="gateTitle">' + (isView ? '저장된 4항목 DB' : '잠금이 해제됐습니다') + '</h3>' +
-        '<p>' + (isView
-          ? '이 브라우저에 저장된 4항목 입력값과 전송용 JSON 페이로드입니다.'
-          : '이제 매칭 이유 · 상세 지출 · 인력 운영 포인트를 바로 확인하실 수 있습니다.') + '</p>' +
+        '<p class="eyebrow"><span class="eyebrow-line"></span>LEAD · SAVED</p>' +
+        '<h3 id="gateTitle">저장된 4항목 정보</h3>' +
+        '<p>이 브라우저에 저장된 입력값입니다. 아래 <b>다시 입력</b>을 누르면 상세 내용이 다시 잠깁니다.</p>' +
       '</div>' +
       '<div class="gate-body">' +
         '<div class="gate-receipt">' +
@@ -907,16 +906,9 @@
           '</div>' +
           '<div class="receipt-summary">' + gateSummaryRows(payload) + '</div>' +
         '</div>' +
-        '<div class="payload-box">' +
-          '<div class="payload-head"><strong>4항목 DB · JSON 페이로드</strong>' +
-            '<button type="button" class="btn btn-quiet btn-xs" data-copy-payload>JSON 복사</button></div>' +
-          '<pre class="payload" id="leadPayload">' + esc(json) + '</pre>' +
-          '<p class="payload-note">접수 내용은 이 브라우저에 저장되고 담당자에게 알림이 전송됩니다. 남겨주신 번호로 김현율 팀장이 바로 확인합니다.</p>' +
-        '</div>' +
+        '<p class="gate-foot">접수 내용은 이 브라우저에 저장되고 담당자에게도 전달됩니다. 남겨주신 번호로 김현율 팀장이 바로 확인합니다.</p>' +
         '<div class="gate-actions">' +
-          (isView
-            ? '<button type="button" class="btn btn-navy btn-lg" data-close-gate>닫기</button>'
-            : '<button type="button" class="btn btn-gold btn-lg" data-gate-continue>확인하고 이어서 보기</button>') +
+          '<button type="button" class="btn btn-navy btn-lg" data-close-gate>닫기</button>' +
           '<button type="button" class="btn btn-quiet" data-gate-restart>다시 입력</button>' +
         '</div>' +
       '</div>';
@@ -1034,13 +1026,26 @@
       phone: phone
     }, ctx);
 
+    /* 접수 내용은 이 브라우저에 저장하고 담당자 알림은 백그라운드로 보냅니다(실패하면 큐에 보관).
+       접수증·JSON 코드 같은 중간 단계 없이 게이트를 바로 닫고, 요청했던 상세/매칭 결과를 즉시 보여 줍니다. */
     saveLead(payload);
     sendLead(payload);
-    renderGate(gateSuccessHTML(payload, false));
-    bindGateBody();
-    var panel = $('.gate-panel', gateEl);
-    if (panel) panel.scrollTop = 0;
-    refreshOpenModal();
+
+    var pending = state.gatePending;
+    state.gatePending = null;
+    var isCompare = !!(pending && pending.type === 'compare');
+    closeGate();
+    if (pending && pending.type === 'match' && pending.criteria) {
+      respond(pending.criteria);
+    } else if (pending && pending.type === 'detail') {
+      refreshOpenModal();
+    } else if (isCompare) {
+      /* 모달이 닫히면 전화·문자 버튼을 볼 수 없으므로 비교 상담은 완료 안내를 보여 줍니다. */
+      openCompareReceipt(pending.stores || []);
+    }
+    toast(isCompare
+      ? '비교 상담 신청이 접수되었습니다. 담당자가 바로 확인합니다.'
+      : '잠금이 해제되었습니다.');
   }
 
   function bindGateBody() {
@@ -1084,18 +1089,6 @@
       });
     }
 
-    var copyBtn = $('[data-copy-payload]', body);
-    if (copyBtn) {
-      copyBtn.addEventListener('click', function () {
-        var pre = $('#leadPayload', body);
-        copyText(pre ? pre.textContent : '').then(function () {
-          toast('4항목 DB JSON을 복사했습니다.');
-        }).catch(function () {
-          toast('복사가 막혀 있습니다. 페이로드를 직접 선택해 주세요.');
-        });
-      });
-    }
-
     var restart = $('[data-gate-restart]', body);
     if (restart) {
       restart.addEventListener('click', function () {
@@ -1108,23 +1101,6 @@
         bindGateBody();
         var panel = $('.gate-panel', gateEl);
         if (panel) panel.scrollTop = 0;
-      });
-    }
-
-    var cont = $('[data-gate-continue]', body);
-    if (cont) {
-      cont.addEventListener('click', function () {
-        var pending = state.gatePending;
-        state.gatePending = null;
-        closeGate();
-        if (pending && pending.type === 'match' && pending.criteria) {
-          respond(pending.criteria);
-        } else if (pending && pending.type === 'detail') {
-          refreshOpenModal();
-          toast('잠금이 해제되었습니다. 상세 지출과 운영 포인트를 확인하세요.');
-        } else if (pending && pending.type === 'compare') {
-          openCompareReceipt(pending.stores || []);
-        }
       });
     }
 
