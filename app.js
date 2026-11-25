@@ -41,6 +41,7 @@
   var FALLBACK = [
     {
       "id": "ap-001",
+      "code": "AP-001",
       "status": "live",
       "region": "서울",
       "district": "종로구",
@@ -136,6 +137,7 @@
     },
     {
       "id": "ap-002",
+      "code": "AP-002",
       "status": "live",
       "region": "경기",
       "district": "성남시 위례",
@@ -231,6 +233,7 @@
     },
     {
       "id": "ap-003",
+      "code": "AP-003",
       "status": "live",
       "region": "서울",
       "district": "금천구",
@@ -325,6 +328,7 @@
     },
     {
       "id": "ap-004",
+      "code": "AP-004",
       "status": "live",
       "region": "서울",
       "district": "강서구",
@@ -412,6 +416,115 @@
         "강서"
       ],
       "visible": true
+    },
+    {
+      "id": "ap-005",
+      "code": "AP-005",
+      "status": "live",
+      "region": "서울",
+      "district": "서초구",
+      "area": "서울 서초구 주거상권",
+      "area_note": "대단지 아파트 항아리상권 · 2면 코너 · 매일 07:30~22:00",
+      "category": "카페",
+      "brand": "우지커피",
+      "brand_note": "커피 프랜차이즈",
+      "store_spec": "1층 · 14평 (46.28㎡)",
+      "store_floor": "1층",
+      "store_pyeong": 14,
+      "initial_cost": {
+        "total_manwon": 28000,
+        "label": "2억 8,000만 원",
+        "items": [
+          {
+            "label": "점포 예치금",
+            "value": "5,500만 원"
+          },
+          {
+            "label": "시설·영업권",
+            "value": "2억 2,500만 원"
+          }
+        ]
+      },
+      "monthly_sales": {
+        "avg_manwon": 5175,
+        "label": "월 평균 5,175만 원"
+      },
+      "profit": {
+        "label": "월 약 1,326만 원",
+        "avg_manwon": 1326,
+        "note": "점주 제시 자료 기준 · 초기 인수 비용 대비 월 4.74%"
+      },
+      "expenses": [
+        {
+          "label": "재료비",
+          "unit": "pct",
+          "pct": [
+            35.0,
+            35.0
+          ]
+        },
+        {
+          "label": "인건비",
+          "unit": "manwon",
+          "amount": [
+            1000,
+            1000
+          ]
+        },
+        {
+          "label": "매장 고정비",
+          "unit": "manwon",
+          "amount": [
+            380,
+            380
+          ]
+        },
+        {
+          "label": "제세공과금·관리",
+          "unit": "manwon",
+          "amount": [
+            138,
+            138
+          ]
+        },
+        {
+          "label": "배달 수수료",
+          "unit": "manwon",
+          "amount": [
+            490,
+            490
+          ]
+        },
+        {
+          "label": "홍보·기타잡비",
+          "unit": "manwon",
+          "amount": [
+            30,
+            30
+          ]
+        }
+      ],
+      "points": [
+        "대단지 아파트 단지 안 상가 1층, 2면 코너에 자리한 항아리 상권입니다",
+        "2025년 12월 24일 개업한 지 1년 된 매장으로 시설 인테리어는 AAAA 등급입니다",
+        "에버시스 e4s 전자동 머신을 비롯한 고급 장비가 갖춰져 있어 추가 설비 부담이 적습니다",
+        "직원 1명과 알바 10명 체제로 돌아가고 점주는 발주·관리만 보는 풀오토 구조입니다",
+        "배달 비중 31.7%로 배달 수수료가 월 490만 원 발생합니다",
+        "본사 로열티는 월 20만 원이며 점주 제시 총경비에는 포함되지 않은 별도 비용입니다",
+        "양도 사유는 타회사 이직입니다",
+        "상세 지출 내역과 실제 위치는 상담에서 안내합니다"
+      ],
+      "check_note": "점주 제시 총경비 3,849만 원은 배달 수수료 490만 원(배달 31.7%)과 인건비 1,000만 원을 포함한 금액입니다. 배달 비중을 줄일 여지와 직원 1명·알바 10명 인력 구조의 실제 근무표를 실사에서 확인하세요.",
+      "keywords": [
+        "주거",
+        "항아리상권",
+        "2면 코너",
+        "풀오토",
+        "배달",
+        "서초",
+        "1층"
+      ],
+      "visible": true
     }
   ];
 
@@ -427,6 +540,7 @@
     gatePending: null,
     gateContext: null,
     lastCriteria: null,
+    lastMatches: null,
     compare: [],
     compareStores: []
   };
@@ -693,6 +807,7 @@
      - 손님 DB 접수: type 'lead', source 'site' | 'detail' | 'matching' | 'compare'
      - 내 매장 양도 의뢰: type 'sell_request', source 'sell' (brand · region · monthly_sales · key_money) */
   function buildLeadPayload(form, ctx) {
+    function codeOfStore(s) { return s && s.code ? normalizeCode(s.code) : (s && s.id ? codeOf(s) : ''); }
     var now = new Date();
     var cats = (form.category || []).slice();
     var areas = (form.area || []).slice();
@@ -715,7 +830,14 @@
       brand: brandText || crit.industry,
       region: crit.region,
       store: ctx && ctx.store
-        ? { id: ctx.store.id, area: ctx.store.area, brand: ctx.store.brand, category: ctx.store.category }
+        ? {
+            id: ctx.store.id,
+            code: codeOfStore(ctx.store),
+            label: storeLabel(ctx.store),
+            area: ctx.store.area,
+            brand: ctx.store.brand,
+            category: ctx.store.category
+          }
         : null,
       criteria: crit,
       contact: {
@@ -727,11 +849,13 @@
       page: location.href
     };
     if (ctx && ctx.stores && ctx.stores.length) {
-      payload.stores = ctx.stores.map(function (L) {
-        return ((L.area || '') + ' ' + (L.brand || '')).trim();
-      });
+      /* 텔레그램·문자 알림에 문의 대상 매물의 고유번호가 그대로 실리도록
+         문자열마다 '[AP-005] 우지커피 · 서울 서초구 주거상권' 형태로 적습니다. */
+      payload.stores = ctx.stores.map(function (L) { return storeLabel(L); });
+      payload.store_codes = ctx.stores.map(function (L) { return codeOfStore(L); });
     } else if (ctx && ctx.store) {
-      payload.stores = [((ctx.store.area || '') + ' ' + (ctx.store.brand || '')).trim()];
+      payload.stores = [storeLabel(ctx.store)];
+      payload.store_codes = [codeOfStore(ctx.store)];
     }
     return payload;
   }
@@ -879,7 +1003,9 @@
       ['④ 연락처', (ct.phone || '-') + (ct.consent ? '  (동의 완료)' : '')]
     ];
     if (payload.stores && payload.stores.length) {
-      rows.push([payload.source === 'detail' ? '조회 점포' : '비교 점포', payload.stores.map(storeName).join(' / ')]);
+      var storeRowLabel = payload.source === 'detail' ? '조회 점포'
+        : payload.source === 'matching' ? '매칭 후보' : '비교 점포';
+      rows.push([storeRowLabel, payload.stores.map(storeName).join(' / ')]);
     }
     return rows.map(function (r) {
       return '<div><span>' + r[0] + '</span><b>' + esc(r[1]) + '</b></div>';
@@ -1156,10 +1282,43 @@
     return p;
   }
 
+  /* ---- 매물 고유번호 ---------------------------------------------------
+     자료마다 붙는 공개 번호입니다. id(내부 키)와 달리 사람이 읽고 부르는 값이라
+     카드·상세·비교·AI 매칭·텔레그램 알림에 'No. AP-001' 형태로 함께 표시합니다.
+     'AP-005' · 'ap5' · '005' 처럼 적어도 같은 번호로 읽습니다.
+     ---------------------------------------------------------------------- */
+  function normalizeCode(v, fallbackNumber) {
+    var s = String(v == null ? '' : v).trim().toUpperCase().replace(/\s+/g, '');
+    var m = s.match(/^AP-?0*([0-9]{1,4})$/);
+    if (m) return 'AP-' + ('000' + m[1]).slice(-3);
+    m = s.match(/^0*([0-9]{1,4})$/);
+    if (m) return 'AP-' + ('000' + m[1]).slice(-3);
+    var n = Number(fallbackNumber);
+    if (!(n > 0)) return '';
+    return 'AP-' + ('000' + n).slice(-3);
+  }
+
+  function codeOf(L, index) {
+    if (!L) return '';
+    var fromData = normalizeCode(L.code);
+    if (fromData) return fromData;
+    var idm = String(L.id || '').match(/([0-9]{1,4})$/);
+    return normalizeCode('', idm ? Number(idm[1]) : index);
+  }
+
+  /* 알림·문자에 쓰는 점포 표기: '[AP-005] 우지커피 · 서울 서초구 주거상권' */
+  function storeLabel(L) {
+    if (!L) return '';
+    var name = [L.brand, L.area].filter(Boolean).join(' · ');
+    var code = codeOf(L);
+    return (code ? '[' + code + '] ' : '') + name;
+  }
+
   function normalize(list) {
-    return (list || []).map(function (L) {
+    return (list || []).map(function (L, i) {
       L.keywords = L.keywords || [];
       L.points = L.points || [];
+      L.code = codeOf(L, i + 1);
       L.profit = normalizeProfit(L);
       L.expenses = (L.expenses || []).map(function (ex) { return normalizeExpense(L, ex); });
       return L;
@@ -1268,7 +1427,7 @@
       box.innerHTML = state.compare.map(function (id) {
         var L = findListingById(id);
         if (!L) return '';
-        return '<span class="compare-chip">' + esc(L.district || L.area) + ' · ' + esc(L.brand) +
+        return '<span class="compare-chip">' + esc(codeOf(L)) + ' · ' + esc(L.district || L.area) + ' · ' + esc(L.brand) +
           '<button type="button" data-compare-remove="' + esc(id) + '" aria-label="' + esc(L.brand) + ' 비교에서 빼기">' +
           '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>' +
           '</button></span>';
@@ -1286,7 +1445,8 @@
     var maxProfit = Math.max.apply(null, stores.map(function (L) { return L.profit.avg_manwon || 0; }));
 
     var head = '<tr><th scope="col"><span class="visually-hidden">비교 항목</span></th>' + stores.map(function (L) {
-      return '<th scope="col"><span class="cmp-area">' + esc(L.area) + '</span><b>' + esc(L.brand) + '</b>' +
+      return '<th scope="col"><span class="cmp-code">No. ' + esc(codeOf(L)) + '</span>' +
+        '<span class="cmp-area">' + esc(L.area) + '</span><b>' + esc(L.brand) + '</b>' +
         '<span class="cmp-sub">' + esc(L.category) + '</span></th>';
     }).join('') + '</tr>';
 
@@ -1374,7 +1534,7 @@
   function openCompareReceipt(stores) {
     if (!modal) modal = $('#modal');
     var lead = readLead();
-    var names = stores.map(function (L) { return L.area + ' ' + L.brand; });
+    var names = stores.map(function (L) { return storeLabel(L); });
     var smsBody = '[에이피파트너 비교 상담 신청]\n' + names.map(function (n, i) { return (i + 1) + '. ' + n; }).join('\n') +
       (lead && lead.contact ? '\n연락처: ' + lead.contact.phone : '');
     var smsHref = PHONE_SMS + '?body=' + encodeURIComponent(smsBody);
@@ -1394,7 +1554,7 @@
           '<h4>선택한 ' + stores.length + '곳으로 상담을 준비합니다</h4>' +
           '<div class="receipt-summary">' +
             stores.map(function (L) {
-              return '<div><span>' + esc(L.area) + '</span><b>' + esc(L.brand) + ' · ' + esc(L.initial_cost.label) + '</b></div>';
+              return '<div><span>No. ' + esc(codeOf(L)) + ' ' + esc(L.area) + '</span><b>' + esc(L.brand) + ' · ' + esc(L.initial_cost.label) + '</b></div>';
             }).join('') +
             (lead && lead.contact ? '<div><span>연락처</span><b>' + esc(lead.contact.phone) + '</b></div>' : '') +
           '</div>' +
@@ -1634,7 +1794,12 @@
 
   /* ---------------- listings ---------------- */
   function searchBlob(L) {
+    var code = codeOf(L);
+    var digits = code.replace(/[^0-9]/g, '');
+    var bare = String(Number(digits) || digits);
     return [
+      code, code.toLowerCase(), 'ap-' + digits, 'ap' + digits, 'ap' + bare,
+      'no.' + digits, 'no' + bare, digits,
       L.area, L.area_note, L.category, L.brand, L.brand_note, L.store_spec,
       (L.keywords || []).join(' '), L.district
     ].join(' ').toLowerCase();
@@ -1643,6 +1808,18 @@
   function filteredListings() {
     var f = state.filters;
     var q = f.q.trim().toLowerCase();
+    /* 'AP-005' · 'ap5' · '005' 처럼 고유번호만 적으면 그 점포만 보여준다. */
+    var codeQ = normalizeCode(q.replace(/\s+/g, ''));
+    if (codeQ) {
+      var codeHits = state.listings.filter(function (L) {
+        if (L.visible === false || L.status === 'closed') return false;
+        if (f.region && L.region !== f.region) return false;
+        if (f.category && L.category !== f.category) return false;
+        if (f.budget && budgetBand(L.initial_cost.total_manwon) !== f.budget) return false;
+        return codeOf(L) === codeQ;
+      });
+      if (codeHits.length) return codeHits;
+    }
     var intent = operationIntentOf(q);
     var intentWord = /^(풀오토|완전오토|오토|반오토|매니저|위탁|직영|직접|운영|직접운영|반|풀로)$/;
     var tokens = q.split(/\s+/).filter(Boolean).filter(function (w) {
@@ -1685,6 +1862,7 @@
             '<strong>' + esc(L.area) + '</strong>' +
           '</div>' +
           '<div class="card-badges">' +
+            '<span class="badge-code">No. ' + esc(codeOf(L)) + '</span>' +
             '<span class="badge-sample live">현장 실사</span>' +
             (L.private_only ? '<span class="badge-private">비공개전용</span>' : '') +
             '<span class="badge-cat">' + esc(bandLabel(band)) + '</span>' +
@@ -1853,6 +2031,7 @@
         '<h3 id="modalTitle">' + esc(L.area) + ' · ' + esc(L.brand) + '</h3>' +
         '<p>' + esc(storeLineText(L)) + '</p>' +
         '<div class="modal-hero-tags">' +
+          '<span class="modal-code">No. ' + esc(codeOf(L)) + '</span>' +
           '<span class="gold">현장 실사 완료</span>' +
           '<span>상세 위치 비공개</span>' +
           (L.private_only ? '<span>비공개 전용</span>' : '') +
@@ -1899,8 +2078,8 @@
       '<div class="modal-hero">' +
         '<p class="eyebrow"><span class="eyebrow-line"></span>REQUEST DETAILS</p>' +
         '<h3 id="modalTitle">상세 자료 요청</h3>' +
-        '<p>' + esc(L.area) + ' · ' + esc(L.brand) + ' · ' + esc(L.initial_cost.label) + '</p>' +
-        '<div class="modal-hero-tags"><span class="gold">현장 실사 완료</span><span>' + esc(L.category) + '</span></div>' +
+        '<p>No. ' + esc(codeOf(L)) + ' · ' + esc(L.area) + ' · ' + esc(L.brand) + ' · ' + esc(L.initial_cost.label) + '</p>' +
+        '<div class="modal-hero-tags"><span class="modal-code">No. ' + esc(codeOf(L)) + '</span><span class="gold">현장 실사 완료</span><span>' + esc(L.category) + '</span></div>' +
       '</div>' +
       '<div class="modal-content">' +
         '<div class="form-head">' +
@@ -1940,10 +2119,11 @@
   }
 
   function receiptHTML(L, data) {
-    var no = 'AP-' + new Date().toISOString().slice(2, 10).replace(/-/g, '') + '-' + String(Math.floor(Math.random() * 9000) + 1000);
+    /* 접수번호는 매물 고유번호(AP-001)와 헷갈리지 않게 REQ- 로 시작합니다. */
+    var no = 'REQ-' + new Date().toISOString().slice(2, 10).replace(/-/g, '') + '-' + String(Math.floor(Math.random() * 9000) + 1000);
     var bodyLines = [
       '[에이피파트너 상담 요청]',
-      '점포: ' + L.area + ' ' + L.brand,
+      '점포: ' + storeLabel(L),
       '이름: ' + data.name,
       '연락처: ' + data.phone,
       '희망 예산: ' + (data.budget || '미선택'),
@@ -1964,9 +2144,9 @@
             '<svg viewBox="0 0 24 24"><path d="m4 12.5 5 5L20 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
           '</div>' +
           '<h4>확인했습니다, ' + esc(data.name) + '님</h4>' +
-          '<p class="no">' + esc(L.area) + ' · ' + esc(L.brand) + '</p>' +
+          '<p class="no">No. ' + esc(codeOf(L)) + ' · ' + esc(L.area) + ' · ' + esc(L.brand) + '</p>' +
           '<div class="receipt-summary">' +
-            '<div><span>점포</span><b>' + esc(L.area) + ' ' + esc(L.brand) + '</b></div>' +
+            '<div><span>점포</span><b>No. ' + esc(codeOf(L)) + ' · ' + esc(L.brand) + ' · ' + esc(L.area) + '</b></div>' +
             '<div><span>연락처</span><b>' + esc(data.phone) + '</b></div>' +
             '<div><span>희망 예산</span><b>' + esc(data.budget || '미선택') + '</b></div>' +
             '<div><span>상담 희망</span><b>' + esc(data.when || '언제든 괜찮습니다') + '</b></div>' +
@@ -2102,7 +2282,7 @@
         if (err) err.hidden = true;
 
         var now = new Date();
-        var storeName = ((L.area || '') + ' ' + (L.brand || '')).trim();
+        var storeName = storeLabel(L);
         var data = { name: name, phone: phone, budget: budget, when: when, message: message, listing: L.id, at: now.toISOString() };
         try {
           var saved = JSON.parse(localStorage.getItem('apPartnerRequests') || '[]');
@@ -2118,8 +2298,9 @@
           form_version: 'store-consult-v1',
           lead_id: leadId(),
           submitted_at: now.toISOString(),
-          store: { id: L.id, area: L.area, brand: L.brand, category: L.category, name: storeName },
-          stores: [storeName],
+          store: { id: L.id, code: codeOf(L), label: storeLabel(L), area: L.area, brand: L.brand, category: L.category, name: storeName },
+          stores: [storeLabel(L)],
+          store_codes: [codeOf(L)],
           name: name,
           phone: phone,
           when: when || '',
@@ -2371,6 +2552,7 @@
         '<button type="button" class="mini-card' + (masked ? ' is-masked' : '') + '"' +
           (masked ? ' tabindex="-1" aria-hidden="true"' : ' data-open="' + esc(L.id) + '"') + '>' +
           '<div class="mini-top">' +
+            '<span class="mini-code">No. ' + esc(codeOf(L)) + '</span>' +
             '<strong>' + esc(title) + '</strong>' +
             '<span class="mini-tag">' + (masked ? 'LOCKED' : 'MATCH') + '</span>' +
           '</div>' +
@@ -2393,7 +2575,7 @@
           '<span class="tr-lock" aria-hidden="true">' + lockIcon() + '</span>' +
           '<div class="tr-main">' +
             '<strong>' + esc(L.region + ' · ●●') + '</strong>' +
-            '<span>' + esc(L.category) + ' · 초기 인수 ●●●</span>' +
+            '<span>No. ' + esc(codeOf(L)) + ' · ' + esc(L.category) + ' · 초기 인수 ●●●</span>' +
           '</div>' +
           '<span class="tr-fig" aria-hidden="true">●●●</span>' +
         '</div>';
@@ -2423,6 +2605,7 @@
     var res = matchListings(criteria);
     var ctaId = res.matches.length ? res.matches[0].listing.id : (state.listings[0] || {}).id;
     state.lastCriteria = criteria;
+    state.lastMatches = res.matches.map(function (m) { return m.listing; });
 
     var intro;
     if (!cond) {
@@ -2479,7 +2662,7 @@
       btn.addEventListener('click', function () {
         openGate('form', {
           pending: { type: 'match', criteria: state.lastCriteria },
-          context: { source: 'matching', criteria: state.lastCriteria }
+          context: { source: 'matching', criteria: state.lastCriteria, stores: state.lastMatches || [] }
         });
       });
     });

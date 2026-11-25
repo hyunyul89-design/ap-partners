@@ -107,6 +107,38 @@
     return [f, p ? p + '평' : ''].filter(Boolean).join(' · ');
   }
 
+  /* ---------------- 매물 고유번호 (AP-001 …) ----------------
+     사이트 카드·비교·알림이 쓰는 공개 번호를 관리자에서도 같은 규칙으로 다룹니다. */
+  function normalizeCode(v, fallbackNumber) {
+    var s = String(v == null ? '' : v).trim().toUpperCase().replace(/\s+/g, '');
+    var m = s.match(/^AP-?0*([0-9]{1,4})$/);
+    if (m) return 'AP-' + ('000' + m[1]).slice(-3);
+    m = s.match(/^0*([0-9]{1,4})$/);
+    if (m) return 'AP-' + ('000' + m[1]).slice(-3);
+    var n = Number(fallbackNumber);
+    if (!(n > 0)) return '';
+    return 'AP-' + ('000' + n).slice(-3);
+  }
+
+  function codeOf(L, index) {
+    if (!L) return '';
+    var fromData = normalizeCode(L.code);
+    if (fromData) return fromData;
+    var idm = String(L.id || '').match(/([0-9]{1,4})$/);
+    return normalizeCode('', idm ? Number(idm[1]) : index);
+  }
+
+  function codeSeq() {
+    var max = 0;
+    state.listings.forEach(function (L) {
+      var m = String(codeOf(L)).match(/([0-9]+)$/);
+      if (m) max = Math.max(max, Number(m[1]));
+    });
+    return max + 1;
+  }
+
+  function nextCode() { return normalizeCode('', codeSeq()); }
+
   /* '1층 · 12평 · 테이크아웃 중심' 같은 기존 문자열에서 층수·평수·나머지를 나눈다. */
   function specParts(L) {
     L = L || {};
@@ -285,6 +317,7 @@
       $('#fRegion').value = '서울';
       $('#fCategory').value = '카페';
       $('#fPrivate').value = 'N';
+      $('#fCode').value = nextCode();
       ['#fDistrict', '#fBrand', '#fNote', '#fFloor', '#fPyeong', '#fDeposit', '#fPremium',
         '#fSales', '#fProfit', '#fMat', '#fLabor', '#fFixed', '#fEtc', '#fCheckNote', '#fPoints']
         .forEach(function (id) { var el = $(id); if (el) el.value = ''; });
@@ -296,6 +329,7 @@
       $('#fRegion').value = ['서울', '경기', '인천'].indexOf(L.region) !== -1 ? L.region : '기타';
       $('#fCategory').value = ['카페', '디저트', '음식점', '치킨'].indexOf(L.category) !== -1 ? L.category : '기타';
       $('#fPrivate').value = L.private_only ? 'Y' : 'N';
+      $('#fCode').value = codeOf(L);
       $('#fDistrict').value = L.district || '';
       $('#fBrand').value = L.brand || '';
       /* 매장 규모: 층수·평수 칸에 나눠 넣고, 기존 문자열의 나머지 설명은 한줄평으로 옮긴다. */
@@ -462,6 +496,7 @@
 
   function onSaveStore(e) {
     e.preventDefault();
+    var existing = state.editingId ? findListing(state.editingId) : null;
     var region = val('#fRegion');
     var district = val('#fDistrict');
     var brand = val('#fBrand');
@@ -515,10 +550,24 @@
     });
 
     var points = val('#fPoints').split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
-    var existing = state.editingId ? findListing(state.editingId) : null;
+
+    /* 고유번호: 비우면 다음 번호를 붙이고, 이미 쓰는 번호면 저장하지 않습니다. */
+    var codeRaw = val('#fCode');
+    var code = normalizeCode(codeRaw) || (existing ? codeOf(existing) : nextCode());
+    var dupCode = state.listings.filter(function (L) {
+      return (!existing || L.id !== existing.id) && codeOf(L) === code;
+    })[0];
+    if (dupCode) {
+      if (err) {
+        err.textContent = '고유번호 ' + code + '는 이미 "' + dupCode.area + ' ' + dupCode.brand + '" 점포가 쓰고 있습니다. 다른 번호를 적거나 비워 두세요.';
+        err.hidden = false;
+      }
+      return;
+    }
 
     var listing = {
       id: existing ? existing.id : 'ap-' + Date.now().toString(36),
+      code: code,
       status: existing ? (existing.status === 'closed' ? 'closed' : (existing.status || 'active')) : 'active',
       visible: existing ? existing.visible !== false : true,
       region: region,
@@ -586,6 +635,7 @@
   /* 양식 열 순서 · 별칭 · 필수 여부
      예상수익은 평균치 한 열이다. 예전 양식의 최소·최대 두 열(template:false)이 오면 평균을 쓴다. */
   var CSV_COLS = [
+    { key: 'code', label: '고유번호', required: false, aliases: ['코드', '번호', '고유 번호', 'no', 'No.', 'NO', 'AP번호', 'AP 번호'] },
     { key: 'area', label: '지역', required: true, aliases: ['지역명', '상권'] },
     { key: 'category', label: '업종', required: true, aliases: ['카테고리'] },
     { key: 'brand', label: '브랜드', required: true,
@@ -615,9 +665,9 @@
   var TEMPLATE_COLS = CSV_COLS.filter(function (c) { return c.template !== false; });
 
   var TEMPLATE_ROWS = [
-    ['서울 마포구', '카페', '메가커피', '1층', '13', '1000', '20000', '3200', '1250', '34', '520', '180', '115',
+    ['AP-001', '서울 마포구', '카페', '메가커피', '1층', '13', '1000', '20000', '3200', '1250', '34', '520', '180', '115',
       '대학가 인접 상권 · 평일 08:00~19:30 영업', 'N'],
-    ['경기 성남시 분당구', '디저트', '설빙', '1층', '15', '1500', '15000', '2600', '900', '36', '620', '370', '520',
+    ['AP-002', '경기 성남시 분당구', '디저트', '설빙', '1층', '15', '1500', '15000', '2600', '900', '36', '620', '370', '520',
       '주차 2대 · 매일 09:00~01:30 영업', 'Y']
   ];
 
@@ -798,13 +848,19 @@
   function buildBulkRow(cells, map, lineNo) {
     var out = {
       line: lineNo, ok: false, errors: [], notes: [], listing: null,
-      view: { area: '', category: '', brand: '', spec: '', cost: '', sales: '', profit: '' }
+      view: { code: '', area: '', category: '', brand: '', spec: '', cost: '', sales: '', profit: '' }
     };
     function get(key) {
       var idx = map[key];
       if (idx == null || idx < 0) return '';
       return String(cells[idx] == null ? '' : cells[idx]).trim();
     }
+
+    /* 고유번호: 적혀 있으면 그 번호를, 비어 있으면 빈 번호 다음 번호를 쓴다(중복 검사는 파일 전체를 본 뒤 applyBulkParsed에서). */
+    var codeRaw = get('code');
+    var code = normalizeCode(codeRaw);
+    if (codeRaw && !code) out.notes.push('고유번호 "' + codeRaw + '"를 번호로 읽지 못해 빈 번호 다음 번호로 붙입니다.');
+    out.view.code = code || '';
 
     /* 지역 → 지역 · 지역구 */
     var areaRaw = get('area').replace(/\s+/g, ' ').trim();
@@ -943,6 +999,7 @@
     if (!out.errors.length) {
       out.ok = true;
       out.listing = {
+        code: code,
         status: 'active',
         visible: true,
         region: region,
@@ -1096,6 +1153,26 @@
 
     var rows = dataRows.map(function (r, i) { return buildBulkRow(r.cells, map, i + 2); });
     var seen = {};
+    var usedCodes = {};
+    state.listings.forEach(function (L) { var c = codeOf(L); if (c) usedCodes[c] = true; });
+    var seq = codeSeq();
+    rows.forEach(function (row) {
+      if (!row.ok || !row.listing) return;
+      var rowCode = row.listing.code;
+      if (rowCode && usedCodes[rowCode]) {
+        row.notes.push('고유번호 ' + rowCode + '는 이미 쓰고 있어 새 번호로 붙입니다.');
+        rowCode = '';
+      }
+      if (!rowCode) {
+        while (usedCodes[normalizeCode('', seq)]) seq++;
+        rowCode = normalizeCode('', seq);
+        seq++;
+        if (!row.listing.code) row.notes.push('고유번호 ' + rowCode + '를 자동으로 붙였습니다.');
+      }
+      usedCodes[rowCode] = true;
+      row.listing.code = rowCode;
+      row.view.code = rowCode;
+    });
     rows.forEach(function (row) {
       if (!row.ok || !row.listing) return;
       var key = row.listing.area + '|' + row.listing.brand;
@@ -1136,6 +1213,7 @@
         '<tr class="' + (r.ok ? '' : 'is-bad') + '">' +
           '<td data-label="행" class="bulk-no">' + r.line + '</td>' +
           '<td data-label="상태"><span class="status-badge ' + (r.ok ? 'live' : 'error') + '">' + (r.ok ? '정상' : '오류') + '</span></td>' +
+          '<td data-label="고유번호" class="code-cell">' + esc(r.view.code || '-') + '</td>' +
           '<td data-label="지역">' + esc(r.view.area || '-') + '</td>' +
           '<td data-label="업종">' + esc(r.view.category || '-') + '</td>' +
           '<td data-label="브랜드">' + esc(r.view.brand || '-') + '</td>' +
@@ -1234,6 +1312,7 @@
       var closed = L.status === 'closed' || L.visible === false;
       return '' +
         '<tr class="admin-row' + (closed ? ' is-closed' : '') + '" data-id="' + esc(L.id) + '">' +
+          '<td data-label="고유번호" class="code-cell">' + esc(codeOf(L) || '-') + '</td>' +
           '<td data-label="점포"><div class="cell-main"><b>' + esc(L.area) + '</b>' +
             '<span>' + esc(L.brand) + ' · ' + esc(L.area_note) + '</span></div></td>' +
           '<td data-label="업종">' + esc(L.category) + '</td>' +

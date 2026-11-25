@@ -1673,3 +1673,27 @@ body.compare-on .toast { bottom: 100px; }
   .admin-title-row { gap: 8px; }
   .admin-site-link { font-size: 12px; }
 }
+
+/* ---------------- 매물 고유번호 (No. AP-001) ----------------
+   카드 · 상세 모달 · 비교표 · AI 매칭 카드 · 관리자 목록이 같은 번호를 씁니다. */
+.badge-code {
+  font-size: 10px; letter-spacing: .08em; font-weight: 700; color: #fff;
+  border: 1px solid rgba(255,255,255,.4); background: rgba(15,30,54,.62);
+  padding: 3px 7px; border-radius: 3px; white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.modal-hero-tags .modal-code {
+  color: #fff; font-weight: 700; letter-spacing: .05em;
+  background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.34);
+  font-variant-numeric: tabular-nums;
+}
+.compare-table thead .cmp-code {
+  display: block; font-size: 10px; font-weight: 700; letter-spacing: .06em;
+  color: var(--muted); margin-bottom: 4px; font-variant-numeric: tabular-nums;
+}
+.mini-code {
+  font-size: 10px; font-weight: 700; letter-spacing: .04em; color: #fff;
+  background: var(--navy); padding: 2px 6px; border-radius: 3px; white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.admin-table .code-cell { font-size: 12px; font-weight: 700; color: var(--navy); letter-spacing: .03em; white-space: nowrap; font-variant-numeric: tabular-nums; }

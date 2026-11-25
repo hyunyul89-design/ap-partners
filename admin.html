@@ -103,7 +103,7 @@
         </div>
 
         <p class="admin-note" id="catalogNote">
-          <b>등록 데이터</b> · <code>data/listings.json</code>의 실제 등록 점포 4곳을 불러온 상태입니다.
+          <b>등록 데이터</b> · <code>data/listings.json</code>의 실제 등록 점포 5곳을 불러온 상태입니다.
           한 곳이라도 저장하면 이후에는 브라우저에 저장된 목록을 사이트가 사용합니다.
         </p>
 
@@ -122,7 +122,7 @@
           <p class="admin-hint">
             엑셀에서 저장할 때 <b>CSV UTF-8(쉼표로 분리)</b>를 고르면 한글이 깨지지 않습니다.
             열 이름과 순서는 <b>샘플 양식(CSV) 다운로드</b> 파일을 그대로 쓰면 되고, 내려받은 양식의 <b>예시 2행</b>은 실제 점포로 바꾸거나 지운 뒤 올리세요.
-            층수·평수·비율·특징한줄평·비공개전용 칸은 비워도 됩니다.
+            층수·평수·비율·특징한줄평·비공개전용 칸은 비워도 됩니다. <b>고유번호</b>를 비우면 빈 번호 다음 번호가 자동으로 붙습니다.
           </p>
           <p class="admin-error" id="bulkError" hidden></p>
           <p class="admin-hint" id="bulkLegacy" hidden></p>
@@ -138,7 +138,7 @@
               <table class="admin-table bulk-table" id="bulkTable">
                 <thead>
                   <tr>
-                    <th>행</th><th>상태</th><th>지역</th><th>업종</th><th>브랜드</th>
+                    <th>행</th><th>상태</th><th>고유번호</th><th>지역</th><th>업종</th><th>브랜드</th>
                     <th>매장 규모</th><th>초기 인수</th><th>월 매출</th><th>예상 수익(만원)</th><th>확인</th>
                   </tr>
                 </thead>
@@ -161,6 +161,10 @@
           <fieldset>
             <legend>기본 정보</legend>
             <div class="admin-grid">
+              <label>고유번호
+                <input id="fCode" type="text" inputmode="numeric" placeholder="AP-006" aria-label="매물 고유번호 (예: AP-006)" />
+                <small class="field-note">비워 두면 다음 번호가 자동으로 붙습니다. 카드·상세·비교·알림에 <b>No. AP-006</b> 형태로 표시됩니다.</small>
+              </label>
               <label>지역
                 <select id="fRegion">
                   <option value="서울">서울</option>
@@ -274,7 +278,7 @@
         <div class="admin-table-wrap">
           <table class="admin-table" id="storeTable">
             <thead>
-              <tr><th>점포</th><th>업종</th><th>초기 인수</th><th>월 매출</th><th>상태</th><th>관리</th></tr>
+              <tr><th>고유번호</th><th>점포</th><th>업종</th><th>초기 인수</th><th>월 매출</th><th>상태</th><th>관리</th></tr>
             </thead>
             <tbody id="storeRows"></tbody>
           </table>
