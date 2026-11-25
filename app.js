@@ -2958,6 +2958,19 @@
     }, 320);
   }
 
+  /* 설치 이벤트는 DOM 준비 전에 올 수도 있어, 스크립트가 실행되는 즉시 잡아 둡니다. */
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    pwaDeferredPrompt = e;
+    showPwaBanner('android');
+  });
+
+  window.addEventListener('appinstalled', function () {
+    pwaDeferredPrompt = null;
+    hidePwaBanner(true);
+    toast('홈 화면에 추가되었습니다. 앱 아이콘으로 바로 열 수 있어요.');
+  });
+
   function initPwa() {
     pwaBanner = $('#pwaBanner');
 
@@ -2985,17 +2998,8 @@
       });
     }
 
-    window.addEventListener('beforeinstallprompt', function (e) {
-      e.preventDefault();
-      pwaDeferredPrompt = e;
-      showPwaBanner('android');
-    });
-
-    window.addEventListener('appinstalled', function () {
-      pwaDeferredPrompt = null;
-      hidePwaBanner(true);
-      toast('홈 화면에 추가되었습니다. 앱 아이콘으로 바로 열 수 있어요.');
-    });
+    /* 페이지를 여는 도중 이미 beforeinstallprompt 가 잡혔다면 바로 배너를 띄웁니다. */
+    if (pwaDeferredPrompt) showPwaBanner('android');
 
     /* 설치 API가 없는 아이폰 사파리에서는 잠시 뒤 조용히 안내 배너를 띄웁니다. */
     if (!isStandalone() && isIosSafari()) {
