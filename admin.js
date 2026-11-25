@@ -177,11 +177,16 @@
 
   function writeAccounts(list) {
     state.accounts = list;
-    return writeStore(ACCOUNTS_KEY, JSON.stringify({
+    var saved = writeStore(ACCOUNTS_KEY, JSON.stringify({
       version: 'admin-accounts-1',
       updated_at: new Date().toISOString(),
       accounts: list
     }));
+    if (!saved) {
+      /* 시크릿 모드·저장 공간 부족 등으로 저장되지 않은 경우, 저장된 것처럼 보이지 않게 알립니다. */
+      showAccountMsg('브라우저 저장 공간을 쓸 수 없어 계정 변경이 저장되지 않았습니다. 시크릿 모드를 끄거나 저장 공간을 확인해 주세요.', true);
+    }
+    return saved;
   }
 
   function findAccount(id) {
