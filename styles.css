@@ -1136,6 +1136,12 @@ body.gate-open { overflow: hidden; }
 .admin-header-links button {
   background: none; border: 0; color: inherit; font-size: inherit; font-family: inherit; cursor: pointer; padding: 0;
 }
+.admin-user {
+  font-size: 12px; font-weight: 600; color: rgba(255,255,255,.9); white-space: nowrap;
+  padding-right: 14px; border-right: 1px solid rgba(255,255,255,.16);
+}
+.admin-user b { font-weight: 700; }
+.admin-user em { font-style: normal; font-weight: 400; color: rgba(255,255,255,.6); }
 
 .admin-main { padding: 34px 0 70px; min-height: calc(100vh - 68px); }
 .admin-login { max-width: 460px; margin: 6vh auto 0; padding: 0 20px; }
@@ -1159,6 +1165,8 @@ body.gate-open { overflow: hidden; }
 }
 .admin-login input:focus { outline: none; border-color: var(--navy); box-shadow: 0 0 0 3px rgba(15,30,54,.06); }
 .admin-login .btn { width: 100%; margin-top: 14px; }
+.admin-login label.login-label-pw { margin-top: 12px; }
+.admin-login #adminId { letter-spacing: 0; }
 .login-error { margin-top: 10px; font-size: 12px; color: #B4453C; }
 .login-note {
   margin-top: 20px; padding: 13px 15px; border-radius: 8px;
@@ -1185,7 +1193,12 @@ body.gate-open { overflow: hidden; }
 .admin-stat.accent { background: #FBF8F1; border-color: #ECE0C5; }
 .admin-stat.accent b { color: #8C6F32; }
 
-.admin-tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--line); margin-bottom: 22px; }
+.admin-tabs {
+  display: flex; gap: 6px; border-bottom: 1px solid var(--line); margin-bottom: 22px;
+  overflow-x: auto; scrollbar-width: none;
+}
+.admin-tabs::-webkit-scrollbar { display: none; }
+.admin-tab { flex: 0 0 auto; white-space: nowrap; }
 .admin-tab {
   background: none; border: 0; border-bottom: 2px solid transparent; padding: 11px 16px;
   font-family: inherit; font-size: 14px; font-weight: 600; color: var(--muted); cursor: pointer;
@@ -1239,6 +1252,8 @@ body.gate-open { overflow: hidden; }
 .admin-total b { font-size: 15px; color: #6E5B32; letter-spacing: -0.01em; }
 .admin-form textarea { min-height: 74px; resize: vertical; }
 .admin-hint { margin-top: 8px; font-size: 11px; color: #9AA1AE; }
+.admin-hint.is-error { color: #B4453C; }
+.admin-table .cell-by { font-size: 10.5px; color: #9AA1AE; }
 .admin-grid label .field-unit { font-weight: 500; color: #9AA1AE; }
 .admin-grid label .field-preview { font-size: 10.5px; font-weight: 500; color: #8C6F32; letter-spacing: -0.01em; }
 .admin-grid label .field-preview:empty { display: none; }
@@ -1374,6 +1389,8 @@ body.gate-open { overflow: hidden; }
 @media (max-width: 820px) {
   .admin-header-inner { height: 62px; }
   .admin-header-links { gap: 12px; font-size: 12px; }
+  .admin-user { padding-right: 10px; margin-right: 2px; font-size: 11px; max-width: 132px; overflow: hidden; text-overflow: ellipsis; }
+  .admin-user em { display: none; }
   .admin-main { padding: 22px 0 60px; }
   .admin-stats { gap: 10px; }
   .admin-stat { padding: 13px 14px; }
@@ -1403,7 +1420,10 @@ body.gate-open { overflow: hidden; }
   .admin-form-actions .btn { width: 100%; }
   .admin-panel-head { flex-direction: column; align-items: stretch; }
   .admin-panel-head .btn { width: 100%; }
+  .admin-tabs { flex-wrap: wrap; overflow-x: visible; }
   .admin-tab { padding: 10px 12px; font-size: 13px; }
+  .admin-header .admin-badge { display: none; }
+  .admin-header-links { gap: 9px; }
 
   /* 일괄 등록 미리보기는 카드 대신 가로 스크롤 표로 */
   .bulk-table-wrap { border: 1px solid var(--line); background: #fff; box-shadow: var(--shadow-sm); overflow: auto; }
@@ -1624,7 +1644,8 @@ body.compare-on .toast { bottom: 100px; }
 @media (max-width: 560px) {
   .settings-card .admin-grid.two { grid-template-columns: 1fr; }
   .settings-card .admin-form-actions { flex-direction: column; }
-  .settings-card .admin-form-actions .btn { width: 100%; }
+  /* 세로 배치에서는 flex-basis(240px)가 버튼 높이가 되지 않도록 auto 로 풉니다. */
+  .settings-card .admin-form-actions .btn { width: 100%; flex: 0 0 auto; }
 }
 
 /* 비교 모달 컴팩트 (한 화면에 표 + 상담 버튼) */

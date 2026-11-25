@@ -22,6 +22,7 @@
     </span>
     <span class="admin-badge">ADMIN</span>
     <div class="admin-header-links">
+      <span class="admin-user" id="currentAdmin" hidden></span>
       <a href="index.html" target="_blank" rel="noopener">사이트 보기 ↗</a>
       <button type="button" id="logoutBtn" hidden>로그아웃</button>
     </div>
@@ -38,16 +39,18 @@
       </span>
       <p class="eyebrow dark"><span class="eyebrow-line"></span>ADMIN ACCESS</p>
       <h1>관리자 로그인</h1>
-      <p class="login-lead">점포 등록과 손님 DB는 담당자만 확인합니다. 시안용 비밀번호로 열어 보세요.</p>
+      <p class="login-lead">점포 등록과 손님 DB는 담당자만 확인합니다. 관리자 아이디와 비밀번호로 로그인하세요.</p>
       <form id="loginForm" novalidate>
-        <label for="adminPw">비밀번호</label>
+        <label for="adminId">아이디</label>
+        <input id="adminId" type="text" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="예: hyunyul89" />
+        <label for="adminPw" class="login-label-pw">비밀번호</label>
         <input id="adminPw" type="password" autocomplete="current-password" placeholder="비밀번호 입력" />
         <p class="login-error" id="loginError" hidden></p>
         <button class="btn btn-gold btn-lg" type="submit">로그인</button>
       </form>
       <div class="login-note">
-        <b>시안용 안내</b>
-        <p>아직 서버 인증이 없는 시안입니다. 확인용 비밀번호는 <code>ap2026</code> 이고, 실제 오픈 전에는 서버 인증(구글 로그인·아이디/비밀번호)으로 교체해야 합니다.</p>
+        <b>관리자 계정 안내</b>
+        <p>기본 대표 관리자 아이디는 <code>hyunyul89</code> 이고, 최초 비밀번호는 기존 관리자 비밀번호와 같습니다. 로그인 후 <b>계정·비밀번호</b> 탭에서 꼭 새 비밀번호로 바꿔 주세요. 비밀번호는 SHA-256 해시로만 저장되고 화면·소스에 그대로 남지 않습니다.</p>
       </div>
     </div>
   </section>
@@ -82,6 +85,9 @@
         </button>
         <button class="admin-tab" type="button" role="tab" id="tabSell" aria-controls="panelSell" aria-selected="false">
           양도 의뢰 <span id="tabSellCount">0</span>
+        </button>
+        <button class="admin-tab" type="button" role="tab" id="tabAccounts" aria-controls="panelAccounts" aria-selected="false">
+          계정·비밀번호
         </button>
         <button class="admin-tab" type="button" role="tab" id="tabNotify" aria-controls="panelNotify" aria-selected="false">
           알림 설정
@@ -341,6 +347,103 @@
           <p>사이트 헤더나 상담 섹션의 <b>내 매장 양도 의뢰</b> 버튼으로 접수되면 이곳에 쌓입니다.<br />
             <a href="index.html" target="_blank" rel="noopener">사이트에서 의뢰 화면 보기 ↗</a></p>
         </div>
+      </section>
+
+      <!-- ---------- 계정 · 비밀번호 ---------- -->
+      <section id="panelAccounts" role="tabpanel" aria-labelledby="tabAccounts" hidden>
+        <div class="admin-panel-head">
+          <div>
+            <h2>계정·비밀번호</h2>
+            <p>관리자(팀원) 계정을 추가하고 비밀번호를 바꿉니다. 계정 정보는 이 브라우저에 <b>SHA-256 해시</b>로만 저장됩니다.</p>
+          </div>
+        </div>
+
+        <p class="admin-note" id="pwNotice" hidden></p>
+
+        <div class="settings-grid">
+          <form class="admin-form settings-card" id="pwForm" novalidate>
+            <div class="admin-form-head">
+              <h3>내 비밀번호 변경</h3>
+              <span class="status-badge sample" id="pwWho">-</span>
+            </div>
+            <div class="admin-grid two">
+              <label style="grid-column: 1 / -1;">현재 비밀번호
+                <input id="pwCur" type="password" autocomplete="current-password" placeholder="현재 사용 중인 비밀번호" />
+              </label>
+              <label>새 비밀번호
+                <input id="pwNew" type="password" autocomplete="new-password" placeholder="4자 이상" />
+              </label>
+              <label>새 비밀번호 확인
+                <input id="pwNew2" type="password" autocomplete="new-password" placeholder="다시 한 번" />
+              </label>
+            </div>
+            <p class="admin-error" id="pwError" hidden></p>
+            <p class="admin-hint" id="pwResult" hidden></p>
+            <div class="admin-form-actions">
+              <button class="btn btn-gold" type="submit">비밀번호 저장</button>
+            </div>
+          </form>
+
+          <form class="admin-form settings-card" id="memberForm" novalidate>
+            <div class="admin-form-head">
+              <h3>팀원(관리자) 계정 추가</h3>
+              <span class="status-badge live">같은 관리자 권한</span>
+            </div>
+            <div class="admin-grid two">
+              <label>이름 · 직함
+                <input id="mName" type="text" placeholder="예: 박지훈 팀원" />
+              </label>
+              <label>아이디
+                <input id="mId" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="예: jihun" />
+              </label>
+              <label>역할
+                <select id="mRole">
+                  <option value="팀원 관리자">팀원 관리자</option>
+                  <option value="대표 관리자">대표 관리자</option>
+                </select>
+              </label>
+              <label>비밀번호
+                <input id="mPw" type="password" autocomplete="new-password" placeholder="4자 이상" />
+              </label>
+              <label>비밀번호 확인
+                <input id="mPw2" type="password" autocomplete="new-password" placeholder="다시 한 번" />
+              </label>
+            </div>
+            <p class="admin-error" id="memberError" hidden></p>
+            <p class="admin-hint" id="memberResult" hidden></p>
+            <div class="admin-form-actions">
+              <button class="btn btn-gold" type="submit">계정 추가</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="admin-panel-head" style="margin-top: 26px;">
+          <div>
+            <h2>등록된 관리자</h2>
+            <p>아이디·이름·역할·등록일을 확인하고, 팀원 비밀번호를 초기화하거나 계정을 삭제합니다. 마지막 대표 관리자는 삭제할 수 없습니다.</p>
+          </div>
+          <div class="admin-head-actions">
+            <button class="btn btn-quiet" type="button" id="btnAccountsExport">계정 설정 내보내기(JSON)</button>
+            <button class="btn btn-quiet" type="button" id="btnAccountsImport">계정 설정 불러오기</button>
+            <input type="file" id="accountsFile" accept=".json,application/json" hidden />
+          </div>
+        </div>
+
+        <div class="admin-table-wrap">
+          <table class="admin-table" id="accountTable">
+            <thead>
+              <tr><th>아이디</th><th>이름 · 직함</th><th>역할</th><th>등록일</th><th>관리</th></tr>
+            </thead>
+            <tbody id="accountRows"></tbody>
+          </table>
+        </div>
+        <p class="admin-hint" id="accountMsg" hidden></p>
+
+        <p class="admin-note" style="margin-top: 14px;">
+          <b>기기 간 설정 공유</b> · 정적 사이트라 계정은 이 브라우저(localStorage)에 저장됩니다.
+          다른 팀원 기기에서 같은 계정으로 로그인하려면 이 기기에서 <b>내보내기</b>한 JSON을 그 기기에서 <b>불러오기</b> 하세요.
+          내보내기 파일에는 비밀번호 해시가 들어 있으니 믿을 수 있는 사람에게만 전달하세요.
+        </p>
       </section>
 
       <!-- ---------- 알림 설정 ---------- -->

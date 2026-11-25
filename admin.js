@@ -1,6 +1,7 @@
 /* ==========================================================================
    AP PARTNERS · 에이피파트너 — 관리자 시안 (site/admin.html)
-   - 로그인: 시안용 비밀번호(ap2026) → sessionStorage 유지
+   - 로그인: 관리자 아이디 + 비밀번호(SHA-256 해시 검증) → sessionStorage 유지
+   - 계정 관리: 대표 관리자 1명 + 팀원(관리자) 계정 추가 · 비밀번호 변경/초기화 → localStorage 'apAdminAccounts'
    - 점포 관리: 등록 · 수정 · 거래완료(비노출) · 삭제 → localStorage 'apPartnerCatalog'
      (index.html 이 이 목록을 우선 사용하므로 저장 즉시 사이트에 반영)
    - 손님 DB: index.html 4항목 게이트가 'apPartnerLeads' 에 쌓은 DB → 상태 변경 · CSV 다운로드
@@ -8,8 +9,21 @@
 (function () {
   'use strict';
 
-  var ADMIN_PW = 'ap2026';
+  /* ---------------- 관리자 계정 · 비밀번호 ----------------
+     공개 저장소 소스에 평문 비밀번호를 두지 않도록 SHA-256 해시로만 검증합니다.
+     기본 대표 관리자 1명(초기 비밀번호 = 기존 관리자 비밀번호)으로 시작하고,
+     로그인 후 '계정·비밀번호' 탭에서 바로 바꿀 수 있습니다. */
+  var ACCOUNTS_KEY = 'apAdminAccounts';
   var AUTH_KEY = 'apAdminAuth';
+  var DEFAULT_ACCOUNT = {
+    id: 'hyunyul89',
+    name: '김현율 팀장',
+    role: '대표 관리자',
+    /* 초기 비밀번호의 SHA-256 해시 — 평문은 소스에 남기지 않습니다. */
+    password_hash: '915956364fe3af76659b5f53bdfbedf3260f1c6d44729a0a31ec139eff18288b',
+    created_at: '2026-11-26T00:00:00.000Z',
+    must_change: true
+  };
   var CATALOG_KEY = 'apPartnerCatalog';
   var LEAD_ALL_KEY = 'apPartnerLeads';
   var LEAD_ONE_KEY = 'apPartnerLead';
@@ -18,6 +32,7 @@
   var TG_KEY = 'apTelegramConfig';
 
   var state = {
+    accounts: [],
     listings: [],
     managed: false,
     leads: [],
@@ -40,6 +55,169 @@
   function safeParse(raw) { try { return raw ? JSON.parse(raw) : null; } catch (e) { return null; } }
   function readStore(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
   function writeStore(key, val) { try { localStorage.setItem(key, val); return true; } catch (e) { return false; } }
+  function readSession(key) { try { return sessionStorage.getItem(key); } catch (e) { return null; } }
+  function writeSession(key, val) {
+    try {
+      if (val == null) sessionStorage.removeItem(key);
+      else sessionStorage.setItem(key, val);
+      return true;
+    } catch (e) { return false; }
+  }
+
+  /* ---------------- SHA-256 ----------------
+     https 환경에서는 window.crypto.subtle 을 쓰고, 파일로 직접 열었을 때처럼
+     crypto.subtle 이 없는 환경에서는 아래 순수 JS 구현으로 같은 해시를 만듭니다. */
+  var SHA256_K = [
+    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+  ];
+
+  function rotr(x, n) { return (x >>> n) | (x << (32 - n)); }
+
+  function utf8Bytes(str) {
+    var out = [];
+    for (var i = 0; i < str.length; i++) {
+      var c = str.charCodeAt(i);
+      if (c < 0x80) {
+        out.push(c);
+      } else if (c < 0x800) {
+        out.push(0xC0 | (c >> 6), 0x80 | (c & 63));
+      } else if (c >= 0xD800 && c <= 0xDBFF && i + 1 < str.length) {
+        var c2 = str.charCodeAt(++i);
+        var cp = 0x10000 + ((c - 0xD800) << 10) + (c2 - 0xDC00);
+        out.push(0xF0 | (cp >> 18), 0x80 | ((cp >> 12) & 63), 0x80 | ((cp >> 6) & 63), 0x80 | (cp & 63));
+      } else {
+        out.push(0xE0 | (c >> 12), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+      }
+    }
+    return out;
+  }
+
+  function sha256Fallback(text) {
+    var bytes = utf8Bytes(String(text == null ? '' : text));
+    var bitLen = bytes.length * 8;
+    bytes.push(0x80);
+    while (bytes.length % 64 !== 56) bytes.push(0);
+    var hi = Math.floor(bitLen / 0x100000000);
+    var lo = bitLen % 0x100000000;
+    bytes.push((hi >>> 24) & 255, (hi >>> 16) & 255, (hi >>> 8) & 255, hi & 255);
+    bytes.push((lo >>> 24) & 255, (lo >>> 16) & 255, (lo >>> 8) & 255, lo & 255);
+
+    var H = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
+    var w = new Array(64);
+    for (var off = 0; off < bytes.length; off += 64) {
+      for (var i = 0; i < 16; i++) {
+        w[i] = ((bytes[off + i * 4] << 24) | (bytes[off + i * 4 + 1] << 16) | (bytes[off + i * 4 + 2] << 8) | bytes[off + i * 4 + 3]) | 0;
+      }
+      for (i = 16; i < 64; i++) {
+        var s0 = rotr(w[i - 15], 7) ^ rotr(w[i - 15], 18) ^ (w[i - 15] >>> 3);
+        var s1 = rotr(w[i - 2], 17) ^ rotr(w[i - 2], 19) ^ (w[i - 2] >>> 10);
+        w[i] = (w[i - 16] + s0 + w[i - 7] + s1) | 0;
+      }
+      var a = H[0], b = H[1], c = H[2], d = H[3], e = H[4], f = H[5], g = H[6], h = H[7];
+      for (i = 0; i < 64; i++) {
+        var S1 = rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25);
+        var ch = (e & f) ^ (~e & g);
+        var t1 = (h + S1 + ch + SHA256_K[i] + w[i]) | 0;
+        var S0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22);
+        var maj = (a & b) ^ (a & c) ^ (b & c);
+        var t2 = (S0 + maj) | 0;
+        h = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b; b = a; a = (t1 + t2) | 0;
+      }
+      H[0] = (H[0] + a) | 0; H[1] = (H[1] + b) | 0; H[2] = (H[2] + c) | 0; H[3] = (H[3] + d) | 0;
+      H[4] = (H[4] + e) | 0; H[5] = (H[5] + f) | 0; H[6] = (H[6] + g) | 0; H[7] = (H[7] + h) | 0;
+    }
+    return H.map(function (x) { return ('00000000' + (x >>> 0).toString(16)).slice(-8); }).join('');
+  }
+
+  function sha256Hex(text) {
+    var msg = String(text == null ? '' : text);
+    var subtle = (window.crypto && window.crypto.subtle) || null;
+    if (subtle && typeof subtle.digest === 'function' && typeof TextEncoder !== 'undefined') {
+      return subtle.digest('SHA-256', new TextEncoder().encode(msg))
+        .then(function (buf) {
+          var arr = new Uint8Array(buf);
+          var out = '';
+          for (var i = 0; i < arr.length; i++) out += ('0' + arr[i].toString(16)).slice(-2);
+          return out;
+        })
+        .catch(function () { return sha256Fallback(msg); });
+    }
+    return Promise.resolve(sha256Fallback(msg));
+  }
+
+  /* ---------------- 관리자 계정 저장소 ---------------- */
+  function cloneAccount(a) {
+    return {
+      id: String(a.id),
+      name: String(a.name || a.id),
+      role: a.role === '대표 관리자' ? '대표 관리자' : '팀원 관리자',
+      password_hash: String(a.password_hash || '').toLowerCase(),
+      created_at: a.created_at || '',
+      password_changed_at: a.password_changed_at || '',
+      must_change: a.must_change === true
+    };
+  }
+
+  function readAccounts() {
+    var raw = safeParse(readStore(ACCOUNTS_KEY));
+    if (raw && raw.accounts instanceof Array) {
+      var list = raw.accounts.filter(function (a) { return a && a.id && /^[0-9a-f]{64}$/i.test(String(a.password_hash || '')); })
+        .map(cloneAccount);
+      if (list.length) return list;
+    }
+    return [cloneAccount(DEFAULT_ACCOUNT)];
+  }
+
+  function writeAccounts(list) {
+    state.accounts = list;
+    return writeStore(ACCOUNTS_KEY, JSON.stringify({
+      version: 'admin-accounts-1',
+      updated_at: new Date().toISOString(),
+      accounts: list
+    }));
+  }
+
+  function findAccount(id) {
+    var key = String(id == null ? '' : id).trim().toLowerCase();
+    if (!key) return null;
+    var list = readAccounts();
+    for (var i = 0; i < list.length; i++) {
+      if (String(list[i].id).toLowerCase() === key) return list[i];
+    }
+    return null;
+  }
+
+  function representativeCount(list) {
+    return list.filter(function (a) { return a.role === '대표 관리자'; }).length;
+  }
+
+  function currentAccount() {
+    var s = safeParse(readSession(AUTH_KEY));
+    if (!s || !s.id) return null;
+    var found = findAccount(s.id);
+    if (found) return found;
+    return { id: String(s.id), name: s.name || String(s.id), role: s.role || '팀원 관리자', must_change: false };
+  }
+
+  /* 점포 데이터에 남기는 작성자 표기: '김현율 팀장 (hyunyul89)' */
+  function authorLabel() {
+    var a = currentAccount();
+    return a ? (a.name + ' (' + a.id + ')') : '';
+  }
+
+  function tempPassword() {
+    var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    var out = 'ap';
+    for (var i = 0; i < 6; i++) out += chars.charAt(Math.floor(Math.random() * chars.length));
+    return out;
+  }
 
   function num(id) {
     var el = $(id);
@@ -196,24 +374,45 @@
 
   /* ---------------- auth ---------------- */
   function isAuthed() {
-    try { return sessionStorage.getItem(AUTH_KEY) === '1'; } catch (e) { return false; }
+    var s = safeParse(readSession(AUTH_KEY));
+    return !!(s && s.id);
   }
-  function setAuthed(on) {
-    try { on ? sessionStorage.setItem(AUTH_KEY, '1') : sessionStorage.removeItem(AUTH_KEY); } catch (e) { /* 무시 */ }
+  function setAuthed(account) {
+    if (account) {
+      writeSession(AUTH_KEY, JSON.stringify({ id: account.id, name: account.name, role: account.role, at: new Date().toISOString() }));
+    } else {
+      writeSession(AUTH_KEY, null);
+    }
   }
 
   function showLogin() {
     $('#adminLogin').hidden = false;
     $('#adminApp').hidden = true;
     $('#logoutBtn').hidden = true;
+    var who = $('#currentAdmin');
+    if (who) { who.hidden = true; who.textContent = ''; }
     var pw = $('#adminPw');
     if (pw) pw.value = '';
   }
 
+  function renderHeaderUser(account) {
+    var who = $('#currentAdmin');
+    if (!who) return;
+    if (!account) { who.hidden = true; who.textContent = ''; return; }
+    who.hidden = false;
+    /* 좁은 화면에서는 아이디·역할(<em>)을 숨기고 이름만 보입니다. */
+    who.innerHTML = '<b>' + esc(account.name) + '</b><em> · ' + esc(account.id) + ' · ' + esc(account.role) + '</em>';
+    who.title = account.name + ' · ' + account.id + ' · ' + account.role;
+  }
+
   function enterApp() {
+    var account = currentAccount();
+    if (!account) { showLogin(); return; }
     $('#adminLogin').hidden = true;
     $('#adminApp').hidden = false;
     $('#logoutBtn').hidden = false;
+    renderHeaderUser(account);
+    renderAccounts();
     loadData().then(function () {
       loadSell();
       loadTelegram();
@@ -229,24 +428,287 @@
     if (!form) return;
     form.addEventListener('submit', function (e) {
       e.preventDefault();
+      var id = val('#adminId').trim();
       var pw = val('#adminPw');
       var err = $('#loginError');
-      if (pw !== ADMIN_PW) {
-        if (err) { err.textContent = '비밀번호가 맞지 않습니다. 시안용 비밀번호는 ap2026 입니다.'; err.hidden = false; }
-        return;
+      var btn = $('button[type="submit"]', form);
+      function fail(msg) {
+        if (btn) { btn.disabled = false; btn.textContent = '로그인'; }
+        if (err) { err.textContent = msg; err.hidden = false; }
       }
+      if (!id) { fail('아이디를 입력해 주세요.'); return; }
+      if (!pw) { fail('비밀번호를 입력해 주세요.'); return; }
       if (err) err.hidden = true;
-      setAuthed(true);
-      enterApp();
-      toast('관리자 화면을 열었습니다.');
+      var account = findAccount(id);
+      if (!account) { fail('아이디 또는 비밀번호가 맞지 않습니다.'); return; }
+      if (btn) { btn.disabled = true; btn.textContent = '확인 중…'; }
+      sha256Hex(pw).then(function (hash) {
+        if (hash.toLowerCase() !== account.password_hash) {
+          fail('아이디 또는 비밀번호가 맞지 않습니다.');
+          return;
+        }
+        if (btn) { btn.disabled = false; btn.textContent = '로그인';
+        }
+        if (err) err.hidden = true;
+        setAuthed(account);
+        enterApp();
+        toast(account.name + '님, 관리자 화면을 열었습니다.');
+        if (account.must_change) {
+          toast('아직 최초 비밀번호입니다. 계정·비밀번호 탭에서 바로 바꿔 주세요.');
+        }
+      });
     });
     var logout = $('#logoutBtn');
     if (logout) logout.addEventListener('click', function () {
-      setAuthed(false);
+      setAuthed(null);
       if ($('#bulkPanel')) closeBulk();
       showLogin();
       toast('로그아웃했습니다.');
     });
+  }
+
+  /* ---------------- 계정 · 비밀번호 패널 ---------------- */
+  function showAccountMsg(msg, isError) {
+    var el = $('#accountMsg');
+    if (!el) return;
+    el.hidden = false;
+    el.textContent = msg;
+    el.classList.toggle('is-error', !!isError);
+  }
+
+  function renderAccounts() {
+    var list = readAccounts();
+    state.accounts = list;
+    var me = currentAccount();
+    var meKey = me ? me.id.toLowerCase() : '';
+    var body = $('#accountRows');
+
+    if (body) {
+      var reps = representativeCount(list);
+      body.innerHTML = list.map(function (a) {
+        var isMe = a.id.toLowerCase() === meKey;
+        var lastRep = a.role === '대표 관리자' && reps <= 1;
+        return '' +
+          '<tr data-account="' + esc(a.id) + '">' +
+            '<td data-label="아이디" class="code-cell">' + esc(a.id) +
+              (isMe ? ' <span class="status-badge live">나</span>' : '') + '</td>' +
+            '<td data-label="이름 · 직함">' + esc(a.name) + '</td>' +
+            '<td data-label="역할">' + esc(a.role) +
+              (a.must_change ? ' <span class="status-badge sample">초기 비밀번호</span>' : '') +
+              (lastRep ? ' <span class="status-badge closed">마지막 대표</span>' : '') + '</td>' +
+            '<td data-label="등록일">' + esc(a.created_at ? kst(a.created_at).slice(0, 10) : '-') + '</td>' +
+            '<td data-label="관리"><div class="row-actions">' +
+              '<button type="button" class="gold" data-reset="' + esc(a.id) + '">비밀번호 초기화</button>' +
+              '<button type="button" class="danger" data-del-account="' + esc(a.id) + '">삭제</button>' +
+            '</div></td>' +
+          '</tr>';
+      }).join('');
+
+      $all('[data-reset]', body).forEach(function (b) {
+        b.addEventListener('click', function () { resetAccountPassword(b.getAttribute('data-reset')); });
+      });
+      $all('[data-del-account]', body).forEach(function (b) {
+        b.addEventListener('click', function () { deleteAccount(b.getAttribute('data-del-account')); });
+      });
+    }
+
+    var who = $('#pwWho');
+    if (who) who.textContent = me ? (me.name + ' · ' + me.id) : '-';
+
+    var notice = $('#pwNotice');
+    if (notice) {
+      var pending = list.filter(function (a) { return a.must_change; });
+      if (pending.length) {
+        notice.hidden = false;
+        notice.innerHTML = '<b>비밀번호 변경 안내</b> · ' + esc(pending.map(function (a) { return a.id; }).join(', ')) +
+          ' 계정이 아직 최초·임시 비밀번호를 쓰고 있습니다. 본인이 아래 <b>내 비밀번호 변경</b>에서 새 비밀번호로 바꾸면 표시가 사라집니다.';
+      } else {
+        notice.hidden = true;
+        notice.innerHTML = '';
+      }
+    }
+  }
+
+  function resetAccountPassword(id) {
+    var acc = findAccount(id);
+    if (!acc) return;
+    if (!window.confirm('"' + acc.name + ' (' + acc.id + ')" 계정의 비밀번호를 새 임시 비밀번호로 초기화할까요?\n' +
+      '화면에 나오는 임시 비밀번호를 본인에게 전달하고, 로그인 후 바꾸도록 안내하세요.')) return;
+    var temp = tempPassword();
+    sha256Hex(temp).then(function (hash) {
+      var list = readAccounts().map(function (a) {
+        if (a.id !== acc.id) return a;
+        a.password_hash = hash;
+        a.must_change = true;
+        a.password_changed_at = new Date().toISOString();
+        return a;
+      });
+      writeAccounts(list);
+      renderAccounts();
+      showAccountMsg(acc.id + ' 계정의 임시 비밀번호는 "' + temp + '" 입니다. 본인에게 전달하고 첫 로그인 후 바꾸도록 안내하세요.');
+      toast(acc.name + ' 계정의 비밀번호를 초기화했습니다.');
+    });
+  }
+
+  function deleteAccount(id) {
+    var list = readAccounts();
+    var acc = list.filter(function (a) { return a.id === id; })[0];
+    if (!acc) return;
+    var me = currentAccount();
+    if (me && me.id.toLowerCase() === acc.id.toLowerCase()) {
+      showAccountMsg('지금 로그인한 계정은 삭제할 수 없습니다. 다른 관리자로 로그인한 뒤 삭제해 주세요.', true);
+      return;
+    }
+    if (acc.role === '대표 관리자' && representativeCount(list) <= 1) {
+      showAccountMsg('마지막 대표 관리자는 삭제할 수 없습니다. 먼저 다른 계정을 대표 관리자로 바꾸거나 새 대표 관리자를 추가해 주세요.', true);
+      return;
+    }
+    if (!window.confirm('"' + acc.name + ' (' + acc.id + ')" 관리자 계정을 삭제할까요?\n삭제 후에는 되돌릴 수 없습니다.')) return;
+    writeAccounts(list.filter(function (a) { return a.id !== acc.id; }));
+    renderAccounts();
+    showAccountMsg(acc.id + ' 계정을 삭제했습니다.');
+    toast('관리자 계정을 삭제했습니다.');
+  }
+
+  function initAccountsPanel() {
+    var pwForm = $('#pwForm');
+    if (pwForm) pwForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var err = $('#pwError');
+      var res = $('#pwResult');
+      if (err) err.hidden = true;
+      if (res) { res.hidden = true; res.textContent = ''; }
+      function fail(msg) { if (err) { err.textContent = msg; err.hidden = false; } }
+      var me = currentAccount();
+      if (!me) { fail('로그인이 풀렸습니다. 다시 로그인해 주세요.'); return; }
+      var cur = val('#pwCur');
+      var nw = val('#pwNew');
+      var nw2 = val('#pwNew2');
+      if (!cur) { fail('현재 비밀번호를 입력해 주세요.'); return; }
+      if (nw.length < 4) { fail('새 비밀번호는 4자 이상으로 정해 주세요.'); return; }
+      if (nw !== nw2) { fail('새 비밀번호 확인이 일치하지 않습니다.'); return; }
+      if (nw === cur) { fail('지금 쓰는 비밀번호와 다른 비밀번호로 바꿔 주세요.'); return; }
+      sha256Hex(cur).then(function (curHash) {
+        var list = readAccounts();
+        var acc = list.filter(function (a) { return a.id.toLowerCase() === me.id.toLowerCase(); })[0];
+        if (!acc || acc.password_hash !== curHash.toLowerCase()) {
+          fail('현재 비밀번호가 맞지 않습니다.');
+          return;
+        }
+        return sha256Hex(nw).then(function (newHash) {
+          var updated = list.map(function (a) {
+            if (a.id.toLowerCase() !== me.id.toLowerCase()) return a;
+            a.password_hash = newHash;
+            a.must_change = false;
+            a.password_changed_at = new Date().toISOString();
+            return a;
+          });
+          writeAccounts(updated);
+          renderAccounts();
+          pwForm.reset();
+          if (res) { res.hidden = false; res.textContent = '비밀번호를 바꿨습니다. 다음 로그인부터 새 비밀번호를 쓰세요.'; }
+          toast('비밀번호를 바꿨습니다.');
+        });
+      });
+    });
+
+    var memberForm = $('#memberForm');
+    if (memberForm) memberForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var err = $('#memberError');
+      var res = $('#memberResult');
+      if (err) err.hidden = true;
+      if (res) { res.hidden = true; res.textContent = ''; }
+      function fail(msg) { if (err) { err.textContent = msg; err.hidden = false; } }
+      var name = val('#mName');
+      var id = val('#mId').toLowerCase();
+      var role = val('#mRole') === '대표 관리자' ? '대표 관리자' : '팀원 관리자';
+      var pw = val('#mPw');
+      var pw2 = val('#mPw2');
+      if (name.length < 2) { fail('이름·직함을 2자 이상 입력해 주세요. (예: 박지훈 팀원)'); return; }
+      if (!/^[a-z0-9][a-z0-9._-]{2,19}$/.test(id)) { fail('아이디는 영문 소문자·숫자로 시작해 3~20자로 정해 주세요. (영문·숫자·._- 사용)'); return; }
+      if (findAccount(id)) { fail('아이디 "' + id + '"는 이미 사용 중입니다.'); return; }
+      if (pw.length < 4) { fail('비밀번호는 4자 이상으로 정해 주세요.'); return; }
+      if (pw !== pw2) { fail('비밀번호 확인이 일치하지 않습니다.'); return; }
+      sha256Hex(pw).then(function (hash) {
+        var list = readAccounts();
+        if (list.some(function (a) { return a.id.toLowerCase() === id; })) {
+          fail('아이디 "' + id + '"는 이미 사용 중입니다.');
+          return;
+        }
+        var nowIso = new Date().toISOString();
+        list.push({
+          id: id,
+          name: name,
+          role: role,
+          password_hash: hash,
+          created_at: nowIso,
+          password_changed_at: nowIso,
+          must_change: false
+        });
+        writeAccounts(list);
+        renderAccounts();
+        memberForm.reset();
+        if (res) { res.hidden = false; res.textContent = name + ' (' + id + ') 계정을 추가했습니다. 같은 기기에서는 지금부터 이 아이디로 로그인할 수 있습니다.'; }
+        toast('관리자 계정을 추가했습니다.');
+      });
+    });
+
+    var exp = $('#btnAccountsExport');
+    if (exp) exp.addEventListener('click', function () {
+      var payload = {
+        type: 'ap-admin-accounts',
+        version: 'admin-accounts-1',
+        site: 'ap-partners',
+        exported_at: new Date().toISOString(),
+        accounts: readAccounts()
+      };
+      saveText('ap-admin-accounts-' + todayStamp() + '.json', JSON.stringify(payload, null, 2), 'application/json;charset=utf-8;');
+      showAccountMsg('계정 ' + payload.accounts.length + '개를 JSON 파일로 내보냈습니다. 다른 기기에서 \'계정 설정 불러오기\'로 옮길 수 있습니다.');
+      toast('계정 설정을 내보냈습니다.');
+    });
+
+    var imp = $('#btnAccountsImport');
+    var file = $('#accountsFile');
+    if (imp && file) {
+      imp.addEventListener('click', function () { file.value = ''; file.click(); });
+      file.addEventListener('change', function () {
+        var f = file.files && file.files[0];
+        if (!f) return;
+        var reader = new FileReader();
+        reader.onload = function () {
+          var raw = safeParse(String(reader.result || ''));
+          var incoming = raw && raw.accounts instanceof Array ? raw.accounts : (raw instanceof Array ? raw : null);
+          if (!incoming) {
+            showAccountMsg('불러올 수 없는 파일입니다. 이 화면에서 내보낸 계정 JSON 파일을 선택해 주세요.', true);
+            return;
+          }
+          var valid = incoming.filter(function (a) {
+            return a && a.id && /^[0-9a-f]{64}$/i.test(String(a.password_hash || ''));
+          }).map(cloneAccount);
+          if (!valid.length) { showAccountMsg('불러올 계정이 없는 파일입니다.', true); return; }
+          if (!representativeCount(valid)) {
+            showAccountMsg('대표 관리자가 없는 계정 목록은 불러올 수 없습니다. 대표 관리자가 포함된 파일을 선택해 주세요.', true);
+            return;
+          }
+          if (!window.confirm('계정 ' + valid.length + '개를 불러옵니다.\n같은 아이디는 이 기기의 계정 정보(비밀번호 포함)를 덮어씁니다. 계속할까요?')) return;
+          var list = readAccounts();
+          valid.forEach(function (a) {
+            var idx = -1;
+            for (var i = 0; i < list.length; i++) {
+              if (list[i].id.toLowerCase() === a.id.toLowerCase()) { idx = i; break; }
+            }
+            if (idx >= 0) list[idx] = a; else list.push(a);
+          });
+          writeAccounts(list);
+          renderAccounts();
+          showAccountMsg(valid.map(function (a) { return a.id; }).join(', ') + ' — ' + valid.length + '개 계정을 불러왔습니다.');
+          toast('계정 설정을 불러왔습니다.');
+        };
+        reader.onerror = function () { showAccountMsg('파일을 읽지 못했습니다. 잠시 후 다시 시도해 주세요.', true); };
+        reader.readAsText(f, 'utf-8');
+      });
+    }
   }
 
   /* ---------------- data ---------------- */
@@ -295,14 +757,17 @@
   }
 
   function initTabs() {
-    var tabs = [$('#tabStores'), $('#tabLeads'), $('#tabSell'), $('#tabNotify')];
-    var panels = [$('#panelStores'), $('#panelLeads'), $('#panelSell'), $('#panelNotify')];
+    var tabs = [$('#tabStores'), $('#tabLeads'), $('#tabSell'), $('#tabAccounts'), $('#tabNotify')];
+    var panels = [$('#panelStores'), $('#panelLeads'), $('#panelSell'), $('#panelAccounts'), $('#panelNotify')];
     tabs.forEach(function (tab, i) {
+      if (!tab || !panels[i]) return;
       tab.addEventListener('click', function () {
         tabs.forEach(function (t, j) {
+          if (!t || !panels[j]) return;
           t.setAttribute('aria-selected', i === j ? 'true' : 'false');
           panels[j].hidden = i !== j;
         });
+        if (i === 3) renderAccounts();
       });
     });
   }
@@ -603,7 +1068,10 @@
       check_note: val('#fCheckNote'),
       keywords: [],
       private_deals: existing && existing.private_deals ? existing.private_deals : [],
-      private_only: val('#fPrivate') === 'Y'
+      private_only: val('#fPrivate') === 'Y',
+      /* 작성자 기록 — 누가 등록·수정했는지 남깁니다. */
+      registered_by: existing ? (existing.registered_by || '') : authorLabel(),
+      updated_by: authorLabel()
     };
 
     if (existing) {
@@ -1244,6 +1712,8 @@
         if (Object.prototype.hasOwnProperty.call(r.listing, k)) L[k] = r.listing[k];
       }
       L.id = 'ap-' + stamp + '-' + pad2(i + 1);
+      L.registered_by = authorLabel();
+      L.updated_by = authorLabel();
       return L;
     });
     state.listings = added.concat(state.listings);
@@ -1314,7 +1784,12 @@
         '<tr class="admin-row' + (closed ? ' is-closed' : '') + '" data-id="' + esc(L.id) + '">' +
           '<td data-label="고유번호" class="code-cell">' + esc(codeOf(L) || '-') + '</td>' +
           '<td data-label="점포"><div class="cell-main"><b>' + esc(L.area) + '</b>' +
-            '<span>' + esc(L.brand) + ' · ' + esc(L.area_note) + '</span></div></td>' +
+            '<span>' + esc(L.brand) + ' · ' + esc(L.area_note) + '</span>' +
+            (L.registered_by || L.updated_by
+              ? '<span class="cell-by">' + esc('등록 ' + (L.registered_by || '-') +
+                  (L.updated_by && L.updated_by !== L.registered_by ? ' · 수정 ' + L.updated_by : '')) + '</span>'
+              : '') +
+            '</div></td>' +
           '<td data-label="업종">' + esc(L.category) + '</td>' +
           '<td data-label="초기 인수" class="num">' + esc(L.initial_cost.label) + '</td>' +
           '<td data-label="월 매출" class="num">' + esc(L.monthly_sales.label.replace('월 평균 ', '')) + '</td>' +
@@ -1394,7 +1869,10 @@
   /* stores 항목은 문자열('지역 브랜드')과 객체({area, brand}) 둘 다 올 수 있습니다. */
   function storeNameOf(s) {
     if (!s) return '';
-    if (typeof s === 'string') return s;
+    if (typeof s === 'string') {
+      /* 텔레그램 알림용으로 붙은 링크 '(https://…/?id=AP-005)' 는 CSV·화면에서 띄어 냅니다. */
+      return s.replace(/\s*\(https?:\/\/[^)]*\)\s*$/, '').trim();
+    }
     return ((s.area || '') + ' ' + (s.brand || '')).trim();
   }
 
@@ -1549,6 +2027,9 @@
       + '· 업종·브랜드: 카페 · 메가커피\n'
       + '· 지역·예산: 서울 / 2억대\n'
       + '· 연락처: 010-1234-5678\n'
+      + '\n'
+      + '· 관심 점포: [AP-005] 우지커피 · 서울 서초구 주거상권\n'
+      + '  (https://hyunyul89-design.github.io/ap-partners/?id=AP-005)\n'
       + '\n'
       + '[에이피파트너] 양도 의뢰\n'
       + '· 접수: 2026-11-25 05:10\n'
@@ -1710,6 +2191,8 @@
     initLeadFilters();
     initSellActions();
     initTelegram();
+    initAccountsPanel();
+    renderAccounts();
     if (isAuthed()) enterApp();
     else showLogin();
   });

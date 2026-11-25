@@ -836,7 +836,8 @@
             label: storeLabel(ctx.store),
             area: ctx.store.area,
             brand: ctx.store.brand,
-            category: ctx.store.category
+            category: ctx.store.category,
+            url: listingUrl(ctx.store)
           }
         : null,
       criteria: crit,
@@ -849,13 +850,16 @@
       page: location.href
     };
     if (ctx && ctx.stores && ctx.stores.length) {
-      /* 텔레그램·문자 알림에 문의 대상 매물의 고유번호가 그대로 실리도록
-         문자열마다 '[AP-005] 우지커피 · 서울 서초구 주거상권' 형태로 적습니다. */
-      payload.stores = ctx.stores.map(function (L) { return storeLabel(L); });
+      /* 텔레그램 알림에 문의 대상 매물의 고유번호와 바로 열리는 링크가 실리도록
+         문자열마다 '[AP-005] 우지커피 · 서울 서초구 주거상권 (https://…/?id=AP-005)' 형태로 적고,
+         링크만 따로 담은 store_links 도 함께 보냅니다. */
+      payload.stores = ctx.stores.map(function (L) { return storeAlertLabel(L); });
       payload.store_codes = ctx.stores.map(function (L) { return codeOfStore(L); });
+      payload.store_links = ctx.stores.map(function (L) { return listingUrl(L); });
     } else if (ctx && ctx.store) {
-      payload.stores = [storeLabel(ctx.store)];
+      payload.stores = [storeAlertLabel(ctx.store)];
       payload.store_codes = [codeOfStore(ctx.store)];
+      payload.store_links = [listingUrl(ctx.store)];
     }
     return payload;
   }
@@ -986,10 +990,11 @@
       '</div>';
   }
 
-  /* stores 항목은 문자열('지역 브랜드')과 객체({area, brand}) 둘 다 올 수 있습니다. */
+  /* stores 항목은 문자열('지역 브랜드')과 객체({area, brand}) 둘 다 올 수 있습니다.
+     텔레그램 전송용으로 붙은 링크 '(https://…/?id=AP-005)' 는 화면에서 띄어 냅니다. */
   function storeName(s) {
     if (!s) return '';
-    if (typeof s === 'string') return s;
+    if (typeof s === 'string') return s.replace(/\s*\(https?:\/\/[^)]*\)\s*$/, '').trim();
     return ((s.area || '') + ' ' + (s.brand || '')).trim();
   }
 
@@ -1312,6 +1317,23 @@
     var name = [L.brand, L.area].filter(Boolean).join(' · ');
     var code = codeOf(L);
     return (code ? '[' + code + '] ' : '') + name;
+  }
+
+  /* 텔레그램에서 눌러 바로 그 물건 상세 창이 열리는 주소.
+     예: https://hyunyul89-design.github.io/ap-partners/?id=AP-005 */
+  var SITE_BASE_URL = 'https://hyunyul89-design.github.io/ap-partners/';
+
+  function listingUrl(L) {
+    var code = codeOf(L);
+    return SITE_BASE_URL + (code ? '?id=' + encodeURIComponent(code) : '');
+  }
+
+  /* 알림(텔레그램) 전송용 표기 — 화면·문자에는 storeLabel 만 씁니다.
+     '[AP-005] 우지커피 · 서울 서초구 주거상권 (https://…/?id=AP-005)' */
+  function storeAlertLabel(L) {
+    var label = storeLabel(L);
+    if (!label) return '';
+    return label + ' (' + listingUrl(L) + ')';
   }
 
   function normalize(list) {
@@ -2298,9 +2320,10 @@
           form_version: 'store-consult-v1',
           lead_id: leadId(),
           submitted_at: now.toISOString(),
-          store: { id: L.id, code: codeOf(L), label: storeLabel(L), area: L.area, brand: L.brand, category: L.category, name: storeName },
-          stores: [storeLabel(L)],
+          store: { id: L.id, code: codeOf(L), label: storeLabel(L), area: L.area, brand: L.brand, category: L.category, name: storeName, url: listingUrl(L) },
+          stores: [storeAlertLabel(L)],
           store_codes: [codeOf(L)],
+          store_links: [listingUrl(L)],
           name: name,
           phone: phone,
           when: when || '',
@@ -2828,6 +2851,46 @@
     });
   }
 
+  /* ---------------- 링크로 들어온 물건 바로 열기 ----------------
+     텔레그램 알림의 링크(?id=AP-005 · ?id=ap-005 · #AP-005)를 누르면
+     목록에서 그 물건을 찾아 상세 창을 바로 보여 줍니다. */
+  function requestedListingFromUrl() {
+    var raw = '';
+    try {
+      var q = new URLSearchParams(location.search || '');
+      raw = q.get('id') || q.get('code') || '';
+    } catch (e) { raw = ''; }
+    if (!raw) {
+      var h = String(location.hash || '').replace(/^#!?\/?/, '');
+      if (/^(?:ap-?)?[0-9]{1,4}$/i.test(h)) {
+        raw = h;
+      } else {
+        var m = h.match(/(?:^|[&?])id=([A-Za-z0-9%\-]+)/);
+        if (m) {
+          try { raw = decodeURIComponent(m[1]); } catch (e2) { raw = m[1]; }
+        }
+      }
+    }
+    raw = String(raw || '').trim();
+    if (!raw) return null;
+    var want = normalizeCode(raw);
+    var wantLower = raw.toLowerCase();
+    return state.listings.filter(function (L) {
+      if (want && codeOf(L) === want) return true;
+      if (L.id && String(L.id).toLowerCase() === wantLower) return true;
+      if (L.code && String(L.code).toLowerCase() === wantLower) return true;
+      return false;
+    })[0] || null;
+  }
+
+  function openListingFromUrl() {
+    var L = requestedListingFromUrl();
+    if (!L) return false;
+    if (L.status === 'closed' || L.visible === false) return false;
+    openModal(L, 'detail');
+    return true;
+  }
+
   /* ---------------- boot ---------------- */
   document.addEventListener('DOMContentLoaded', function () {
     initHeader();
@@ -2855,6 +2918,10 @@
         if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(notice, anchor.nextSibling);
       }
       renderListings();
+      /* 텔레그램 링크로 들어온 경우 해당 물건 상세 창을 바로 연다. */
+      openListingFromUrl();
     });
+
+    window.addEventListener('hashchange', function () { openListingFromUrl(); });
   });
 })();
