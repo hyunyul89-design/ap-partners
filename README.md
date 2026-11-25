@@ -162,6 +162,17 @@ function doPost(e) {
 - **GitHub Pages**: 저장소에 `site/` 폴더를 올리고 Settings → Pages → Branch `main`, 폴더 `/site` 선택
 - **Vercel**: 저장소 연결 후 Root Directory를 `site`로 지정 (프레임워크: Other, 빌드 명령 없음)
 
+## 검색엔진 최적화 (2026-11-25 추가)
+
+- **사이트**: `https://hyunyul89-design.github.io/ap-partners/` (저장소 `hyunyul89-design/ap-partners`, 커밋 `bd8a188`·`f11bc44`)
+- `robots.txt`: 전체 허용, `/admin.html`만 차단, 사이트맵 위치 안내
+- `sitemap.xml`: 사이트 루트 URL 1개
+- `index.html` head: `canonical`, `description`, `og:*`(title·description·url·image·type·site_name·locale), `twitter:card`, `naver-site-verification` 메타태그
+- `assets/og-cover.png`: 공유 미리보기용 1200×630 이미지. `tools/make_og_cover.py`로 다시 만들 수 있음(Noto Sans/Serif KR, 네이비·골드)
+- **루트 저장소** `hyunyul89-design/hyunyul89-design.github.io`: 네이버 서치어드바이저가 호스트 단위로만 사이트를 받기 때문에 만든 저장소. `index.html`은 `/ap-partners/`로 넘기는 안내 페이지이고, 루트 `robots.txt`와 네이버 확인 파일(`naver157fc89ea794a6ebeab98219ec2df593.html`)이 함께 있다. 확인 파일을 지우면 네이버 소유확인이 풀리므로 삭제하지 말 것.
+- **네이버 서치어드바이저**(`hyunyul89` 계정): 사이트 `https://hyunyul89-design.github.io` 등록·소유확인 완료, 사이트맵 `ap-partners/sitemap.xml` 제출, `/ap-partners/` 수집 요청, robots.txt 수집·검증 완료
+- 도메인을 새로 붙이면 서치어드바이저에 그 도메인을 사이트로 다시 등록하고 소유확인해야 한다.
+
 ## 실제 오픈 전에 확인할 것
 
 1. ~~`listings.sample.json`을 실제 점포로 교체~~ → 완료: `listings.json`에 실사 점포 3곳 반영, `SAMPLE` 배지·샘플 안내 문구 제거
