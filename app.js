@@ -2891,6 +2891,126 @@
     return true;
   }
 
+  /* ---------------- PWA · 홈 화면 앱 추가 ----------------
+     - 서비스워커 등록: 재방문 시 빠르게 열리고, 오프라인에서도 마지막 화면이 뜹니다.
+     - 안드로이드·크롬: beforeinstallprompt 를 잡아 두었다가 '앱 설치' 버튼으로 띄웁니다.
+     - 아이폰 사파리: 설치 API가 없어 '공유 → 홈 화면에 추가' 안내로 대신합니다.
+     - 이미 앱으로 열려 있거나(standalone) 최근에 닫았으면 배너를 띄우지 않습니다.
+     ------------------------------------------------------ */
+  var PWA_DISMISS_KEY = 'apPartnerPwaDismissed';
+  var PWA_DISMISS_DAYS = 120;
+  var pwaDeferredPrompt = null;
+  var pwaBanner = null;
+
+  function isStandalone() {
+    try {
+      if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) return true;
+    } catch (e) { /* 무시 */ }
+    return !!(window.navigator && window.navigator.standalone === true);
+  }
+
+  function isIosDevice() {
+    var ua = String(navigator.userAgent || '');
+    var ios = /iPad|iPhone|iPod/.test(ua);
+    if (!ios && /Macintosh/.test(ua) && navigator.maxTouchPoints > 1) ios = true; /* iPadOS */
+    return ios;
+  }
+
+  function isIosSafari() {
+    var ua = String(navigator.userAgent || '');
+    if (!isIosDevice()) return false;
+    /* 크롬·파이어폭스·엣지·네이버·카카오 등 인앱 브라우저는 홈 화면 추가 메뉴가 다릅니다. */
+    return !/CriOS|FxiOS|EdgiOS|Whale|NAVER|KAKAO|DaumApps|Instagram|FBAN|FBAV/i.test(ua);
+  }
+
+  function pwaDismissed() {
+    try {
+      var t = Number(localStorage.getItem(PWA_DISMISS_KEY) || 0);
+      return t > 0 && (Date.now() - t) < PWA_DISMISS_DAYS * 86400000;
+    } catch (e) { return false; }
+  }
+
+  function rememberPwaDismiss() {
+    try { localStorage.setItem(PWA_DISMISS_KEY, String(Date.now())); } catch (e) { /* 무시 */ }
+  }
+
+  function showPwaBanner(mode) {
+    if (!pwaBanner || isStandalone() || pwaDismissed()) return;
+    var cta = $('#pwaInstallBtn');
+    var note = $('#pwaBannerNote');
+    if (mode === 'ios') {
+      if (cta) cta.textContent = '추가 방법';
+      if (note) note.textContent = '아이폰은 공유 버튼으로 홈 화면에 추가할 수 있어요.';
+    }
+    pwaBanner.hidden = false;
+    document.body.classList.add('pwa-on');
+    /* 다음 프레임에 show 를 붙여야 아래에서 올라오는 효과가 살아납니다. */
+    window.requestAnimationFrame(function () { pwaBanner.classList.add('show'); });
+  }
+
+  function hidePwaBanner(remember) {
+    if (remember) rememberPwaDismiss();
+    if (!pwaBanner) return;
+    pwaBanner.classList.remove('show');
+    document.body.classList.remove('pwa-on');
+    setTimeout(function () {
+      if (pwaBanner && !pwaBanner.classList.contains('show')) pwaBanner.hidden = true;
+    }, 320);
+  }
+
+  function initPwa() {
+    pwaBanner = $('#pwaBanner');
+
+    if (pwaBanner) {
+      var closeBtn = $('#pwaBannerClose');
+      if (closeBtn) closeBtn.addEventListener('click', function () { hidePwaBanner(true); });
+
+      var cta = $('#pwaInstallBtn');
+      if (cta) cta.addEventListener('click', function () {
+        if (pwaDeferredPrompt) {
+          var prompt = pwaDeferredPrompt;
+          pwaDeferredPrompt = null;
+          try { prompt.prompt(); } catch (e) { /* 무시 */ }
+          var done = function () { hidePwaBanner(true); };
+          if (prompt.userChoice && prompt.userChoice.then) prompt.userChoice.then(done, done);
+          else done();
+          return;
+        }
+        /* 설치 창을 띄울 수 없는 환경: 직접 추가하는 방법을 안내합니다. */
+        var note = $('#pwaBannerNote');
+        if (note) note.textContent = isIosDevice()
+          ? '사파리 아래 공유(□↑) 버튼 → “홈 화면에 추가”를 눌러 주세요.'
+          : '브라우저 오른쪽 위 ⋮ 메뉴 → “앱 설치” 또는 “홈 화면에 추가”를 눌러 주세요.';
+        cta.textContent = '확인';
+      });
+    }
+
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      pwaDeferredPrompt = e;
+      showPwaBanner('android');
+    });
+
+    window.addEventListener('appinstalled', function () {
+      pwaDeferredPrompt = null;
+      hidePwaBanner(true);
+      toast('홈 화면에 추가되었습니다. 앱 아이콘으로 바로 열 수 있어요.');
+    });
+
+    /* 설치 API가 없는 아이폰 사파리에서는 잠시 뒤 조용히 안내 배너를 띄웁니다. */
+    if (!isStandalone() && isIosSafari()) {
+      setTimeout(function () {
+        if (!pwaDeferredPrompt) showPwaBanner('ios');
+      }, 3200);
+    }
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('sw.js').catch(function () { /* 등록 실패는 조용히 무시 */ });
+      });
+    }
+  }
+
   /* ---------------- boot ---------------- */
   document.addEventListener('DOMContentLoaded', function () {
     initHeader();
@@ -2903,6 +3023,7 @@
     initKakao();
     initConcierge();
     initListingFilters();
+    initPwa();
 
     loadListings().then(function (result) {
       state.listings = result.listings;

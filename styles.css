@@ -759,6 +759,42 @@ body.modal-open { overflow: hidden; }
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
+/* ==========================================================================
+   PWA · 홈 화면 앱 추가 배너
+   ========================================================================== */
+.pwa-banner {
+  position: fixed; left: 50%; bottom: 16px; transform: translate(-50%, 16px);
+  z-index: 150; display: flex; align-items: center; gap: 11px;
+  width: min(520px, calc(100% - 24px));
+  padding: 9px 10px 9px 9px;
+  background: linear-gradient(180deg, #16294B 0%, #0F1F38 100%);
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  border-radius: 12px;
+  box-shadow: 0 18px 44px -18px rgba(8, 18, 34, 0.72);
+  opacity: 0; pointer-events: none;
+  transition: opacity .28s ease, transform .28s ease;
+}
+.pwa-banner.show { opacity: 1; pointer-events: auto; transform: translate(-50%, 0); }
+.pwa-banner[hidden] { display: none; }
+.pwa-banner-icon { width: 42px; height: 42px; border-radius: 10px; flex: 0 0 auto; }
+.pwa-banner-copy { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 1px; word-break: keep-all; }
+.pwa-banner-copy b { color: #EBD9A6; font-size: 13.5px; letter-spacing: -.01em; }
+.pwa-banner-copy span { color: #C4CEDE; font-size: 12px; line-height: 1.45; }
+.pwa-banner-cta {
+  flex: 0 0 auto; height: 34px; padding: 0 14px; border-radius: 8px;
+  border: 1px solid #D4AF37; background: #D4AF37; color: #0F1F38;
+  font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap;
+}
+.pwa-banner-cta:hover { background: #E2C463; border-color: #E2C463; }
+.pwa-banner-close {
+  flex: 0 0 auto; width: 26px; height: 26px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 6px; background: transparent; color: #93A0B5; cursor: pointer;
+}
+.pwa-banner-close svg { width: 14px; height: 14px; }
+.pwa-banner-close:hover { color: #fff; }
+body.pwa-on .toast { bottom: 98px; }
+
 .mobile-bar { display: none; }
 .noscript { padding: 24px; text-align: center; background: #FBECEA; color: #7A2E28; font-size: 14px; }
 
@@ -830,6 +866,8 @@ body.modal-open { overflow: hidden; }
   .mobile-btn .ico { width: 16px; height: 16px; }
   body { padding-bottom: 74px; }
   .toast { bottom: 90px; }
+  .pwa-banner { bottom: calc(84px + env(safe-area-inset-bottom)); }
+  body.pwa-on .toast { bottom: calc(166px + env(safe-area-inset-bottom)); }
 }
 
 @media (max-width: 560px) {
