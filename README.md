@@ -204,11 +204,12 @@ var LEAD_ENDPOINT = '';   // 예: https://script.google.com/macros/s/xxxx/exec
 - **화면**: 매장 DB 카드의 `수정`·`삭제` 옆 **`물건카드`** 버튼 → 모달에서 원본 크게 보기·확대·첨부/교체. 새 매장 등록·수정 폼에서도 선택적으로 첨부할 수 있습니다.
 - **설정**: 관리자 **알림 설정** 탭의 `물건카드 연동` 카드에서 웹훅 주소와 연동 키(`CARD_SECRET`, 기본 `apcard-2026`)를 확인·저장합니다. `연결 테스트`는 `?action=ping`, `응답 미리 보기 ↗`는 브라우저 새 창에서 원본 JSON을 보여 줍니다(CORS 진단용).
 - **웹훅 규격** (`LEAD_ENDPOINT` = Google Apps Script):
-  - `GET ?action=getCard&id=AP-006&key=****` → `{ok:true, dataUrl:"data:image/jpeg;base64,...", updated, size}` 또는 `{ok:false, reason:"not_found"}`
+  - `GET ?action=getCard&id=AP-006&key=****` → `{ok:true, dataUrl:"data:image/jpeg;base64,...", updated, size}` 또는 `{ok:false, reason:"not_found"}`, `&callback=함수명`을 붙이면 JSONP(자바스크립트)로 응답
   - `POST {action:"saveCard", id:"AP-006", key:"****", dataUrl:"data:image/jpeg;base64,..."}` → 같은 이름 파일은 휴지통으로 옮기고 새 파일로 교체
   - `GET ?action=ping` → 서비스·폴더 접근 상태
 - **스크립트**: `docs/apps-script-property-cards.gs` — 기존 텔레그램 `doPost`는 그대로 두고 `[1]` 상수 + `doPost` 첫 줄 한 줄 + `[2]` 블록(doGet·헬퍼)만 붙이는 방식과, 통째로 쓰는 전체 템플릿(`[3]`)을 함께 담았습니다.
 - **이미지 축소**: 업로드 시 브라우저에서 긴 변 1600px · JPEG(품질 0.85)로 줄여 전송합니다(원본이 그보다 작으면 그대로).
+- **CORS 대비**: Apps Script 웹 앱 응답에 CORS 헤더가 없을 때를 대비해, 읽기는 `callback=` JSONP를 먼저 시도하고 안 되면 fetch로 물러납니다. 저장(POST)은 응답을 읽지 못해도 `getCard`로 실제 저장 여부를 확인한 뒤에만 다시 보냅니다.
 - **권한**: `CARD_SECRET`은 간단한 게이트입니다. 공개 저장소의 `admin.js`에 기본값이 들어 있으므로, 실제 운영에서는 관리자 화면에서 키를 바꾸고 스크립트의 `CARD_SECRET_KEY`도 같은 값으로 바꿔 주세요.
 
 ## 텔레그램 알림 연결 (배포 시)

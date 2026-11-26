@@ -2801,11 +2801,46 @@
     return '물건카드를 불러오지 못했습니다' + (reason ? ' (' + reason + ')' : '') + '.';
   }
 
-  function fetchCardData(code) {
+  /* ---- 웹훅 읽기: JSONP 먼저, 안 되면 fetch ----
+     Apps Script 웹 앱은 응답에 CORS 헤더가 붙지 않는 경우가 있어, 브라우저에서는
+     <script> 태그로 부를 수 있는 JSONP(callback=) 경로를 먼저 시도합니다.
+     (Code.gs의 doGet이 callback 이름을 받아 자바스크립트로 감싸줍니다.) */
+  function cardQueryString(action, extra, callbackName) {
     var cfg = cardConfig();
-    if (!cfg.endpoint || !code) return Promise.resolve({ ok: false, reason: 'no-endpoint' });
-    var url = cardFetchUrl('getCard', 'id=' + encodeURIComponent(code));
-    return fetch(url, { method: 'GET', cache: 'no-store' }).then(function (res) {
+    var q = 'action=' + encodeURIComponent(action) + '&key=' + encodeURIComponent(cfg.secret) + '&_t=' + Date.now();
+    if (extra) q += '&' + extra;
+    if (callbackName) q += '&callback=' + encodeURIComponent(callbackName);
+    return cfg.endpoint + (cfg.endpoint.indexOf('?') === -1 ? '?' : '&') + q;
+  }
+
+  function cardJsonpGet(action, extra) {
+    var cfg = cardConfig();
+    if (!cfg.endpoint) return Promise.resolve({ ok: false, reason: 'no-endpoint' });
+    return new Promise(function (resolve) {
+      var name = 'apCardCb_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+      var done = false;
+      var script = document.createElement('script');
+      var timer = setTimeout(function () { finish({ ok: false, reason: 'network' }); }, 15000);
+      function finish(data) {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        try { delete window[name]; } catch (e) { window[name] = null; }
+        if (script.parentNode) script.parentNode.removeChild(script);
+        resolve(data && typeof data === 'object' ? data : { ok: false, reason: 'bad_response' });
+      }
+      window[name] = finish;
+      script.onerror = function () { finish({ ok: false, reason: 'network' }); };
+      script.onload = function () { finish({ ok: false, reason: 'network' }); };
+      script.src = cardQueryString(action, extra, name);
+      document.head.appendChild(script);
+    });
+  }
+
+  function cardFetchGet(action, extra) {
+    var cfg = cardConfig();
+    if (!cfg.endpoint) return Promise.resolve({ ok: false, reason: 'no-endpoint' });
+    return fetch(cardQueryString(action, extra, ''), { method: 'GET', cache: 'no-store' }).then(function (res) {
       return res.text().then(function (t) {
         var body = safeParse(t);
         if (body && typeof body === 'object') return body;
@@ -2818,6 +2853,21 @@
     }).catch(function (err) {
       return { ok: false, reason: 'network', message: String((err && err.message) || err) };
     });
+  }
+
+  function cardGet(action, extra) {
+    return cardJsonpGet(action, extra).then(function (r) {
+      if (r && (r.ok || (r.reason && r.reason !== 'network' && r.reason !== 'bad_response'))) return r;
+      return cardFetchGet(action, extra).then(function (r2) {
+        if (r2 && (r2.ok || (r2.reason && r2.reason !== 'network' && r2.reason !== 'bad_response'))) return r2;
+        return r;
+      });
+    });
+  }
+
+  function fetchCardData(code) {
+    if (!cardConfig().endpoint || !code) return Promise.resolve({ ok: false, reason: 'no-endpoint' });
+    return cardGet('getCard', 'id=' + encodeURIComponent(code));
   }
 
   /* 이미지 저장. 응답을 읽지 못했을 때는 이미 저장됐는지 getCard로 먼저 확인한 뒤에만 다시 보냅니다. */
@@ -3157,26 +3207,25 @@
       var err = $('#cardFormError');
       if (err) err.hidden = true;
       if (res) { res.hidden = false; res.textContent = '연결을 확인하는 중…'; }
-      var url = cardFetchUrl('ping', '');
-      if (!url) {
+      if (!cardConfig().endpoint) {
         if (res) res.textContent = '웹훅 주소가 비어 있습니다.';
         return;
       }
-      fetch(url, { method: 'GET', cache: 'no-store' }).then(function (r) {
-        return r.text().then(function (t) { return { ok: r.ok, body: safeParse(t) || {} }; });
-      }).then(function (o) {
-        var b = o.body || {};
-        if (o.ok && b.ok) {
+      cardGet('ping', '').then(function (b) {
+        b = b || {};
+        if (b.ok) {
           if (res) res.textContent = '연결됨 · 물건카드 서비스가 응답했습니다' + (b.folderAccessible ? ' · 드라이브 폴더 접근 가능' : ' · 다만 드라이브 폴더에 접근하지 못했습니다(폴더 ID 확인 필요)');
           var status = $('#cardStatus');
           if (status) { status.textContent = b.folderAccessible ? '연결됨' : '폴더 확인 필요'; status.className = 'status-badge ' + (b.folderAccessible ? 'live' : 'closed'); }
-        } else if (b && b.reason === 'unknown_action') {
+        } else if (b.reason === 'unknown_action') {
           if (res) res.textContent = '웹훅은 응답하지만 물건카드 기능(doGet)이 아직 배포되지 않았습니다. Apps Script에 [2] 블록을 붙이고 새 버전으로 배포해 주세요.';
+        } else if (b.reason === 'no_doget' || b.reason === 'auth') {
+          if (res) res.textContent = cardReasonText(b) + ' (지금 응답: ' + b.reason + ')';
+        } else if (b.reason === 'network') {
+          if (res) res.textContent = '응답을 읽지 못했습니다. 위 [응답 미리 보기 ↗]를 누르면 브라우저 새 창에서 실제 응답을 볼 수 있습니다.';
         } else {
-          if (res) res.textContent = '연결하지 못했습니다. 주소·배포 액세스 권한(모든 사용자)을 확인해 주세요.';
+          if (res) res.textContent = '연결하지 못했습니다 (' + (b.reason || '알 수 없음') + '). 주소·배포 액세스 권한(모든 사용자)을 확인해 주세요.';
         }
-      }).catch(function () {
-        if (res) res.textContent = '연결하지 못했습니다. 주소·인터넷 연결·배포 액세스 권한을 확인해 주세요.';
       });
     });
 
