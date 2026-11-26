@@ -303,6 +303,26 @@
     writeStore(BRANCH_KEY, JSON.stringify(map));
   }
 
+  /* 지점명 비교용 정규화 — 모든 공백을 지우고 대소문자를 무시합니다.
+     '상명대점'과 '상명대 점'은 같은 지점명으로 봅니다. */
+  function normBranch(name) {
+    return String(name == null ? '' : name).replace(/\s+/g, '').toLowerCase();
+  }
+
+  /* 같은 담당 컨설턴트 안에서만 같은 비공개 지점명을 찾습니다.
+     담당자가 다르면 각자의 DB로 보므로 중복이 아닙니다. */
+  function findBranchListing(branchName, consultantId, excludeId) {
+    var key = normBranch(branchName);
+    if (!key) return null;
+    var owner = String(consultantId == null ? '' : consultantId).trim();
+    var found = state.listings.filter(function (L) {
+      if (excludeId && L.id === excludeId) return false;
+      if (normBranch(branchOf(L)) !== key) return false;
+      return String(consultantOf(L).id || '').trim() === owner;
+    })[0];
+    return found || null;
+  }
+
   /* 점포 데이터에 남기는 작성자 표기: '김현율 팀장 (hyunyul89)' */
   function authorLabel() {
     var a = currentAccount();
@@ -1093,7 +1113,10 @@
       $('#fRegion').value = '서울';
       $('#fCategory').value = '카페';
       $('#fPrivate').value = 'N';
+      /* 자동으로 붙인 번호라는 표시 — 사용자가 직접 고친 번호와 구분해
+         같은 담당자·같은 지점명 중복 체크를 할지 판단합니다. */
       $('#fCode').value = nextCode();
+      $('#fCode').setAttribute('data-auto', '1');
       ['#fDistrict', '#fBrand', '#fNote', '#fFloor', '#fPyeong', '#fDeposit', '#fPremium',
         '#fSales', '#fProfit', '#fMat', '#fLabor', '#fFixed', '#fEtc', '#fCheckNote', '#fPoints']
         .forEach(function (id) { var el = $(id); if (el) el.value = ''; });
@@ -1106,6 +1129,7 @@
       $('#fCategory').value = ['카페', '디저트', '음식점', '패스트푸드', '치킨'].indexOf(L.category) !== -1 ? L.category : '기타';
       $('#fPrivate').value = L.private_only ? 'Y' : 'N';
       $('#fCode').value = codeOf(L);
+      $('#fCode').removeAttribute('data-auto');
       $('#fDistrict').value = L.district || '';
       $('#fBrand').value = L.brand || '';
       /* 매장 규모: 층수·평수 칸에 나눠 넣고, 기존 문자열의 나머지 설명은 한줄평으로 옮긴다. */
@@ -1308,6 +1332,10 @@
         el.addEventListener('change', updatePublicPreview);
       }
     });
+    var codeInput = $('#fCode');
+    if (codeInput) {
+      codeInput.addEventListener('input', function () { codeInput.removeAttribute('data-auto'); });
+    }
     $('#storeForm').addEventListener('submit', onSaveStore);
   }
 
@@ -1383,13 +1411,6 @@
       return;
     }
 
-    /* 비공개 지점명은 관리자 전용 저장소에만 남깁니다. 고유번호가 바뀌면 새 번호로 옮깁니다. */
-    setBranch(code, val('#fBranch'));
-    if (existing) {
-      var prevCode = codeOf(existing);
-      if (prevCode && prevCode !== code) setBranch(prevCode, '');
-    }
-
     var meAcc = currentAccount();
     var owner = existing ? consultantOf(existing) : null;
     var consultantId = '';
@@ -1403,6 +1424,39 @@
       /* 컨설턴트는 본인이 등록한 매장만 담당으로 잡히고, 남의 매장을 수정할 때는 담당을 그대로 둡니다. */
       consultantId = (owner && owner.id) || (meAcc && meAcc.id) || DEFAULT_CONSULTANT_ID;
       consultantName = (owner && owner.name) || (meAcc && meAcc.name) || '김현율';
+    }
+
+    /* 같은 담당 컨설턴트 + 같은 비공개 지점명이면 새 번호로 중복 등록하지 않고
+       기존 AP-xxx 매장의 내용·수치만 업데이트합니다.
+       고유번호를 직접 적은 경우(사용자가 새 번호를 일부러 지정)와 담당자가 다른 경우는 그대로 신규 등록합니다. */
+    var branchText = val('#fBranch');
+    var branchMatched = false;
+    var codeField = $('#fCode');
+    var codeTyped = !!(codeField && codeField.getAttribute('data-auto') !== '1' && String(codeField.value || '').trim());
+    if (!existing && !codeTyped && normBranch(branchText)) {
+      var sameBranch = findBranchListing(branchText, consultantId, null);
+      if (sameBranch) {
+        var closedNote = (sameBranch.status === 'closed' || sameBranch.visible === false) ? ' (지금은 거래완료·비노출 상태입니다)' : '';
+        var askText = '이미 [' + codeOf(sameBranch) + ' · ' + branchOf(sameBranch) + '] 매장이 있습니다' + closedNote + '. 새 번호로 등록하지 않고 기존 매장을 최신 내용으로 업데이트할까요?';
+        if (!window.confirm(askText)) {
+          if (err) {
+            err.textContent = '등록을 중단했습니다. 기존 ' + codeOf(sameBranch) + ' 매장을 업데이트하려면 다시 저장하고 확인을 눌러 주세요. 같은 지점명으로 새 번호를 따로 만들어야 하면 고유번호 칸에 원하는 번호를 직접 적어 주세요.';
+            err.hidden = false;
+          }
+          return;
+        }
+        existing = sameBranch;
+        branchMatched = true;
+        owner = consultantOf(existing);
+        code = codeOf(existing);
+      }
+    }
+
+    /* 비공개 지점명은 관리자 전용 저장소에만 남깁니다. 고유번호가 바뀌면 새 번호로 옮깁니다. */
+    setBranch(code, branchText);
+    if (existing) {
+      var prevCode = codeOf(existing);
+      if (prevCode && prevCode !== code) setBranch(prevCode, '');
     }
 
     var listing = {
@@ -1461,7 +1515,11 @@
     closeForm();
     renderStats();
     renderStores();
-    toast(existing ? '매장을 수정했습니다. 사이트 목록에 반영됩니다.' : '새 매장을 등록했습니다. 사이트 목록에 반영됩니다.');
+    if (branchMatched) {
+      toast('이미 등록된 ' + code + ' 매장을 새 번호 없이 최신 내용으로 업데이트했습니다. 사이트 목록에 반영됩니다.');
+    } else {
+      toast(existing ? '매장을 수정했습니다. 사이트 목록에 반영됩니다.' : '새 매장을 등록했습니다. 사이트 목록에 반영됩니다.');
+    }
   }
 
   function findListing(id) {
@@ -1503,6 +1561,9 @@
     { key: 'note', label: '특징한줄평', required: false,
       aliases: ['한줄특징', '한 줄 특징', '한줄 특징', '특징', '특징·한줄평', '특징 한줄평'] },
     { key: 'private', label: '비공개전용(Y/N)', required: false, aliases: ['비공개전용', '비공개 전용'] },
+    /* 관리자 전용 비공개 지점명 — 같은 담당 컨설턴트 안에서 기존 매장을 찾는 열쇠 (선택 열) */
+    { key: 'branch', label: '비공개지점명', required: false,
+      aliases: ['비공개 지점명', '지점명', '매장지점명', '매장 지점명', '비공개지점'] },
     /* 예전 양식 호환용 (양식 파일에는 넣지 않는다) */
     { key: 'profit_min', label: '예상수익최소(만원)', required: false, template: false,
       aliases: ['예상수익최소', '예상수익 최소(만원)', '예상순수익최소(만원)', '예상수익최소금액(만원)'] },
@@ -1514,9 +1575,9 @@
 
   var TEMPLATE_ROWS = [
     ['AP-001', '서울 마포구', '카페', '메가커피', '1층', '13', '1000', '20000', '3200', '1250', '34', '520', '180', '115',
-      '대학가 인접 상권 · 평일 08:00~19:30 영업', 'N'],
+      '대학가 인접 상권 · 평일 08:00~19:30 영업', 'N', ''],
     ['AP-002', '경기 성남시 분당구', '디저트', '설빙', '1층', '15', '1500', '15000', '2600', '900', '36', '620', '370', '520',
-      '주차 2대 · 매일 09:00~01:30 영업', 'Y']
+      '주차 2대 · 매일 09:00~01:30 영업', 'Y', '']
   ];
 
   function csvField(v) {
@@ -1695,7 +1756,7 @@
 
   function buildBulkRow(cells, map, lineNo) {
     var out = {
-      line: lineNo, ok: false, errors: [], notes: [], listing: null,
+      line: lineNo, ok: false, errors: [], notes: [], listing: null, branch: '', action: 'new', targetId: '',
       view: { code: '', area: '', category: '', brand: '', spec: '', cost: '', sales: '', profit: '' }
     };
     function get(key) {
@@ -1839,6 +1900,9 @@
 
     var areaNote = get('note') || '상담 시 상권 설명';
 
+    /* 비공개 지점명(관리자 전용) — 같은 담당 컨설턴트 안에서 기존 매장을 찾는 데 씁니다. */
+    out.branch = get('branch').replace(/\s+/g, ' ').trim();
+
     out.view.cost = (deposit || premium) ? wonLabel(deposit + premium) : '-';
     out.view.sales = sales > 0 ? wonLabel(sales) : '-';
     out.view.profit = pAvg > 0 ? comma(pAvg) : '-';
@@ -1906,6 +1970,7 @@
     var btn = $('#btnBulkCommit');
     if (btn) { btn.disabled = true; btn.textContent = '일괄 등록하기'; }
     var info = $('#bulkFileInfo'); if (info) info.textContent = '';
+    var plan = $('#bulkPlan'); if (plan) plan.textContent = '';
     var legacy = $('#bulkLegacy'); if (legacy) { legacy.hidden = true; legacy.textContent = ''; }
     var file = $('#bulkFile'); if (file) file.value = '';
     var summary = $('#bulkTotalRows'); if (summary) summary.textContent = '0';
@@ -2004,8 +2069,33 @@
     var usedCodes = {};
     state.listings.forEach(function (L) { var c = codeOf(L); if (c) usedCodes[c] = true; });
     var seq = codeSeq();
+    var bulkMe = currentAccount();
+    var bulkOwnerId = (bulkMe && bulkMe.id) || DEFAULT_CONSULTANT_ID;
+    /* 같은 파일 안에서 같은 지점명이 다시 나오면 앞 행이 등록·업데이트한 매장을 대상으로 삼습니다. */
+    var fileBranch = {};
     rows.forEach(function (row) {
       if (!row.ok || !row.listing) return;
+      row.action = 'new';
+      row.targetId = '';
+      var key = normBranch(row.branch);
+      var target = key ? (fileBranch[key] || findBranchListing(row.branch, bulkOwnerId, null)) : null;
+      if (target) {
+        var targetCode = codeOf(target) || target.code || '';
+        if (row.listing.code && row.listing.code !== targetCode) {
+          row.notes.push('고유번호 ' + row.listing.code + ' 대신 기존 매장 번호 ' + targetCode + '로 업데이트합니다.');
+        }
+        row.notes.push('같은 담당자·같은 비공개 지점명(' + row.branch + ')의 기존 매장 ' + targetCode + '을(를) 새 번호 없이 업데이트합니다.');
+        if (target.status === 'closed' || target.visible === false) {
+          row.notes.push('기존 매장이 거래완료·비노출 상태입니다. 내용만 업데이트되고 사이트에는 보이지 않습니다.');
+        }
+        row.action = target.id ? 'update' : 'update-new';
+        row.targetId = target.id || '';
+        row.listing.code = targetCode;
+        row.view.code = targetCode;
+        if (target.id) usedCodes[targetCode] = true;
+        fileBranch[key] = target;
+        return;
+      }
       var rowCode = row.listing.code;
       if (rowCode && usedCodes[rowCode]) {
         row.notes.push('고유번호 ' + rowCode + '는 이미 쓰고 있어 새 번호로 붙입니다.');
@@ -2020,6 +2110,7 @@
       usedCodes[rowCode] = true;
       row.listing.code = rowCode;
       row.view.code = rowCode;
+      if (key) fileBranch[key] = { id: '', code: rowCode };
     });
     rows.forEach(function (row) {
       if (!row.ok || !row.listing) return;
@@ -2036,6 +2127,14 @@
     renderBulkPreview();
   }
 
+  /* CSV 결과 요약 문구 — '신규 N건 · 업데이트 M건' */
+  function bulkPlanLabel(rows) {
+    var okRows = rows.filter(function (r) { return r.ok; });
+    var newCount = okRows.filter(function (r) { return r.action !== 'update' && r.action !== 'update-new'; }).length;
+    var updCount = okRows.filter(function (r) { return r.action === 'update'; }).length;
+    return { newCount: newCount, updCount: updCount, label: '신규 ' + newCount + '건 · 업데이트 ' + updCount + '건' };
+  }
+
   function renderBulkPreview() {
     var bulk = state.bulk;
     if (!bulk) return;
@@ -2047,6 +2146,9 @@
     $('#bulkOkRows').textContent = String(okRows.length);
     $('#bulkErrRows').textContent = String(badCount);
     $('#bulkFileInfo').textContent = bulk.fileName + ' · ' + bulk.encoding + ' · ' + bulk.rows.length + '행';
+    var plan = bulkPlanLabel(bulk.rows);
+    var planEl = $('#bulkPlan');
+    if (planEl) planEl.textContent = plan.label;
 
     $('#bulkRows').innerHTML = bulk.rows.map(function (r) {
       var note;
@@ -2057,10 +2159,16 @@
       } else {
         note = '<span class="bulk-note">-</span>';
       }
+      var badge = '<span class="status-badge error">오류</span>';
+      if (r.ok) {
+        if (r.action === 'update') badge = '<span class="status-badge sample">업데이트</span>';
+        else if (r.action === 'update-new') badge = '<span class="status-badge sample">같은 파일 통합</span>';
+        else badge = '<span class="status-badge live">신규</span>';
+      }
       return '' +
         '<tr class="' + (r.ok ? '' : 'is-bad') + '">' +
           '<td data-label="행" class="bulk-no">' + r.line + '</td>' +
-          '<td data-label="상태"><span class="status-badge ' + (r.ok ? 'live' : 'error') + '">' + (r.ok ? '정상' : '오류') + '</span></td>' +
+          '<td data-label="상태">' + badge + '</td>' +
           '<td data-label="고유번호" class="code-cell">' + esc(r.view.code || '-') + '</td>' +
           '<td data-label="지역">' + esc(r.view.area || '-') + '</td>' +
           '<td data-label="업종">' + esc(r.view.category || '-') + '</td>' +
@@ -2088,24 +2196,65 @@
     var stamp = Date.now().toString(36);
     var bulkMe = currentAccount();
     var bulkOwner = { id: (bulkMe && bulkMe.id) || DEFAULT_CONSULTANT_ID, name: (bulkMe && bulkMe.name) || '김현율' };
-    var added = okRows.map(function (r, i) {
+    var byId = {};
+    state.listings.forEach(function (L) { byId[L.id] = L; });
+    var fresh = [];
+    var freshByCode = {};
+    var added = 0, updated = 0;
+
+    okRows.forEach(function (r) {
       var L = {};
       for (var k in r.listing) {
         if (Object.prototype.hasOwnProperty.call(r.listing, k)) L[k] = r.listing[k];
       }
-      L.id = 'ap-' + stamp + '-' + pad2(i + 1);
-      L.consultant_id = bulkOwner.id;
-      L.consultant_name = bulkOwner.name;
-      L.registered_by = authorLabel();
-      L.updated_by = authorLabel();
-      return L;
+      var base = r.targetId ? byId[r.targetId] : null;
+      var keepCode = base ? codeOf(base) : String(r.listing.code || '');
+      if (base) {
+        /* 기존 AP-xxx 번호·상태·작성자·비공개 메모는 유지하고 내용·수치만 최신으로 업데이트 */
+        L.id = base.id;
+        L.code = keepCode;
+        L.status = base.status === 'closed' ? 'closed' : (base.status || 'active');
+        L.visible = base.visible !== false;
+        L.registered_by = base.registered_by || '';
+        L.private_deals = base.private_deals ? base.private_deals : [];
+        L.consultant_id = base.consultant_id || bulkOwner.id;
+        L.consultant_name = base.consultant_name || bulkOwner.name;
+        L.updated_by = authorLabel();
+        byId[base.id] = L;
+        updated++;
+      } else if (freshByCode[keepCode]) {
+        /* 같은 파일 안에서 같은 지점명이 다시 나오면 나중 행 내용으로 합칩니다. */
+        var idx = fresh.indexOf(freshByCode[keepCode]);
+        L.id = freshByCode[keepCode].id;
+        L.code = keepCode;
+        L.consultant_id = bulkOwner.id;
+        L.consultant_name = bulkOwner.name;
+        L.registered_by = authorLabel();
+        L.updated_by = authorLabel();
+        L.private_deals = L.private_deals || [];
+        fresh[idx] = L;
+        freshByCode[keepCode] = L;
+      } else {
+        L.id = 'ap-' + stamp + '-' + pad2(fresh.length + 1);
+        L.code = keepCode;
+        L.consultant_id = bulkOwner.id;
+        L.consultant_name = bulkOwner.name;
+        L.registered_by = authorLabel();
+        L.updated_by = authorLabel();
+        L.private_deals = L.private_deals || [];
+        fresh.push(L);
+        freshByCode[keepCode] = L;
+        added++;
+      }
+      if (r.branch) setBranch(keepCode, r.branch);
     });
-    state.listings = added.concat(state.listings);
+
+    state.listings = fresh.concat(state.listings.map(function (L) { return byId[L.id] || L; }));
     persist();
     renderStats();
     renderStores();
     closeBulk();
-    toast(added.length + '곳을 일괄 등록했습니다. 사이트 점포 목록에 바로 반영됩니다.');
+    toast('신규 ' + added + '건 · 업데이트 ' + updated + '건을 반영했습니다. 사이트 점포 목록에 바로 반영됩니다.');
   }
 
   function initBulk() {
