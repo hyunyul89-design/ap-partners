@@ -327,6 +327,25 @@
             <p class="admin-hint">최소·최대 대신 <b>평균치 하나</b>만 적으면 됩니다. 재료비는 매출 대비 %, 인건비·매장 고정비·기타잡비는 월 금액(만 원)으로 넣으면 금액과 비중, 사이트 막대 길이가 자동으로 계산됩니다.</p>
           </fieldset>
 
+          <fieldset class="admin-card-field">
+            <legend>물건카드 원본 (선택)</legend>
+            <div class="admin-grid">
+              <div style="grid-column: 1 / -1;">
+                <span class="admin-spec-title">창업물건 보고서 · 현장 사진</span>
+                <div class="admin-card-row">
+                  <button type="button" class="btn btn-quiet" id="fCardPick">이미지 선택</button>
+                  <input type="file" id="fCardFile" accept="image/*" hidden />
+                  <span class="admin-card-name" id="fCardName">선택 안 함</span>
+                </div>
+                <div class="admin-card-preview" id="fCardPreview" hidden>
+                  <img id="fCardImage" alt="물건카드 미리보기" />
+                  <button type="button" class="admin-card-clear" id="fCardClear" aria-label="선택한 이미지 지우기">✕</button>
+                </div>
+                <small class="field-note">저장하면 <b>현율 님의 비공개 Google Drive</b>(AP파트너_물건카드_비공개)에 <code>AP-000.jpg</code>로 올라갑니다. 공개 사이트에는 게시되지 않습니다. 나중에 카드의 <b>물건카드</b> 버튼으로도 첨부·교체할 수 있습니다.</small>
+              </div>
+            </div>
+          </fieldset>
+
           <fieldset>
             <legend>특징 · 확인 포인트</legend>
             <div class="admin-grid">
@@ -502,12 +521,49 @@
       <section id="panelNotify" role="tabpanel" aria-labelledby="tabNotify" hidden>
         <div class="admin-panel-head">
           <div>
-            <h2>텔레그램 알림 설정</h2>
-            <p>손님 DB와 양도 의뢰가 접수될 때 텔레그램으로 바로 받아보기 위한 설정입니다.</p>
+            <h2>알림 · 물건카드 연동 설정</h2>
+            <p>손님 DB·양도 의뢰 텔레그램 알림과 물건카드(비공개 Drive) 연결을 설정합니다.</p>
           </div>
         </div>
 
         <div class="settings-grid">
+          <form class="admin-form settings-card" id="cardForm" novalidate>
+            <div class="admin-form-head">
+              <h3>물건카드 연동</h3>
+              <span class="status-badge closed" id="cardStatus">미확인</span>
+            </div>
+            <div class="admin-grid two">
+              <label style="grid-column: 1 / -1;">웹훅 주소 (Apps Script /exec)
+                <input id="cardEndpoint" type="url" autocomplete="off" spellcheck="false" placeholder="https://script.google.com/macros/s/.../exec" />
+              </label>
+              <label>물건카드 연동 키 (CARD_SECRET)
+                <input id="cardSecret" type="text" autocomplete="off" spellcheck="false" placeholder="apcard-2026" />
+              </label>
+              <label>드라이브 폴더
+                <input id="cardFolder" type="text" readonly value="AP파트너_물건카드_비공개" />
+              </label>
+            </div>
+            <p class="admin-hint">기본 키는 <code>apcard-2026</code> 입니다. Apps Script의 <code>CARD_SECRET_KEY</code> 값과 같아야 물건카드를 읽고 저장할 수 있습니다. 키를 바꾸면 스크립트도 같은 값으로 고쳐 주세요.</p>
+            <p class="admin-error" id="cardFormError" hidden></p>
+            <p class="admin-hint" id="cardFormResult" hidden></p>
+            <div class="admin-form-actions">
+              <button class="btn btn-gold" type="submit">설정 저장</button>
+              <button class="btn btn-quiet" type="button" id="cardTest">연결 테스트</button>
+              <a class="btn btn-quiet" id="cardOpenRaw" href="#" target="_blank" rel="noopener">응답 미리 보기 ↗</a>
+              <button class="btn btn-quiet" type="button" id="cardReset">기본값으로</button>
+            </div>
+          </form>
+
+          <div class="settings-card preview">
+            <h3>물건카드 보관 위치</h3>
+            <ul class="perm-list">
+              <li><b>비공개 Drive</b><span>AP파트너_물건카드_비공개 폴더 · 파일 이름 AP-001.jpg ~ AP-012.jpg</span></li>
+              <li><b>공개 사이트</b><span>이미지는 올리지 않습니다. 관리자 페이지가 웹훅으로 <code>base64</code>를 받아 화면에만 표시합니다.</span></li>
+              <li><b>교체</b><span>같은 고유번호로 다시 올리면 기존 파일은 휴지통으로 옮겨지고 새 파일로 바뀝니다.</span></li>
+            </ul>
+            <p class="admin-hint">연결이 안 되면 Apps Script [배포 관리]에서 액세스 권한이 <b>모든 사용자</b>인지, 그리고 스크립트에 <code>doGet</code>·<code>CARD_SECRET_KEY</code>가 들어 있는지 확인해 주세요.</p>
+          </div>
+
           <form class="admin-form settings-card" id="tgForm" novalidate>
             <div class="admin-form-head">
               <h3>봇 연결</h3>
@@ -581,6 +637,44 @@
         <button class="btn btn-quiet" type="button" data-close-pw>취소</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- ============ 물건카드 (비공개 Drive) ============ -->
+<div class="admin-modal card-modal" id="cardModal" hidden role="dialog" aria-modal="true" aria-labelledby="cardModalTitle">
+  <div class="admin-modal-backdrop" data-close-card></div>
+  <div class="admin-modal-card" role="document">
+    <div class="admin-modal-head">
+      <div>
+        <p class="admin-modal-eyebrow">PROPERTY CARD</p>
+        <h3 id="cardModalTitle">물건카드</h3>
+        <p class="admin-modal-who" id="cardModalWho">-</p>
+      </div>
+      <button type="button" class="admin-modal-close" data-close-card aria-label="닫기">✕</button>
+    </div>
+
+    <div class="card-view" id="cardView">
+      <p class="card-view-loading" id="cardLoading">불러오는 중…</p>
+      <div class="card-view-empty" id="cardEmpty" hidden>
+        <strong>등록된 물건카드 없음</strong>
+        <span>이 매물은 아직 물건카드 원본이 첨부되지 않았습니다. 아래 <b>물건카드 첨부</b>로 바로 올릴 수 있습니다.</span>
+      </div>
+      <figure class="card-view-figure" id="cardFigure" hidden>
+        <img id="cardImage" alt="물건카드 원본 이미지" />
+      </figure>
+    </div>
+
+    <p class="card-view-meta" id="cardMeta" hidden></p>
+    <p class="admin-error" id="cardError" hidden></p>
+    <p class="admin-hint" id="cardProgress" hidden></p>
+
+    <div class="card-view-actions">
+      <button class="btn btn-gold" type="button" id="cardPick">물건카드 첨부 · 교체</button>
+      <button class="btn btn-quiet" type="button" id="cardZoom" hidden>확대해서 보기</button>
+      <button class="btn btn-quiet" type="button" data-close-card>닫기</button>
+    </div>
+    <input type="file" id="cardFile" accept="image/*" hidden />
+    <p class="admin-hint">이미지는 비공개 Google Drive에만 저장되고, 공개 사이트에는 올라가지 않습니다. 긴 변 1600px · JPEG로 자동 축소해 올립니다.</p>
   </div>
 </div>
 

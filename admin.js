@@ -53,6 +53,17 @@
   var SELL_KEY = 'apPartnerSellRequests';
   var TG_KEY = 'apTelegramConfig';
 
+  /* ---------------- 물건카드 (비공개 Google Drive) ----------------
+     원본 이미지는 현율 님 구글 계정의 비공개 폴더(AP파트너_물건카드_비공개)에만 두고,
+     관리자 화면은 LEAD_ENDPOINT(Apps Script)의 getCard / saveCard 로만 읽고 씁니다.
+     공개 저장소(site/)에는 이미지를 올리지 않습니다. */
+  var CARD_CONFIG_KEY = 'apPropertyCardConfig';
+  var CARD_ENDPOINT_DEFAULT = 'https://script.google.com/macros/s/AKfycby46wERwxPPkkGeOXVO0zyerX4DWgua0tqBRbtgN3eh-aDJGLJ7ggNewUUY8sTl7EGHUA/exec';
+  var CARD_SECRET_DEFAULT = 'apcard-2026';
+  var CARD_FOLDER_LABEL = 'AP파트너_물건카드_비공개';
+  var CARD_MAX_SIDE = 1600;
+  var CARD_CACHE_MS = 60000;
+
   var state = {
     accounts: [],
     listings: [],
@@ -68,7 +79,11 @@
     /* 매장 DB 필터 */
     storeFilters: { q: '', region: '', category: '', status: '', consultant: '' },
     /* 텔레그램 알림의 admin.html?id=AP-xxx 딥링크 */
-    deepCode: ''
+    deepCode: '',
+    /* 물건카드: 고유번호별 조회 결과 캐시 · 모달 상태 · 새 매장 폼에서 고른 이미지 */
+    cards: {},
+    card: { code: '', listingId: '', status: 'idle', dataUrl: '', updated: '', zoom: false, busy: false },
+    formCard: null
   };
 
   /* ---------------- utils ---------------- */
@@ -1162,6 +1177,7 @@
     updateTotals();
     updateSpecPreview();
     renderConsultantField(L);
+    clearFormCard();
     var branchInput = $('#fBranch');
     if (branchInput) branchInput.value = L ? branchOf(L) : '';
     updatePublicPreview();
@@ -1277,6 +1293,7 @@
   function closeForm() {
     $('#storeForm').hidden = true;
     state.editingId = null;
+    clearFormCard();
   }
 
   function updateTotals() {
@@ -1341,6 +1358,7 @@
 
   function onSaveStore(e) {
     e.preventDefault();
+    var formCard = state.formCard;
     var existing = state.editingId ? findListing(state.editingId) : null;
     var region = val('#fRegion');
     var district = val('#fDistrict');
@@ -1519,6 +1537,19 @@
       toast('이미 등록된 ' + code + ' 매장을 새 번호 없이 최신 내용으로 업데이트했습니다. 사이트 목록에 반영됩니다.');
     } else {
       toast(existing ? '매장을 수정했습니다. 사이트 목록에 반영됩니다.' : '새 매장을 등록했습니다. 사이트 목록에 반영됩니다.');
+    }
+
+    /* 폼에서 고른 물건카드는 매장 저장이 끝난 뒤 고유번호(AP-000)로 비공개 Drive에 올립니다. */
+    if (formCard && formCard.dataUrl && code) {
+      saveCardRemote(code, formCard.dataUrl).then(function (res) {
+        if (res && res.ok) {
+          var body = (res.body && res.body.ok) ? res.body : {};
+          state.cards[code] = { ok: true, dataUrl: formCard.dataUrl, updated: body.updated || new Date().toISOString(), size: body.size || formCard.bytes || 0, ts: Date.now() };
+          toast(code + ' 물건카드를 비공개 Drive에 저장했습니다.');
+        } else {
+          toast(code + ' 매장은 저장했지만 물건카드는 올리지 못했습니다. 카드의 [물건카드]에서 다시 시도해 주세요.');
+        }
+      });
     }
   }
 
@@ -2428,6 +2459,7 @@
             '<option value="closed"' + (closed ? ' selected' : '') + '>거래완료 · 비노출</option>' +
           '</select>' +
           '<div class="row-actions">' +
+            '<button type="button" class="card" data-card="' + esc(L.id) + '" aria-label="' + esc((L.brand || '') + ' 물건카드 보기·첨부') + '">물건카드</button>' +
             '<button type="button" class="gold" data-edit="' + esc(L.id) + '">수정</button>' +
             '<button type="button" class="danger" data-del="' + esc(L.id) + '">삭제</button>' +
           '</div>' +
@@ -2449,6 +2481,12 @@
   }
 
   function bindStoreCardActions(wrap) {
+    $all('[data-card]', wrap).forEach(function (b) {
+      b.addEventListener('click', function () {
+        var L = findListing(b.getAttribute('data-card'));
+        if (L) openCardModal(L);
+      });
+    });
     $all('[data-edit]', wrap).forEach(function (b) {
       b.addEventListener('click', function () {
         var L = findListing(b.getAttribute('data-edit'));
@@ -2719,6 +2757,438 @@
     }).join('');
   }
 
+  /* ---------------- 물건카드 (비공개 Google Drive) ----------------
+     관리자 페이지는 이미지를 직접 보관하지 않고, Apps Script 웹훅(LEAD_ENDPOINT)에
+     action=getCard / action=saveCard 로 요청해 현율 님 드라이브 폴더와 주고받습니다. */
+  function cardConfig() {
+    var cfg = safeParse(readStore(CARD_CONFIG_KEY));
+    if (!cfg || typeof cfg !== 'object') cfg = {};
+    return {
+      endpoint: String(cfg.endpoint || CARD_ENDPOINT_DEFAULT).trim(),
+      secret: String(cfg.secret == null ? CARD_SECRET_DEFAULT : cfg.secret),
+      stored: !!(cfg.endpoint || cfg.secret),
+      updated_at: cfg.updated_at || ''
+    };
+  }
+
+  function saveCardConfig(endpoint, secret) {
+    var data = { endpoint: String(endpoint || '').trim(), secret: String(secret || ''), updated_at: new Date().toISOString() };
+    writeStore(CARD_CONFIG_KEY, JSON.stringify(data));
+    return cardConfig();
+  }
+
+  function cardFetchUrl(action, extra) {
+    var cfg = cardConfig();
+    if (!cfg.endpoint) return '';
+    var q = 'action=' + encodeURIComponent(action) + '&key=' + encodeURIComponent(cfg.secret) + '&_t=' + Date.now();
+    if (extra) q += '&' + extra;
+    return cfg.endpoint + (cfg.endpoint.indexOf('?') === -1 ? '?' : '&') + q;
+  }
+
+  /* 서버 응답을 읽지 못한 경우(CORS·네트워크)와 서버가 준 실패를 구분해서 돌려줍니다. */
+  function cardReasonText(r) {
+    var reason = (r && r.reason) || '';
+    if (reason === 'unauthorized') return '연동 키가 Apps Script의 CARD_SECRET_KEY와 다릅니다. [알림 설정 → 물건카드 연동]에서 키를 맞춰 주세요.';
+    if (reason === 'folder_unavailable') return 'Drive 폴더(AP파트너_물건카드_비공개)를 찾을 수 없습니다. 폴더 ID와 스크립트 액세스 권한을 확인해 주세요.';
+    if (reason === 'not_found') return '등록된 물건카드 없음';
+    if (reason === 'too_large') return '이미지가 너무 큽니다. 8MB 이하로 올려 주세요.';
+    if (reason === 'bad_data_url') return '이미지 형식을 읽지 못했습니다. jpg·png 파일로 다시 시도해 주세요.';
+    if (reason === 'bad_id') return '물건카드 번호(AP-000)를 확인해 주세요.';
+    if (reason === 'no-endpoint') return '웹훅 주소가 비어 있습니다. [알림 설정 → 물건카드 연동]에서 주소를 저장해 주세요.';
+    if (reason === 'no_doget') return 'Apps Script에 물건카드 조회(doGet)가 아직 배포되지 않았습니다. docs/apps-script-property-cards.gs의 [2] 블록을 붙이고 새 버전으로 배포해 주세요.';
+    if (reason === 'auth') return 'Apps Script 배포가 공개되지 않았습니다. [배포 관리]에서 액세스 권한을 모든 사용자로 바꿔 주세요.';
+    if (reason === 'network') return '웹훅에 연결하지 못했습니다. 주소·인터넷 연결, Apps Script 배포 액세스 권한(모든 사용자)을 확인해 주세요.';
+    return '물건카드를 불러오지 못했습니다' + (reason ? ' (' + reason + ')' : '') + '.';
+  }
+
+  function fetchCardData(code) {
+    var cfg = cardConfig();
+    if (!cfg.endpoint || !code) return Promise.resolve({ ok: false, reason: 'no-endpoint' });
+    var url = cardFetchUrl('getCard', 'id=' + encodeURIComponent(code));
+    return fetch(url, { method: 'GET', cache: 'no-store' }).then(function (res) {
+      return res.text().then(function (t) {
+        var body = safeParse(t);
+        if (body && typeof body === 'object') return body;
+        /* 아직 doGet이 없는 스크립트는 HTML 안내문(HTTP 200)을 돌려줍니다. */
+        if (/Script function not found/i.test(t)) return { ok: false, reason: 'no_doget' };
+        if (/\bdoGet\b/i.test(t) && /(없|찾을 수 없|not found)/i.test(t)) return { ok: false, reason: 'no_doget' };
+        if (/accounts\.google\.com|Google \uACC4\uC815\uC73C\uB85C \uB85C\uADF8\uC778/i.test(t)) return { ok: false, reason: 'auth' };
+        return { ok: false, reason: res.ok ? 'bad_response' : ('HTTP ' + res.status) };
+      });
+    }).catch(function (err) {
+      return { ok: false, reason: 'network', message: String((err && err.message) || err) };
+    });
+  }
+
+  /* 이미지 저장. 응답을 읽지 못했을 때는 이미 저장됐는지 getCard로 먼저 확인한 뒤에만 다시 보냅니다. */
+  function saveCardRemote(code, dataUrl) {
+    var cfg = cardConfig();
+    if (!cfg.endpoint) return Promise.resolve({ ok: false, reason: 'no-endpoint' });
+    var body = JSON.stringify({ action: 'saveCard', id: code, key: cfg.secret, dataUrl: dataUrl, saved_at: new Date().toISOString() });
+    return fetch(cfg.endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: body
+    }).then(function (res) {
+      return res.text().then(function (t) {
+        var j = safeParse(t);
+        if (j && j.ok) return { ok: true, body: j };
+        if (j) return { ok: false, reason: j.reason || ('HTTP ' + res.status) };
+        return { ok: false, reason: 'HTTP ' + res.status };
+      });
+    }).catch(function () {
+      return fetchCardData(code).then(function (check) {
+        if (check && check.ok && check.dataUrl === dataUrl) return { ok: true, body: check, verified: true };
+        return fetch(cfg.endpoint, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: body
+        }).then(function () {
+          return { ok: true, uncertain: true };
+        }).catch(function (err2) {
+          return { ok: false, reason: 'network', message: String((err2 && err2.message) || err2) };
+        });
+      });
+    });
+  }
+
+  /* 고른 사진을 긴 변 1600px · JPEG로 축소해 data URL로 만듭니다(원본이 작으면 그대로). */
+  function imageFileToDataUrl(file, maxSide) {
+    return new Promise(function (resolve, reject) {
+      if (!file) { reject(new Error('파일이 없습니다.')); return; }
+      if (!/^image\//i.test(String(file.type || ''))) { reject(new Error('이미지 파일이 아닙니다.')); return; }
+      var reader = new FileReader();
+      reader.onerror = function () { reject(new Error('파일을 읽지 못했습니다.')); };
+      reader.onload = function () {
+        var img = new Image();
+        img.onerror = function () { reject(new Error('이미지를 열지 못했습니다. jpg·png 파일로 다시 시도해 주세요.')); };
+        img.onload = function () {
+          var w = img.naturalWidth || img.width;
+          var h = img.naturalHeight || img.height;
+          var limit = maxSide || CARD_MAX_SIDE;
+          var scale = Math.min(1, limit / Math.max(w, h));
+          var tw = Math.max(1, Math.round(w * scale));
+          var th = Math.max(1, Math.round(h * scale));
+          var out = String(reader.result || '');
+          try {
+            var canvas = document.createElement('canvas');
+            canvas.width = tw;
+            canvas.height = th;
+            var ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, tw, th);
+            ctx.drawImage(img, 0, 0, tw, th);
+            out = canvas.toDataURL('image/jpeg', 0.85);
+          } catch (e) { /* 캔버스를 못 쓰면 원본 data URL을 그대로 */ }
+          resolve({ dataUrl: out, width: tw, height: th, name: file.name || '', bytes: Math.round(out.length * 0.75) });
+        };
+        img.src = String(reader.result || '');
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function cardUpdatedLabel(iso) {
+    if (!iso) return '';
+    try { return kst(iso, true); } catch (e) { return ''; }
+  }
+
+  function renderCardModal() {
+    var st = state.card;
+    var loading = $('#cardLoading');
+    var empty = $('#cardEmpty');
+    var figure = $('#cardFigure');
+    var meta = $('#cardMeta');
+    var err = $('#cardError');
+    var zoom = $('#cardZoom');
+    var img = $('#cardImage');
+    if (!loading) return;
+    loading.hidden = st.status !== 'loading';
+    empty.hidden = st.status !== 'none';
+    figure.hidden = st.status !== 'ok';
+    if (err) err.hidden = true;
+    if (zoom) {
+      zoom.hidden = st.status !== 'ok';
+      zoom.textContent = st.zoom ? '화면에 맞춰 보기' : '확대해서 보기';
+    }
+    if (figure) figure.classList[st.zoom ? 'add' : 'remove']('is-zoom');
+    if (img && st.status === 'ok' && img.getAttribute('src') !== st.dataUrl) img.src = st.dataUrl;
+    if (meta) {
+      if (st.status === 'ok') {
+        var bits = [st.code];
+        if (st.updated) bits.push(cardUpdatedLabel(st.updated) + ' 갱신');
+        if (st.size) bits.push(Math.max(1, Math.round(st.size / 1024)) + 'KB');
+        bits.push('비공개 Drive 원본');
+        meta.textContent = bits.join(' · ');
+        meta.hidden = false;
+      } else {
+        meta.hidden = true;
+      }
+    }
+  }
+
+  function showCardError(msg) {
+    var err = $('#cardError');
+    if (!err) return;
+    err.textContent = msg;
+    err.hidden = false;
+  }
+
+  function cardProgress(msg) {
+    var el = $('#cardProgress');
+    if (!el) return;
+    if (!msg) { el.hidden = true; el.textContent = ''; return; }
+    el.textContent = msg;
+    el.hidden = false;
+  }
+
+  function openCardModal(L) {
+    var modal = $('#cardModal');
+    if (!modal || !L) return;
+    var code = codeOf(L);
+    state.card = { code: code, listingId: L.id, status: 'loading', dataUrl: '', updated: '', size: 0, zoom: false, busy: false };
+    var title = $('#cardModalTitle');
+    if (title) title.textContent = 'No. ' + (code || '-') + ' 물건카드';
+    var who = $('#cardModalWho');
+    if (who) {
+      var branch = branchOf(L);
+      who.textContent = [L.brand || '', L.area || '', branch ? '[' + branch + ']' : ''].filter(Boolean).join(' · ');
+    }
+    cardProgress('');
+    modal.hidden = false;
+    renderCardModal();
+    refreshCard(code, true);
+  }
+
+  function closeCardModal() {
+    var modal = $('#cardModal');
+    if (modal) modal.hidden = true;
+    state.card = { code: '', listingId: '', status: 'idle', dataUrl: '', updated: '', size: 0, zoom: false, busy: false };
+    cardProgress('');
+  }
+
+  /* 캐시가 있으면 바로 보여 주면서, 뒤에서 최신으로 갱신합니다. */
+  function refreshCard(code, useCache) {
+    var cached = state.cards[code];
+    if (useCache && cached && (Date.now() - cached.ts) < CARD_CACHE_MS) {
+      applyCardResult(code, cached);
+      return Promise.resolve(cached);
+    }
+    if (state.card.code === code) {
+      state.card.status = 'loading';
+      state.card.dataUrl = '';
+      renderCardModal();
+    }
+    return fetchCardData(code).then(function (r) {
+      var data = { ok: !!(r && r.ok), dataUrl: (r && r.dataUrl) || '', updated: (r && r.updated) || '', size: (r && r.size) || 0, reason: (r && r.reason) || '', ts: Date.now() };
+      state.cards[code] = data;
+      if (state.card.code === code) applyCardResult(code, data);
+      return data;
+    });
+  }
+
+  function applyCardResult(code, data) {
+    if (!state.card || state.card.code !== code) return;
+    if (data.ok && data.dataUrl) {
+      state.card.status = 'ok';
+      state.card.dataUrl = data.dataUrl;
+      state.card.updated = data.updated || '';
+      state.card.size = data.size || 0;
+      cardProgress('');
+    } else if (data.reason === 'not_found') {
+      state.card.status = 'none';
+      state.card.dataUrl = '';
+      state.card.updated = '';
+      cardProgress('');
+    } else {
+      state.card.status = 'none';
+      state.card.dataUrl = '';
+      showCardError(cardReasonText(data));
+    }
+    renderCardModal();
+  }
+
+  function handleCardFile(file) {
+    var st = state.card;
+    if (!st || !st.code || !file || st.busy) return;
+    st.busy = true;
+    cardProgress('이미지를 준비하는 중…');
+    imageFileToDataUrl(file, CARD_MAX_SIDE).then(function (img) {
+      cardProgress('비공개 Drive에 저장하는 중…');
+      return saveCardRemote(st.code, img.dataUrl).then(function (res) { return { res: res, img: img }; });
+    }).then(function (o) {
+      st.busy = false;
+      var res = o.res;
+      if (!res.ok) {
+        cardProgress('');
+        showCardError(cardReasonText(res));
+        return;
+      }
+      var body = (res.body && res.body.ok) ? res.body : {};
+      var saved = { ok: true, dataUrl: o.img.dataUrl, updated: body.updated || new Date().toISOString(), size: body.size || o.img.bytes, ts: Date.now() };
+      state.cards[st.code] = saved;
+      applyCardResult(st.code, saved);
+      cardProgress('저장했습니다 · ' + o.img.width + '×' + o.img.height + 'px' + (body.replaced && body.replaced.length ? ' · 이전 파일은 휴지통으로 이동' : ''));
+      toast(st.code + ' 물건카드를 비공개 Drive에 저장했습니다.');
+    }).catch(function (err) {
+      st.busy = false;
+      cardProgress('');
+      showCardError('업로드하지 못했습니다 · ' + String((err && err.message) || err));
+    });
+  }
+
+  function initCardModal() {
+    var modal = $('#cardModal');
+    if (!modal) return;
+    $all('[data-close-card]', modal).forEach(function (b) { b.addEventListener('click', closeCardModal); });
+    var pick = $('#cardPick');
+    var input = $('#cardFile');
+    if (pick && input) {
+      pick.addEventListener('click', function () { input.value = ''; input.click(); });
+      input.addEventListener('change', function () {
+        var f = input.files && input.files[0];
+        if (f) handleCardFile(f);
+      });
+    }
+    var zoom = $('#cardZoom');
+    if (zoom) zoom.addEventListener('click', function () {
+      state.card.zoom = !state.card.zoom;
+      renderCardModal();
+      var figure = $('#cardFigure');
+      if (figure && state.card.zoom) figure.scrollTop = 0;
+    });
+    var figure = $('#cardFigure');
+    if (figure) figure.addEventListener('click', function (e) {
+      if (e.target && e.target.id === 'cardImage') {
+        state.card.zoom = !state.card.zoom;
+        renderCardModal();
+      }
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !modal.hidden) closeCardModal();
+    });
+  }
+
+  /* 새 매장·수정 폼에서 고른 물건카드 */
+  function clearFormCard() {
+    state.formCard = null;
+    var name = $('#fCardName');
+    if (name) name.textContent = '선택 안 함';
+    var preview = $('#fCardPreview');
+    if (preview) preview.hidden = true;
+    var img = $('#fCardImage');
+    if (img) img.removeAttribute('src');
+    var input = $('#fCardFile');
+    if (input) input.value = '';
+  }
+
+  function initFormCard() {
+    var pick = $('#fCardPick');
+    var input = $('#fCardFile');
+    if (pick && input) {
+      pick.addEventListener('click', function () { input.value = ''; input.click(); });
+      input.addEventListener('change', function () {
+        var f = input.files && input.files[0];
+        if (!f) return;
+        imageFileToDataUrl(f, CARD_MAX_SIDE).then(function (img) {
+          state.formCard = img;
+          var name = $('#fCardName');
+          if (name) name.textContent = (img.name || '이미지') + ' · ' + img.width + '×' + img.height + 'px · 저장 시 업로드';
+          var preview = $('#fCardPreview');
+          var el = $('#fCardImage');
+          if (el) el.src = img.dataUrl;
+          if (preview) preview.hidden = false;
+        }).catch(function (err) {
+          clearFormCard();
+          var e = $('#storeError');
+          if (e) { e.textContent = String((err && err.message) || err); e.hidden = false; }
+        });
+      });
+    }
+    var clear = $('#fCardClear');
+    if (clear) clear.addEventListener('click', clearFormCard);
+  }
+
+  /* ---------------- 물건카드 연동 설정 (알림 설정 탭) ---------------- */
+  function loadCardSettings() {
+    var cfg = cardConfig();
+    var endpoint = $('#cardEndpoint');
+    var secret = $('#cardSecret');
+    if (endpoint) endpoint.value = cfg.endpoint;
+    if (secret) secret.value = cfg.secret;
+    var raw = $('#cardOpenRaw');
+    if (raw) raw.href = cardFetchUrl('ping', '') || '#';
+    var status = $('#cardStatus');
+    if (status) {
+      status.textContent = cfg.stored ? '저장됨' : '기본값';
+      status.className = 'status-badge ' + (cfg.stored ? 'live' : 'sample');
+    }
+  }
+
+  function initCardSettings() {
+    loadCardSettings();
+    var form = $('#cardForm');
+    if (form) form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var endpoint = val('#cardEndpoint');
+      var secret = val('#cardSecret');
+      var err = $('#cardFormError');
+      var res = $('#cardFormResult');
+      if (err) err.hidden = true;
+      if (res) { res.hidden = true; res.textContent = ''; }
+      if (!/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_\-]+\/exec$/.test(endpoint)) {
+        if (err) { err.textContent = 'Apps Script 웹 앱 주소(https://script.google.com/macros/s/.../exec)를 넣어 주세요.'; err.hidden = false; }
+        return;
+      }
+      if (!secret) {
+        if (err) { err.textContent = '물건카드 연동 키를 입력해 주세요. 기본값은 apcard-2026 입니다.'; err.hidden = false; }
+        return;
+      }
+      saveCardConfig(endpoint, secret);
+      state.cards = {};
+      loadCardSettings();
+      toast('물건카드 연동 설정을 저장했습니다.');
+    });
+
+    var test = $('#cardTest');
+    if (test) test.addEventListener('click', function () {
+      var res = $('#cardFormResult');
+      var err = $('#cardFormError');
+      if (err) err.hidden = true;
+      if (res) { res.hidden = false; res.textContent = '연결을 확인하는 중…'; }
+      var url = cardFetchUrl('ping', '');
+      if (!url) {
+        if (res) res.textContent = '웹훅 주소가 비어 있습니다.';
+        return;
+      }
+      fetch(url, { method: 'GET', cache: 'no-store' }).then(function (r) {
+        return r.text().then(function (t) { return { ok: r.ok, body: safeParse(t) || {} }; });
+      }).then(function (o) {
+        var b = o.body || {};
+        if (o.ok && b.ok) {
+          if (res) res.textContent = '연결됨 · 물건카드 서비스가 응답했습니다' + (b.folderAccessible ? ' · 드라이브 폴더 접근 가능' : ' · 다만 드라이브 폴더에 접근하지 못했습니다(폴더 ID 확인 필요)');
+          var status = $('#cardStatus');
+          if (status) { status.textContent = b.folderAccessible ? '연결됨' : '폴더 확인 필요'; status.className = 'status-badge ' + (b.folderAccessible ? 'live' : 'closed'); }
+        } else if (b && b.reason === 'unknown_action') {
+          if (res) res.textContent = '웹훅은 응답하지만 물건카드 기능(doGet)이 아직 배포되지 않았습니다. Apps Script에 [2] 블록을 붙이고 새 버전으로 배포해 주세요.';
+        } else {
+          if (res) res.textContent = '연결하지 못했습니다. 주소·배포 액세스 권한(모든 사용자)을 확인해 주세요.';
+        }
+      }).catch(function () {
+        if (res) res.textContent = '연결하지 못했습니다. 주소·인터넷 연결·배포 액세스 권한을 확인해 주세요.';
+      });
+    });
+
+    var reset = $('#cardReset');
+    if (reset) reset.addEventListener('click', function () {
+      removeStore(CARD_CONFIG_KEY);
+      state.cards = {};
+      loadCardSettings();
+      toast('물건카드 연동 설정을 기본값으로 되돌렸습니다.');
+    });
+  }
+
   /* ---------------- 텔레그램 알림 설정 ---------------- */
   function loadTelegram() {
     var cfg = safeParse(readStore(TG_KEY));
@@ -2913,6 +3383,9 @@
     initLeadFilters();
     initSellActions();
     initTelegram();
+    initCardModal();
+    initFormCard();
+    initCardSettings();
     initPwModal();
     initAccountsPanel();
     renderAccounts();

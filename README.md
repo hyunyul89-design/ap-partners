@@ -189,10 +189,27 @@ var LEAD_ENDPOINT = '';   // 예: https://script.google.com/macros/s/xxxx/exec
 | `apPartnerCompare` | 비교 담은 점포(세션) |
 | `apPartnerCatalog` | 관리자가 저장한 점포 목록 |
 | `apTelegramConfig` | 텔레그램 Bot Token · Chat ID 설정 |
+| `apPropertyCardConfig` | 물건카드 연동 설정(웹훅 주소·연동 키). 없으면 `admin.js`의 기본값(LEAD_ENDPOINT · `apcard-2026`) 사용 |
 | `apAdminAccounts` | 관리자 계정 목록(아이디·이름·권한·SHA-256 비밀번호 해시·등록일) |
 | `apAdminBranches` | 관리자 전용 비공개 지점명(`{ "AP-001": "○○점", … }`). 손님 화면에서는 읽지 않음 |
 | `apAdminRememberSession` | 자동 로그인 세션(아이디·이름·권한·세션 토큰·만료일). 체크 해제·로그아웃·비밀번호 변경 시 지워짐 |
 | `apAdminLastId` · `apAdminRememberChoice` | 마지막 로그인 아이디 · 자동 로그인 체크 선택 |
+
+## 물건카드 (비공개 Google Drive) · 2026-11-26 추가
+
+매물별 **창업물건 보고서 원본 이미지**를 관리자 화면에서 보고 첨부·교체합니다. 이미지는 공개 저장소(`site/`)에 올리지 않고 현율 님 구글 계정의 비공개 드라이브 폴더에만 둡니다.
+
+- **드라이브 폴더**: `AP파트너_물건카드_비공개` (hyunyul89@gmail.com 소유)
+  - 폴더 ID `1reQLNvYQJSMhi6W2iTC3wUaT_AQ2XVEG` · 파일 이름은 매물 고유번호와 1:1 (`AP-001.jpg` ~ `AP-012.jpg`)
+- **화면**: 매장 DB 카드의 `수정`·`삭제` 옆 **`물건카드`** 버튼 → 모달에서 원본 크게 보기·확대·첨부/교체. 새 매장 등록·수정 폼에서도 선택적으로 첨부할 수 있습니다.
+- **설정**: 관리자 **알림 설정** 탭의 `물건카드 연동` 카드에서 웹훅 주소와 연동 키(`CARD_SECRET`, 기본 `apcard-2026`)를 확인·저장합니다. `연결 테스트`는 `?action=ping`, `응답 미리 보기 ↗`는 브라우저 새 창에서 원본 JSON을 보여 줍니다(CORS 진단용).
+- **웹훅 규격** (`LEAD_ENDPOINT` = Google Apps Script):
+  - `GET ?action=getCard&id=AP-006&key=****` → `{ok:true, dataUrl:"data:image/jpeg;base64,...", updated, size}` 또는 `{ok:false, reason:"not_found"}`
+  - `POST {action:"saveCard", id:"AP-006", key:"****", dataUrl:"data:image/jpeg;base64,..."}` → 같은 이름 파일은 휴지통으로 옮기고 새 파일로 교체
+  - `GET ?action=ping` → 서비스·폴더 접근 상태
+- **스크립트**: `docs/apps-script-property-cards.gs` — 기존 텔레그램 `doPost`는 그대로 두고 `[1]` 상수 + `doPost` 첫 줄 한 줄 + `[2]` 블록(doGet·헬퍼)만 붙이는 방식과, 통째로 쓰는 전체 템플릿(`[3]`)을 함께 담았습니다.
+- **이미지 축소**: 업로드 시 브라우저에서 긴 변 1600px · JPEG(품질 0.85)로 줄여 전송합니다(원본이 그보다 작으면 그대로).
+- **권한**: `CARD_SECRET`은 간단한 게이트입니다. 공개 저장소의 `admin.js`에 기본값이 들어 있으므로, 실제 운영에서는 관리자 화면에서 키를 바꾸고 스크립트의 `CARD_SECRET_KEY`도 같은 값으로 바꿔 주세요.
 
 ## 텔레그램 알림 연결 (배포 시)
 
