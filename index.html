@@ -86,6 +86,10 @@
           <svg viewBox="0 0 24 24" aria-hidden="true" class="ico"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </a>
         <a class="btn btn-outline-light btn-lg" href="#contact">상담 문의</a>
+        <a class="btn btn-ai btn-lg" href="#concierge" data-jump-concierge>
+          <svg viewBox="0 0 24 24" aria-hidden="true" class="ico spark"><path d="M12 3.2l1.7 4.6 4.6 1.7-4.6 1.7L12 15.8l-1.7-4.6L5.7 9.5l4.6-1.7z" fill="currentColor"/><path d="M18.4 14.4l.8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8z" fill="currentColor" opacity=".55"/></svg>
+          내 조건 매장 찾기
+        </a>
       </div>
     </div>
   </section>
@@ -108,6 +112,11 @@
           <button class="btn btn-quiet" type="button" data-view-lead>DB 페이로드</button>
           <button class="btn btn-quiet" type="button" data-reset-lead>다시 입력</button>
         </div>
+      </div>
+
+      <div class="ai-jump-strip">
+        <span class="ai-jump-text">조건 입력이 번거로우시면</span>
+        <a class="ai-jump-link" href="#concierge" data-jump-concierge>✨ 내 조건 매장 찾기</a>
       </div>
 
       <div class="filter-bar" role="search">
@@ -179,15 +188,15 @@
         <div class="chat-head">
           <span class="chat-avatar" aria-hidden="true">AP</span>
           <div class="chat-head-text">
-            <strong>AP 매칭 컨시어지</strong>
+            <strong>내 조건 매장 찾기</strong>
             <span>조건을 분석해 후보를 골라 드립니다</span>
           </div>
           <span class="chat-status">실시간 매칭</span>
         </div>
 
-        <div class="chat-log" id="chatLog" role="log" aria-live="polite" aria-label="AI 컨시어지 대화">
+        <div class="chat-log" id="chatLog" role="log" aria-live="polite" aria-label="내 조건 매장 찾기 대화">
           <div class="msg msg-bot">
-            <p>안녕하세요, 에이피파트너 매칭 컨시어지입니다.</p>
+            <p>안녕하세요, 에이피파트너입니다. 내 조건 매장을 찾아 드립니다.</p>
             <p>희망 지역과 예산을 알려주시면 조건에 가까운 점포를 먼저 보여드릴게요. 아래에서 고르셔도 되고, 문장으로 적으셔도 됩니다.</p>
           </div>
         </div>

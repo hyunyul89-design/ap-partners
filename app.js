@@ -1,7 +1,7 @@
 /* ==========================================================================
    AP PARTNERS · 에이피파트너 — 사이트 스크립트
    - 점포 데이터: data/listings.json (이 파일만 수정하면 목록에 자동 반영)
-   - AI 컨시어지: 브라우저 안에서 조건을 해석하는 규칙 기반 매칭 (외부 API 없음)
+   - AI 매칭(내 조건 매장 찾기): 브라우저 안에서 조건을 해석하는 규칙 기반 매칭 (외부 API 없음)
    ========================================================================== */
 (function () {
   'use strict';
@@ -3565,6 +3565,27 @@
     }
   }
 
+  /* ---------------- 내 조건 매장 찾기 바로가기 ---------------- */
+  function initAiJump() {
+    var links = $all('[data-jump-concierge]');
+    if (!links.length) return;
+    links.forEach(function (link) {
+      link.addEventListener('click', function (e) {
+        var section = $('#concierge');
+        var input = $('#conciergeInput');
+        if (!section) return;
+        e.preventDefault();
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (history.replaceState) history.replaceState(null, '', '#concierge');
+        if (!input) return;
+        /* 스크롤이 끝난 뒤 입력창에 커서를 둔다. 모바일 키보드가 같이 올라온다. */
+        window.setTimeout(function () {
+          try { input.focus({ preventScroll: true }); } catch (err) { input.focus(); }
+        }, 520);
+      });
+    });
+  }
+
   /* ---------------- misc ---------------- */
   function initHeader() {
     var toggle = $('.nav-toggle');
@@ -3809,6 +3830,7 @@
     updateLeadStatus();
     initKakao();
     initConcierge();
+    initAiJump();
     initListingFilters();
     initPwa();
 
