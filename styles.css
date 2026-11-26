@@ -1661,3 +1661,193 @@ body.compare-on .toast { bottom: 100px; }
   font-variant-numeric: tabular-nums;
 }
 .admin-table .code-cell { font-size: 12px; font-weight: 700; color: var(--navy); letter-spacing: .03em; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* ==========================================================================
+   관리자 v9 — 매장 DB 카드 · 비공개 지점명 배지 · 담당 컨설턴트 필터
+   ========================================================================== */
+.admin-count { font-style: normal; font-size: 12.5px; font-weight: 600; color: var(--muted); letter-spacing: 0; }
+
+.admin-filters {
+  display: grid;
+  grid-template-columns: minmax(200px, 1.7fr) repeat(4, minmax(110px, 1fr)) auto;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.admin-filters .filter-search { flex: none; }
+.admin-filters .filter-search svg { width: 16px; height: 16px; color: var(--muted); flex: none; }
+.admin-filters .filter-select { position: relative; display: flex; }
+.admin-filters select {
+  width: 100%;
+  appearance: none; -webkit-appearance: none;
+  border: 1px solid #DCE0E7; background: #fff; color: var(--ink-2);
+  font-family: inherit; font-size: 12.5px; padding: 10px 28px 10px 11px;
+  border-radius: 8px; cursor: pointer; min-width: 0;
+}
+.admin-filters .filter-select::after {
+  content: ""; position: absolute; right: 11px; top: 50%; width: 6px; height: 6px;
+  border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted);
+  transform: translateY(-70%) rotate(45deg); pointer-events: none;
+}
+.admin-filters select:focus { outline: none; border-color: var(--navy); box-shadow: 0 0 0 3px rgba(15,30,54,.05); }
+.admin-filters .filter-select.consultant select { border-color: #E3D6B8; background: #FDFAF3; color: #6E5B32; font-weight: 600; }
+.btn-filter-reset { padding: 9px 14px; font-size: 12px; white-space: nowrap; }
+
+.store-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.store-card {
+  display: flex; flex-direction: column; gap: 10px;
+  background: #fff; border: 1px solid var(--line); border-radius: 14px;
+  padding: 16px 18px 14px; box-shadow: var(--shadow-sm);
+  transition: box-shadow .18s ease, border-color .18s ease, transform .18s ease;
+}
+.store-card:hover { box-shadow: var(--shadow-md); border-color: #D6DAE2; }
+.store-card.is-closed { background: #FAFAFB; }
+.store-card.is-closed h3, .store-card.is-closed .store-code { color: #8A92A0; }
+.store-card.is-focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(200,164,93,.28), var(--shadow-md);
+}
+.store-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.store-card-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.store-code {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .04em; color: #5A6472;
+  background: #F1F3F7; border: 1px solid #E4E8EE; border-radius: 6px; padding: 2px 7px;
+  white-space: nowrap; font-variant-numeric: tabular-nums;
+}
+.store-card-title h3 { font-size: 16px; font-weight: 700; color: var(--navy); letter-spacing: -0.025em; word-break: keep-all; }
+.branch-badge {
+  display: inline-flex; align-items: center;
+  font-size: 11.5px; font-weight: 700; color: #8A5A0F;
+  background: #FBF1DC; border: 1px solid #E9D3A2; border-radius: 999px;
+  padding: 2px 9px; letter-spacing: -0.01em; white-space: nowrap;
+}
+.branch-badge::before {
+  content: ""; width: 5px; height: 5px; border-radius: 50%;
+  background: var(--gold-deep); margin-right: 5px;
+}
+.store-card-state { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.store-public {
+  display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap;
+  font-size: 12.5px; color: #4E5866; letter-spacing: -0.01em;
+}
+.store-public span {
+  font-size: 10px; font-weight: 700; letter-spacing: .06em; color: #8C6F32;
+  background: #FBF8F1; border: 1px solid #EFE4CC; border-radius: 4px; padding: 1px 5px;
+  flex: none;
+}
+.store-note { font-size: 12px; color: var(--muted); line-height: 1.55; word-break: keep-all; }
+.store-figures {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px;
+  margin: 2px 0 0; padding: 12px 14px;
+  background: #FAFBFD; border: 1px solid var(--line-soft); border-radius: 10px;
+}
+.store-figures > div { min-width: 0; }
+.store-figures span { display: block; font-size: 10.5px; color: var(--muted); letter-spacing: -0.01em; }
+.store-figures b {
+  display: block; margin-top: 2px; font-size: 13px; font-weight: 600; color: var(--navy);
+  letter-spacing: -0.02em; font-variant-numeric: tabular-nums; word-break: keep-all;
+}
+.store-figures b.store-owner { color: #6E5B32; font-weight: 700; }
+.store-by { font-size: 10.5px; color: #9AA1AE; letter-spacing: -0.01em; word-break: keep-all; }
+.store-card-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin-top: auto; padding-top: 11px; border-top: 1px solid var(--line-soft); flex-wrap: wrap;
+}
+.store-status {
+  appearance: none; -webkit-appearance: none;
+  border: 1px solid #DCE0E7; background: #fff; color: var(--navy);
+  font-family: inherit; font-size: 12px; font-weight: 600;
+  padding: 7px 26px 7px 11px; border-radius: 8px; cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, #8A92A0 50%), linear-gradient(135deg, #8A92A0 50%, transparent 50%);
+  background-position: calc(100% - 15px) 52%, calc(100% - 10px) 52%;
+  background-size: 5px 5px, 5px 5px; background-repeat: no-repeat;
+}
+.store-status:focus { outline: none; border-color: var(--navy); box-shadow: 0 0 0 3px rgba(15,30,54,.05); }
+
+/* 관리자 전용 입력 구역 */
+.admin-private { background: #FCFAF5; border: 1px solid #EFE6D3 !important; border-radius: 10px; padding: 12px 14px 6px !important; margin-top: 4px; }
+.admin-private legend { color: #8C6F32; }
+.admin-public-preview {
+  display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap;
+  background: #fff; border: 1px dashed #DCD2BC; border-radius: 9px; padding: 10px 12px;
+}
+.admin-public-preview > span {
+  font-size: 10px; font-weight: 700; letter-spacing: .08em; color: #8C6F32;
+  border: 1px solid #E7D9BC; border-radius: 4px; padding: 1px 6px; flex: none;
+}
+.admin-public-preview b { font-size: 13px; font-weight: 600; color: var(--navy); letter-spacing: -0.02em; }
+.admin-public-preview small { flex-basis: 100%; font-size: 10.5px; color: #9AA1AE; word-break: keep-all; }
+
+/* 계정 권한 */
+.role-cell { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.role-select {
+  appearance: none; -webkit-appearance: none;
+  border: 1px solid #DCE0E7; background: #fff; color: var(--navy);
+  font-family: inherit; font-size: 12px; font-weight: 600;
+  padding: 5px 24px 5px 9px; border-radius: 7px; cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, #8A92A0 50%), linear-gradient(135deg, #8A92A0 50%, transparent 50%);
+  background-position: calc(100% - 13px) 53%, calc(100% - 8px) 53%;
+  background-size: 5px 5px, 5px 5px; background-repeat: no-repeat;
+}
+.role-select:disabled { background-color: #F4F5F8; color: #7A828F; cursor: default; }
+.perm-list { list-style: none; display: flex; flex-direction: column; gap: 9px; margin: 10px 0 12px; }
+.perm-list li { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--muted); line-height: 1.6; word-break: keep-all; }
+.perm-list b { font-size: 12.5px; color: var(--navy); }
+
+/* 내 비밀번호 모달 */
+.admin-modal { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.admin-modal[hidden] { display: none; }
+.admin-modal-backdrop { position: absolute; inset: 0; background: rgba(10,22,40,.5); backdrop-filter: blur(2px); }
+.admin-modal-card {
+  position: relative; width: min(440px, 100%); max-height: calc(100vh - 40px); overflow: auto;
+  background: #fff; border-radius: 14px; box-shadow: 0 24px 60px rgba(10,22,40,.28);
+  padding: 22px 22px 18px;
+}
+.admin-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.admin-modal-eyebrow { font-size: 10px; font-weight: 700; letter-spacing: .14em; color: var(--gold-deep); }
+.admin-modal-head h3 { margin-top: 4px; font-size: 18px; font-weight: 700; color: var(--navy); letter-spacing: -0.02em; }
+.admin-modal-who { margin-top: 3px; font-size: 11.5px; color: var(--muted); }
+.admin-modal-close {
+  border: 1px solid var(--line); background: #fff; color: var(--muted);
+  width: 30px; height: 30px; border-radius: 8px; cursor: pointer; flex: none; font-size: 13px;
+}
+.admin-modal-close:hover { border-color: var(--navy); color: var(--navy); }
+.admin-modal form { display: flex; flex-direction: column; }
+.admin-modal label { font-size: 11.5px; font-weight: 600; color: var(--ink-2); margin: 10px 0 5px; }
+.admin-modal input {
+  border: 1px solid #DCE0E7; border-radius: 8px; padding: 10px 11px;
+  font-family: inherit; font-size: 13px; color: var(--ink); background: #fff;
+}
+.admin-modal input:focus { outline: none; border-color: var(--navy); box-shadow: 0 0 0 3px rgba(15,30,54,.06); }
+.admin-modal .admin-form-actions { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line-soft); }
+.admin-modal .admin-form-actions .btn-gold { flex: 1 1 auto; }
+.admin-modal .admin-hint { margin-top: 8px; }
+
+@media (max-width: 1080px) {
+  .admin-filters { grid-template-columns: minmax(180px, 1.4fr) repeat(2, minmax(110px, 1fr)); }
+  .admin-filters .filter-search { grid-column: 1 / -1; }
+  .admin-filters .btn-filter-reset { grid-column: 1 / -1; justify-self: start; }
+}
+@media (max-width: 980px) {
+  .store-cards { grid-template-columns: 1fr; }
+}
+@media (max-width: 620px) {
+  .admin-filters { grid-template-columns: 1fr 1fr; }
+  .store-card { padding: 14px 14px 12px; }
+  .store-card-title h3 { font-size: 15px; }
+  .store-figures { grid-template-columns: 1fr 1fr; padding: 10px 11px; gap: 8px 10px; }
+  .store-card-foot { flex-direction: column; align-items: stretch; }
+  .store-card-foot .row-actions { justify-content: flex-end; }
+  .store-card-foot .row-actions button { flex: 1; }
+  .admin-modal { padding: 12px; align-items: flex-end; }
+  .admin-modal-card { width: 100%; border-radius: 14px; padding: 18px 16px 14px; }
+}
+
+/* hidden 속성이 display 규칙에 밀리지 않도록 (권한별 탭 숨김) */
+.admin-tab[hidden] { display: none !important; }
+
+@media (max-width: 720px) {
+  /* 좁은 화면에서는 헤더의 '사이트 보기'를 숨겨 '내 비밀번호' 버튼까지 한 줄에 담습니다. */
+  .admin-header-links > a { display: none; }
+  .admin-header-links { gap: 8px; }
+}

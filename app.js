@@ -947,7 +947,7 @@
             area: ctx.store.area,
             brand: ctx.store.brand,
             category: ctx.store.category,
-            url: listingUrl(ctx.store)
+            url: adminListingUrl(ctx.store)
           }
         : null,
       criteria: crit,
@@ -960,16 +960,16 @@
       page: location.href
     };
     if (ctx && ctx.stores && ctx.stores.length) {
-      /* 텔레그램 알림에 문의 대상 매물의 고유번호와 바로 열리는 링크가 실리도록
-         문자열마다 '[AP-005] 우지커피 · 서울 서초구 주거상권 (https://…/?id=AP-005)' 형태로 적고,
-         링크만 따로 담은 store_links 도 함께 보냅니다. */
+      /* 텔레그램 알림에 문의 대상 매물의 고유번호와 관리자 페이지 링크가 실리도록
+         문자열마다 '[AP-005] 우지커피 · 서울 서초구 주거상권 (https://…/admin.html?id=AP-005)' 형태로 적고,
+         링크만 따로 담은 store_links 도 함께 보냅니다. (손님 화면·공유 링크는 ?id= 그대로) */
       payload.stores = ctx.stores.map(function (L) { return storeAlertLabel(L); });
       payload.store_codes = ctx.stores.map(function (L) { return codeOfStore(L); });
-      payload.store_links = ctx.stores.map(function (L) { return listingUrl(L); });
+      payload.store_links = ctx.stores.map(function (L) { return adminListingUrl(L); });
     } else if (ctx && ctx.store) {
       payload.stores = [storeAlertLabel(ctx.store)];
       payload.store_codes = [codeOfStore(ctx.store)];
-      payload.store_links = [listingUrl(ctx.store)];
+      payload.store_links = [adminListingUrl(ctx.store)];
     }
     return payload;
   }
@@ -1429,21 +1429,30 @@
     return (code ? '[' + code + '] ' : '') + name;
   }
 
-  /* 텔레그램에서 눌러 바로 그 물건 상세 창이 열리는 주소.
+  /* 텔레그램에서 눌러 바로 그 물건 상세 창이 열리는 주소(손님용).
      예: https://hyunyul89-design.github.io/ap-partners/?id=AP-005 */
   var SITE_BASE_URL = 'https://hyunyul89-design.github.io/ap-partners/';
+
+  /* 관리자 확인용 링크 — 텔레그램 알림에서 누르면 관리자 페이지가 그 매장 카드로 열립니다.
+     예: https://hyunyul89-design.github.io/ap-partners/admin.html?id=AP-005 */
+  var ADMIN_BASE_URL = SITE_BASE_URL + 'admin.html';
 
   function listingUrl(L) {
     var code = codeOf(L);
     return SITE_BASE_URL + (code ? '?id=' + encodeURIComponent(code) : '');
   }
 
+  function adminListingUrl(L) {
+    var code = codeOf(L);
+    return ADMIN_BASE_URL + (code ? '?id=' + encodeURIComponent(code) : '');
+  }
+
   /* 알림(텔레그램) 전송용 표기 — 화면·문자에는 storeLabel 만 씁니다.
-     '[AP-005] 우지커피 · 서울 서초구 주거상권 (https://…/?id=AP-005)' */
+     '[AP-005] 우지커피 · 서울 서초구 주거상권 (https://…/admin.html?id=AP-005)' */
   function storeAlertLabel(L) {
     var label = storeLabel(L);
     if (!label) return '';
-    return label + ' (' + listingUrl(L) + ')';
+    return label + ' (' + adminListingUrl(L) + ')';
   }
 
   function normalize(list) {
@@ -2425,10 +2434,10 @@
           form_version: 'store-consult-v1',
           lead_id: leadId(),
           submitted_at: now.toISOString(),
-          store: { id: L.id, code: codeOf(L), label: storeLabel(L), area: L.area, brand: L.brand, category: L.category, name: storeName, url: listingUrl(L) },
+          store: { id: L.id, code: codeOf(L), label: storeLabel(L), area: L.area, brand: L.brand, category: L.category, name: storeName, url: adminListingUrl(L) },
           stores: [storeAlertLabel(L)],
           store_codes: [codeOf(L)],
-          store_links: [listingUrl(L)],
+          store_links: [adminListingUrl(L)],
           name: name,
           phone: phone,
           when: when || '',

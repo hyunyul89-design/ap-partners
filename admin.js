@@ -17,13 +17,28 @@
   var AUTH_KEY = 'apAdminAuth';
   var DEFAULT_ACCOUNT = {
     id: 'hyunyul89',
-    name: '김현율 팀장',
-    role: '대표 관리자',
+    name: '김현율',
+    role: 'master',
     /* 초기 비밀번호의 SHA-256 해시 — 평문은 소스에 남기지 않습니다. */
     password_hash: '915956364fe3af76659b5f53bdfbedf3260f1c6d44729a0a31ec139eff18288b',
     created_at: '2026-11-26T00:00:00.000Z',
     must_change: true
   };
+
+  /* ---------------- 관리자 전용 비공개 지점명 ----------------
+     지점명은 손님 화면(index.html · app.js · data/listings.json)에 절대 넣지 않습니다.
+     기본 6곳은 아래 seed 로만 두고, 등록·수정한 지점명은 이 브라우저의
+     관리자 전용 저장소(apAdminBranches)에만 보관합니다. */
+  var BRANCH_KEY = 'apAdminBranches';
+  var BRANCH_SEED = {
+    'AP-001': '상명대점',
+    'AP-002': '위례점',
+    'AP-003': '신림푸르지오점',
+    'AP-004': '강서가양점',
+    'AP-005': '반포점',
+    'AP-006': '강동고덕역점'
+  };
+  var DEFAULT_CONSULTANT_ID = 'hyunyul89';
   var CATALOG_KEY = 'apPartnerCatalog';
   var LEAD_ALL_KEY = 'apPartnerLeads';
   var LEAD_ONE_KEY = 'apPartnerLead';
@@ -41,7 +56,12 @@
     sell: [],
     tg: null,
     editingId: null,
-    bulk: null
+    bulk: null,
+    tabIndex: 0,
+    /* 매장 DB 필터 */
+    storeFilters: { q: '', region: '', category: '', status: '', consultant: '' },
+    /* 텔레그램 알림의 admin.html?id=AP-xxx 딥링크 */
+    deepCode: ''
   };
 
   /* ---------------- utils ---------------- */
@@ -152,12 +172,31 @@
     return Promise.resolve(sha256Fallback(msg));
   }
 
-  /* ---------------- 관리자 계정 저장소 ---------------- */
+  /* ---------------- 관리자 계정 저장소 ----------------
+     권한은 두 가지입니다.
+       master     = 최종관리자 (계정·권한 관리까지 사용)
+       consultant = 일반 컨설턴트 (매장 DB 관리만, 계정 관리는 막힘)
+     예전에 저장된 '대표 관리자 / 팀원 관리자' 표기는 아래에서 새 권한으로 옮깁니다. */
+  function normalizeRole(role) {
+    var r = String(role == null ? '' : role).trim();
+    if (r === 'master' || r === '최종관리자' || r === '대표 관리자' || r === '대표관리자') return 'master';
+    return 'consultant';
+  }
+
+  function roleLabel(role) {
+    return normalizeRole(role) === 'master' ? '최종관리자' : '컨설턴트';
+  }
+
   function cloneAccount(a) {
+    var id = String(a.id);
+    var role = normalizeRole(a.role);
+    var name = String(a.name || a.id);
+    /* 예전 기본 계정 이름('김현율 팀장')은 표시명 '김현율'로 맞춥니다. */
+    if (role === 'master' && id.toLowerCase() === DEFAULT_CONSULTANT_ID && /^김현율\s*(팀장|팀원|대표|관리자)?$/.test(name)) name = '김현율';
     return {
-      id: String(a.id),
-      name: String(a.name || a.id),
-      role: a.role === '대표 관리자' ? '대표 관리자' : '팀원 관리자',
+      id: id,
+      name: name,
+      role: role,
       password_hash: String(a.password_hash || '').toLowerCase(),
       created_at: a.created_at || '',
       password_changed_at: a.password_changed_at || '',
@@ -200,7 +239,7 @@
   }
 
   function representativeCount(list) {
-    return list.filter(function (a) { return a.role === '대표 관리자'; }).length;
+    return list.filter(function (a) { return normalizeRole(a.role) === 'master'; }).length;
   }
 
   function currentAccount() {
@@ -208,7 +247,52 @@
     if (!s || !s.id) return null;
     var found = findAccount(s.id);
     if (found) return found;
-    return { id: String(s.id), name: s.name || String(s.id), role: s.role || '팀원 관리자', must_change: false };
+    /* 계정 목록을 읽지 못한 경우에는 권한을 낮춰 잡습니다(최종관리자 UI가 열리지 않도록). */
+    return { id: String(s.id), name: s.name || String(s.id), role: 'consultant', must_change: false };
+  }
+
+  /* 최종관리자 여부 — 계정·권한 관리 탭은 이 값이 참일 때만 열립니다. */
+  function isMaster() {
+    var a = currentAccount();
+    return !!a && normalizeRole(a.role) === 'master';
+  }
+
+  /* 매장의 담당 컨설턴트. 예전 6곳처럼 지정이 없으면 기본 담당(김현율)으로 둡니다. */
+  function consultantOf(L) {
+    var id = String((L && L.consultant_id) || '').trim();
+    if (id) {
+      var acc = findAccount(id);
+      return { id: id, name: String((L && L.consultant_name) || (acc && acc.name) || id) };
+    }
+    var def = findAccount(DEFAULT_CONSULTANT_ID);
+    return { id: DEFAULT_CONSULTANT_ID, name: (def && def.name) || '김현율' };
+  }
+
+  function consultantLabel(name) {
+    var n = String(name || '').trim();
+    return n ? n + ' 컨설턴트' : '담당 미정';
+  }
+
+  /* ---------------- 비공개 지점명 (관리자 전용) ---------------- */
+  function readBranches() {
+    var raw = safeParse(readStore(BRANCH_KEY));
+    return (raw && typeof raw === 'object' && !(raw instanceof Array)) ? raw : {};
+  }
+
+  function branchOf(L) {
+    var code = codeOf(L);
+    if (!code) return '';
+    var map = readBranches();
+    if (Object.prototype.hasOwnProperty.call(map, code)) return String(map[code] || '');
+    return BRANCH_SEED[code] || '';
+  }
+
+  /* 빈 값으로 저장하면 seed 지점명도 감춥니다(지점명을 지우고 싶을 때). */
+  function setBranch(code, name) {
+    if (!code) return;
+    var map = readBranches();
+    map[code] = String(name == null ? '' : name).trim();
+    writeStore(BRANCH_KEY, JSON.stringify(map));
   }
 
   /* 점포 데이터에 남기는 작성자 표기: '김현율 팀장 (hyunyul89)' */
@@ -394,6 +478,9 @@
     $('#adminLogin').hidden = false;
     $('#adminApp').hidden = true;
     $('#logoutBtn').hidden = true;
+    var pwBtn = $('#myPwBtn');
+    if (pwBtn) pwBtn.hidden = true;
+    closePwModal();
     var who = $('#currentAdmin');
     if (who) { who.hidden = true; who.textContent = ''; }
     var pw = $('#adminPw');
@@ -405,9 +492,10 @@
     if (!who) return;
     if (!account) { who.hidden = true; who.textContent = ''; return; }
     who.hidden = false;
+    var role = roleLabel(account.role);
     /* 좁은 화면에서는 아이디·역할(<em>)을 숨기고 이름만 보입니다. */
-    who.innerHTML = '<b>' + esc(account.name) + '</b><em> · ' + esc(account.id) + ' · ' + esc(account.role) + '</em>';
-    who.title = account.name + ' · ' + account.id + ' · ' + account.role;
+    who.innerHTML = '<b>' + esc(account.name) + '</b><em> · ' + esc(account.id) + ' · ' + esc(role) + '</em>';
+    who.title = account.name + ' · ' + account.id + ' · ' + role;
   }
 
   function enterApp() {
@@ -416,7 +504,11 @@
     $('#adminLogin').hidden = true;
     $('#adminApp').hidden = false;
     $('#logoutBtn').hidden = false;
+    var pwBtn = $('#myPwBtn');
+    if (pwBtn) pwBtn.hidden = false;
     renderHeaderUser(account);
+    applyRoleVisibility();
+    selectTab(0);
     renderAccounts();
     loadData().then(function () {
       loadSell();
@@ -425,6 +517,7 @@
       renderStores();
       renderLeads();
       renderSell();
+      if (state.deepCode) focusStoreByCode(state.deepCode);
     });
   }
 
@@ -467,12 +560,13 @@
     if (logout) logout.addEventListener('click', function () {
       setAuthed(null);
       if ($('#bulkPanel')) closeBulk();
+      closePwModal();
       showLogin();
       toast('로그아웃했습니다.');
     });
   }
 
-  /* ---------------- 계정 · 비밀번호 패널 ---------------- */
+  /* ---------------- 계정 · 권한 패널 (최종관리자 전용) ---------------- */
   function showAccountMsg(msg, isError) {
     var el = $('#accountMsg');
     if (!el) return;
@@ -482,6 +576,14 @@
   }
 
   function renderAccounts() {
+    /* 최종관리자가 아니면 계정 목록 자체를 그리지 않습니다. */
+    if (!isMaster()) {
+      var hiddenBody = $('#accountRows');
+      if (hiddenBody) hiddenBody.innerHTML = '';
+      var hiddenNotice = $('#pwNotice');
+      if (hiddenNotice) { hiddenNotice.hidden = true; hiddenNotice.innerHTML = ''; }
+      return;
+    }
     var list = readAccounts();
     state.accounts = list;
     var me = currentAccount();
@@ -489,18 +591,25 @@
     var body = $('#accountRows');
 
     if (body) {
-      var reps = representativeCount(list);
+      var masters = representativeCount(list);
       body.innerHTML = list.map(function (a) {
         var isMe = a.id.toLowerCase() === meKey;
-        var lastRep = a.role === '대표 관리자' && reps <= 1;
+        var isMasterRow = normalizeRole(a.role) === 'master';
+        var lastMaster = isMasterRow && masters <= 1;
         return '' +
           '<tr data-account="' + esc(a.id) + '">' +
             '<td data-label="아이디" class="code-cell">' + esc(a.id) +
               (isMe ? ' <span class="status-badge live">나</span>' : '') + '</td>' +
-            '<td data-label="이름 · 직함">' + esc(a.name) + '</td>' +
-            '<td data-label="역할">' + esc(a.role) +
+            '<td data-label="이름">' + esc(a.name) + '</td>' +
+            '<td data-label="권한"><div class="role-cell">' +
+              '<select class="role-select" data-role="' + esc(a.id) + '" aria-label="' + esc(a.name) + ' 계정 권한"' +
+                (lastMaster ? ' disabled' : '') + '>' +
+                '<option value="master"' + (isMasterRow ? ' selected' : '') + '>최종관리자</option>' +
+                '<option value="consultant"' + (isMasterRow ? '' : ' selected') + '>컨설턴트</option>' +
+              '</select>' +
               (a.must_change ? ' <span class="status-badge sample">초기 비밀번호</span>' : '') +
-              (lastRep ? ' <span class="status-badge closed">마지막 대표</span>' : '') + '</td>' +
+              (lastMaster ? ' <span class="status-badge closed">마지막 최종관리자</span>' : '') +
+            '</div></td>' +
             '<td data-label="등록일">' + esc(a.created_at ? kst(a.created_at).slice(0, 10) : '-') + '</td>' +
             '<td data-label="관리"><div class="row-actions">' +
               '<button type="button" class="gold" data-reset="' + esc(a.id) + '">비밀번호 초기화</button>' +
@@ -515,10 +624,13 @@
       $all('[data-del-account]', body).forEach(function (b) {
         b.addEventListener('click', function () { deleteAccount(b.getAttribute('data-del-account')); });
       });
+      $all('[data-role]', body).forEach(function (sel) {
+        sel.addEventListener('change', function () { changeAccountRole(sel.getAttribute('data-role'), sel.value); });
+      });
     }
 
     var who = $('#pwWho');
-    if (who) who.textContent = me ? (me.name + ' · ' + me.id) : '-';
+    if (who && me) who.textContent = me.name + ' · ' + me.id;
 
     var notice = $('#pwNotice');
     if (notice) {
@@ -526,7 +638,7 @@
       if (pending.length) {
         notice.hidden = false;
         notice.innerHTML = '<b>비밀번호 변경 안내</b> · ' + esc(pending.map(function (a) { return a.id; }).join(', ')) +
-          ' 계정이 아직 최초·임시 비밀번호를 쓰고 있습니다. 본인이 아래 <b>내 비밀번호 변경</b>에서 새 비밀번호로 바꾸면 표시가 사라집니다.';
+          ' 계정이 아직 최초·임시 비밀번호를 쓰고 있습니다. 본인이 오른쪽 위 <b>내 비밀번호</b>에서 새 비밀번호로 바꾸면 표시가 사라집니다.';
       } else {
         notice.hidden = true;
         notice.innerHTML = '';
@@ -534,7 +646,36 @@
     }
   }
 
+  /* 권한 변경 — 마지막 최종관리자는 컨설턴트로 낼릴 수 없습니다. */
+  function changeAccountRole(id, role) {
+    if (!isMaster()) { renderAccounts(); return; }
+    var list = readAccounts();
+    var acc = list.filter(function (a) { return a.id === id; })[0];
+    if (!acc) { renderAccounts(); return; }
+    var nextRole = normalizeRole(role);
+    if (normalizeRole(acc.role) === nextRole) return;
+    if (normalizeRole(acc.role) === 'master' && nextRole !== 'master' && representativeCount(list) <= 1) {
+      showAccountMsg('마지막 최종관리자는 컨설턴트로 바꿀 수 없습니다. 다른 계정을 먼저 최종관리자로 지정해 주세요.', true);
+      renderAccounts();
+      return;
+    }
+    if (!window.confirm('"' + acc.name + ' (' + acc.id + ')" 계정의 권한을 ' + roleLabel(nextRole) + '(으)로 바꿀까요?')) {
+      renderAccounts();
+      return;
+    }
+    acc.role = nextRole;
+    writeAccounts(list);
+    renderAccounts();
+    applyRoleVisibility();
+    if (normalizeRole(nextRole) !== 'master' && currentAccount() && currentAccount().id === acc.id) {
+      selectTab(0);
+    }
+    showAccountMsg(acc.name + ' (' + acc.id + ') 계정의 권한을 ' + roleLabel(nextRole) + '(으)로 바꿨습니다.');
+    toast('계정 권한을 바꿨습니다.');
+  }
+
   function resetAccountPassword(id) {
+    if (!isMaster()) { showAccountMsg('팀원 계정 관리는 최종관리자만 할 수 있습니다.', true); return; }
     var acc = findAccount(id);
     if (!acc) return;
     if (!window.confirm('"' + acc.name + ' (' + acc.id + ')" 계정의 비밀번호를 새 임시 비밀번호로 초기화할까요?\n' +
@@ -556,16 +697,17 @@
   }
 
   function deleteAccount(id) {
+    if (!isMaster()) { showAccountMsg('팀원 계정 관리는 최종관리자만 할 수 있습니다.', true); return; }
     var list = readAccounts();
     var acc = list.filter(function (a) { return a.id === id; })[0];
     if (!acc) return;
     var me = currentAccount();
     if (me && me.id.toLowerCase() === acc.id.toLowerCase()) {
-      showAccountMsg('지금 로그인한 계정은 삭제할 수 없습니다. 다른 관리자로 로그인한 뒤 삭제해 주세요.', true);
+      showAccountMsg('지금 로그인한 계정은 삭제할 수 없습니다. 다른 최종관리자로 로그인한 뒤 삭제해 주세요.', true);
       return;
     }
-    if (acc.role === '대표 관리자' && representativeCount(list) <= 1) {
-      showAccountMsg('마지막 대표 관리자는 삭제할 수 없습니다. 먼저 다른 계정을 대표 관리자로 바꾸거나 새 대표 관리자를 추가해 주세요.', true);
+    if (normalizeRole(acc.role) === 'master' && representativeCount(list) <= 1) {
+      showAccountMsg('마지막 최종관리자는 삭제할 수 없습니다. 먼저 다른 계정을 최종관리자로 바꾸거나 새 최종관리자를 추가해 주세요.', true);
       return;
     }
     if (!window.confirm('"' + acc.name + ' (' + acc.id + ')" 관리자 계정을 삭제할까요?\n삭제 후에는 되돌릴 수 없습니다.')) return;
@@ -575,9 +717,41 @@
     toast('관리자 계정을 삭제했습니다.');
   }
 
-  function initAccountsPanel() {
+  /* ---------------- 내 비밀번호 변경 (모든 관리자 본인 계정) ----------------
+     팀원 계정 관리 탭은 최종관리자만 보이므로, 컨설턴트도 쓸 수 있는
+     비밀번호 변경은 헤더의 '내 비밀번호' 버튼으로 따로 뺐습니다. */
+  function openPwModal() {
+    var me = currentAccount();
+    if (!me) { showLogin(); return; }
+    var modal = $('#pwModal');
+    if (!modal) return;
+    var who = $('#pwWho');
+    if (who) who.textContent = me.name + ' · ' + me.id + ' · ' + roleLabel(me.role);
+    ['#pwCur', '#pwNew', '#pwNew2'].forEach(function (id) { var el = $(id); if (el) el.value = ''; });
+    var err = $('#pwError'); if (err) { err.hidden = true; err.textContent = ''; }
+    var res = $('#pwResult'); if (res) { res.hidden = true; res.textContent = ''; }
+    modal.hidden = false;
+    var first = $('#pwCur');
+    if (first) first.focus({ preventScroll: true });
+  }
+
+  function closePwModal() {
+    var modal = $('#pwModal');
+    if (modal) modal.hidden = true;
+  }
+
+  function initPwModal() {
+    var open = $('#myPwBtn');
+    if (open) open.addEventListener('click', openPwModal);
+    $all('[data-close-pw]').forEach(function (b) { b.addEventListener('click', closePwModal); });
+    document.addEventListener('keydown', function (e) {
+      var modal = $('#pwModal');
+      if (e.key === 'Escape' && modal && !modal.hidden) closePwModal();
+    });
+
     var pwForm = $('#pwForm');
-    if (pwForm) pwForm.addEventListener('submit', function (e) {
+    if (!pwForm) return;
+    pwForm.addEventListener('submit', function (e) {
       e.preventDefault();
       var err = $('#pwError');
       var res = $('#pwResult');
@@ -611,12 +785,14 @@
           writeAccounts(updated);
           renderAccounts();
           pwForm.reset();
-          if (res) { res.hidden = false; res.textContent = '비밀번호를 바꿨습니다. 다음 로그인부터 새 비밀번호를 쓰세요.'; }
           toast('비밀번호를 바꿨습니다.');
+          closePwModal();
         });
       });
     });
+  }
 
+  function initAccountsPanel() {
     var memberForm = $('#memberForm');
     if (memberForm) memberForm.addEventListener('submit', function (e) {
       e.preventDefault();
@@ -625,12 +801,14 @@
       if (err) err.hidden = true;
       if (res) { res.hidden = true; res.textContent = ''; }
       function fail(msg) { if (err) { err.textContent = msg; err.hidden = false; } }
+      /* 계정 추가·권한 부여는 오직 최종관리자만 */
+      if (!isMaster()) { fail('컨설턴트 계정 추가는 최종관리자만 할 수 있습니다.'); return; }
       var name = val('#mName');
       var id = val('#mId').toLowerCase();
-      var role = val('#mRole') === '대표 관리자' ? '대표 관리자' : '팀원 관리자';
+      var role = normalizeRole(val('#mRole'));
       var pw = val('#mPw');
       var pw2 = val('#mPw2');
-      if (name.length < 2) { fail('이름·직함을 2자 이상 입력해 주세요. (예: 박지훈 팀원)'); return; }
+      if (name.length < 2) { fail('이름을 2자 이상 입력해 주세요. (예: 박지훈)'); return; }
       if (!/^[a-z0-9][a-z0-9._-]{2,19}$/.test(id)) { fail('아이디는 영문 소문자·숫자로 시작해 3~20자로 정해 주세요. (영문·숫자·._- 사용)'); return; }
       if (findAccount(id)) { fail('아이디 "' + id + '"는 이미 사용 중입니다.'); return; }
       if (pw.length < 4) { fail('비밀번호는 4자 이상으로 정해 주세요.'); return; }
@@ -654,13 +832,14 @@
         writeAccounts(list);
         renderAccounts();
         memberForm.reset();
-        if (res) { res.hidden = false; res.textContent = name + ' (' + id + ') 계정을 추가했습니다. 같은 기기에서는 지금부터 이 아이디로 로그인할 수 있습니다.'; }
-        toast('관리자 계정을 추가했습니다.');
+        if (res) { res.hidden = false; res.textContent = name + ' (' + id + ') 계정을 ' + roleLabel(role) + '(으)로 추가했습니다. 같은 기기에서는 지금부터 이 아이디로 로그인할 수 있습니다.'; }
+        toast(roleLabel(role) + ' 계정을 추가했습니다.');
       });
     });
 
     var exp = $('#btnAccountsExport');
     if (exp) exp.addEventListener('click', function () {
+      if (!isMaster()) { showAccountMsg('계정 설정 내보내기는 최종관리자만 할 수 있습니다.', true); return; }
       var payload = {
         type: 'ap-admin-accounts',
         version: 'admin-accounts-1',
@@ -678,6 +857,7 @@
     if (imp && file) {
       imp.addEventListener('click', function () { file.value = ''; file.click(); });
       file.addEventListener('change', function () {
+        if (!isMaster()) { showAccountMsg('계정 설정 불러오기는 최종관리자만 할 수 있습니다.', true); file.value = ''; return; }
         var f = file.files && file.files[0];
         if (!f) return;
         var reader = new FileReader();
@@ -693,7 +873,7 @@
           }).map(cloneAccount);
           if (!valid.length) { showAccountMsg('불러올 계정이 없는 파일입니다.', true); return; }
           if (!representativeCount(valid)) {
-            showAccountMsg('대표 관리자가 없는 계정 목록은 불러올 수 없습니다. 대표 관리자가 포함된 파일을 선택해 주세요.', true);
+            showAccountMsg('최종관리자가 없는 계정 목록은 불러올 수 없습니다. 최종관리자가 포함된 파일을 선택해 주세요.', true);
             return;
           }
           if (!window.confirm('계정 ' + valid.length + '개를 불러옵니다.\n같은 아이디는 이 기기의 계정 정보(비밀번호 포함)를 덮어씁니다. 계속할까요?')) return;
@@ -761,18 +941,52 @@
     if (note) note.hidden = state.managed;
   }
 
+  /* ---------------- 탭 · 권한별 화면 ---------------- */
+  var TABS = [
+    { tab: '#tabStores', panel: '#panelStores' },
+    { tab: '#tabLeads', panel: '#panelLeads' },
+    { tab: '#tabSell', panel: '#panelSell' },
+    { tab: '#tabAccounts', panel: '#panelAccounts', masterOnly: true },
+    { tab: '#tabNotify', panel: '#panelNotify' }
+  ];
+
+  function selectTab(index) {
+    var blocked = !!(TABS[index] && TABS[index].masterOnly && !isMaster());
+    if (blocked) {
+      toast('계정·권한 관리는 최종관리자만 사용할 수 있습니다.');
+      index = 0;
+    }
+    TABS.forEach(function (t, j) {
+      var tabEl = $(t.tab), panelEl = $(t.panel);
+      if (!tabEl || !panelEl) return;
+      var on = (j === index) && !(t.masterOnly && !isMaster());
+      tabEl.setAttribute('aria-selected', on ? 'true' : 'false');
+      panelEl.hidden = !on;
+    });
+    state.tabIndex = index;
+    if (index === 3) renderAccounts();
+    /* 매장 DB로 돌아올 때마다 담당 컨설턴트·필터 선택지를 최신 계정 기준으로 다시 그립니다. */
+    if (index === 0) renderStores();
+  }
+
+  /* 최종관리자 전용 탭은 일반 컨설턴트 화면에서 아예 감춥니다. */
+  function applyRoleVisibility() {
+    var master = isMaster();
+    TABS.forEach(function (t) {
+      if (!t.masterOnly) return;
+      var tabEl = $(t.tab), panelEl = $(t.panel);
+      if (tabEl) tabEl.hidden = !master;
+      if (!master && panelEl) panelEl.hidden = true;
+    });
+  }
+
   function initTabs() {
-    var tabs = [$('#tabStores'), $('#tabLeads'), $('#tabSell'), $('#tabAccounts'), $('#tabNotify')];
-    var panels = [$('#panelStores'), $('#panelLeads'), $('#panelSell'), $('#panelAccounts'), $('#panelNotify')];
-    tabs.forEach(function (tab, i) {
-      if (!tab || !panels[i]) return;
-      tab.addEventListener('click', function () {
-        tabs.forEach(function (t, j) {
-          if (!t || !panels[j]) return;
-          t.setAttribute('aria-selected', i === j ? 'true' : 'false');
-          panels[j].hidden = i !== j;
-        });
-        if (i === 3) renderAccounts();
+    TABS.forEach(function (t, i) {
+      var tabEl = $(t.tab);
+      if (!tabEl) return;
+      tabEl.addEventListener('click', function () {
+        if (t.masterOnly && !isMaster()) { toast('계정·권한 관리는 최종관리자만 사용할 수 있습니다.'); return; }
+        selectTab(i);
       });
     });
   }
@@ -831,6 +1045,10 @@
 
     updateTotals();
     updateSpecPreview();
+    renderConsultantField(L);
+    var branchInput = $('#fBranch');
+    if (branchInput) branchInput.value = L ? branchOf(L) : '';
+    updatePublicPreview();
     var form = $('#storeForm');
     form.scrollIntoView({ behavior: 'smooth', block: 'start' });
     $('#fDistrict').focus({ preventScroll: true });
@@ -841,6 +1059,36 @@
   function digits(s) {
     var m = String(s || '').replace(/[^0-9]/g, '');
     return m;
+  }
+
+  /* 담당 컨설턴트 선택칸 — 최종관리자는 모든 계정 중에서 고르고,
+     일반 컨설턴트는 본인(수정 시에는 기존 담당)으로 고정됩니다. */
+  function renderConsultantField(L) {
+    var sel = $('#fConsultant');
+    if (!sel) return;
+    var me = currentAccount();
+    if (isMaster()) {
+      var opts = consultantOptions();
+      sel.innerHTML = opts.map(function (o) {
+        return '<option value="' + esc(o.id) + '">' + esc(consultantLabel(o.name)) + ' (' + esc(o.id) + ')</option>';
+      }).join('');
+      var want = L ? consultantOf(L).id : ((me && me.id) || DEFAULT_CONSULTANT_ID);
+      sel.value = want;
+      sel.disabled = false;
+      return;
+    }
+    var owner = L ? consultantOf(L) : { id: (me && me.id) || '', name: (me && me.name) || '' };
+    sel.innerHTML = '<option value="' + esc(owner.id) + '">' + esc(consultantLabel(owner.name)) + '</option>';
+    sel.value = owner.id;
+    sel.disabled = true;
+  }
+
+  /* 손님 화면에 실제로 보일 표기 미리보기 (지역 + 지역구·상권) */
+  function updatePublicPreview() {
+    var out = $('#fPublicPreview');
+    if (!out) return;
+    var text = [val('#fRegion'), val('#fDistrict')].filter(Boolean).join(' ');
+    out.textContent = text || '지역구·상권을 입력하면 표시됩니다';
   }
 
   function expLabel(ex) {
@@ -961,6 +1209,13 @@
       var el = $(id);
       if (el) el.addEventListener('input', updateSpecPreview);
     });
+    ['#fRegion', '#fDistrict'].forEach(function (id) {
+      var el = $(id);
+      if (el) {
+        el.addEventListener('input', updatePublicPreview);
+        el.addEventListener('change', updatePublicPreview);
+      }
+    });
     $('#storeForm').addEventListener('submit', onSaveStore);
   }
 
@@ -1027,6 +1282,7 @@
     var dupCode = state.listings.filter(function (L) {
       return (!existing || L.id !== existing.id) && codeOf(L) === code;
     })[0];
+
     if (dupCode) {
       if (err) {
         err.textContent = '고유번호 ' + code + '는 이미 "' + dupCode.area + ' ' + dupCode.brand + '" 점포가 쓰고 있습니다. 다른 번호를 적거나 비워 두세요.';
@@ -1035,11 +1291,36 @@
       return;
     }
 
+    /* 비공개 지점명은 관리자 전용 저장소에만 남깁니다. 고유번호가 바뀌면 새 번호로 옮깁니다. */
+    setBranch(code, val('#fBranch'));
+    if (existing) {
+      var prevCode = codeOf(existing);
+      if (prevCode && prevCode !== code) setBranch(prevCode, '');
+    }
+
+    var meAcc = currentAccount();
+    var owner = existing ? consultantOf(existing) : null;
+    var consultantId = '';
+    var consultantName = '';
+    if (isMaster()) {
+      var pickId = val('#fConsultant');
+      var picked = pickId ? findAccount(pickId) : null;
+      consultantId = (picked && picked.id) || pickId || ((meAcc && meAcc.id) || DEFAULT_CONSULTANT_ID);
+      consultantName = (picked && picked.name) || (meAcc && meAcc.name) || '김현율';
+    } else {
+      /* 컨설턴트는 본인이 등록한 매장만 담당으로 잡히고, 남의 매장을 수정할 때는 담당을 그대로 둡니다. */
+      consultantId = (owner && owner.id) || (meAcc && meAcc.id) || DEFAULT_CONSULTANT_ID;
+      consultantName = (owner && owner.name) || (meAcc && meAcc.name) || '김현율';
+    }
+
     var listing = {
       id: existing ? existing.id : 'ap-' + Date.now().toString(36),
       code: code,
       status: existing ? (existing.status === 'closed' ? 'closed' : (existing.status || 'active')) : 'active',
       visible: existing ? existing.visible !== false : true,
+      /* 담당 컨설턴트 — 등록한 사람, 또는 최종관리자가 고른 계정 */
+      consultant_id: consultantId,
+      consultant_name: consultantName,
       region: region,
       district: district,
       area: region + ' ' + district,
@@ -1711,12 +1992,16 @@
       return;
     }
     var stamp = Date.now().toString(36);
+    var bulkMe = currentAccount();
+    var bulkOwner = { id: (bulkMe && bulkMe.id) || DEFAULT_CONSULTANT_ID, name: (bulkMe && bulkMe.name) || '김현율' };
     var added = okRows.map(function (r, i) {
       var L = {};
       for (var k in r.listing) {
         if (Object.prototype.hasOwnProperty.call(r.listing, k)) L[k] = r.listing[k];
       }
       L.id = 'ap-' + stamp + '-' + pad2(i + 1);
+      L.consultant_id = bulkOwner.id;
+      L.consultant_name = bulkOwner.name;
       L.registered_by = authorLabel();
       L.updated_by = authorLabel();
       return L;
@@ -1773,80 +2058,267 @@
     $('#btnBulkReset').addEventListener('click', function () { resetBulk(); input.click(); });
   }
 
-  /* ---------------- 점포 목록 ---------------- */
+  /* ---------------- 매장 DB 목록 (카드 · 필터) ---------------- */
   function statusBadge(L) {
     if (L.status === 'closed' || L.visible === false) return '<span class="status-badge closed">거래완료 · 비노출</span>';
     if (L.status === 'sample') return '<span class="status-badge sample">샘플 · 노출 중</span>';
     return '<span class="status-badge live">노출 중</span>';
   }
 
-  function renderStores() {
-    var body = $('#storeRows');
-    if (!body) return;
-    body.innerHTML = state.listings.map(function (L) {
-      var closed = L.status === 'closed' || L.visible === false;
-      return '' +
-        '<tr class="admin-row' + (closed ? ' is-closed' : '') + '" data-id="' + esc(L.id) + '">' +
-          '<td data-label="고유번호" class="code-cell">' + esc(codeOf(L) || '-') + '</td>' +
-          '<td data-label="점포"><div class="cell-main"><b>' + esc(L.area) + '</b>' +
-            '<span>' + esc(L.brand) + ' · ' + esc(L.area_note) + '</span>' +
-            (L.registered_by || L.updated_by
-              ? '<span class="cell-by">' + esc('등록 ' + (L.registered_by || '-') +
-                  (L.updated_by && L.updated_by !== L.registered_by ? ' · 수정 ' + L.updated_by : '')) + '</span>'
-              : '') +
-            '</div></td>' +
-          '<td data-label="업종">' + esc(L.category) + '</td>' +
-          '<td data-label="초기 인수" class="num">' + esc(L.initial_cost.label) + '</td>' +
-          '<td data-label="월 매출" class="num">' + esc(L.monthly_sales.label.replace('월 평균 ', '')) + '</td>' +
-          '<td data-label="상태">' + statusBadge(L) +
-            (L.private_only ? ' <span class="status-badge sample">비공개전용</span>' : '') + '</td>' +
-          '<td data-label="관리"><div class="row-actions">' +
-            '<button type="button" class="gold" data-edit="' + esc(L.id) + '">수정</button>' +
-            '<button type="button" data-toggle="' + esc(L.id) + '">' + (closed ? '노출 재개' : '거래완료') + '</button>' +
-            '<button type="button" class="danger" data-del="' + esc(L.id) + '">삭제</button>' +
-          '</div></td>' +
-        '</tr>';
-    }).join('');
+  /* 담당 컨설턴트 후보 — 등록된 계정(최종관리자 먼저) + 예전 매장에 남은 담당 이름 */
+  function consultantOptions() {
+    var out = [];
+    readAccounts().forEach(function (a) {
+      out.push({ id: a.id, name: a.name, role: normalizeRole(a.role) });
+    });
+    state.listings.forEach(function (L) {
+      var c = consultantOf(L);
+      if (!out.some(function (o) { return o.id === c.id; })) {
+        out.push({ id: c.id, name: c.name, role: 'consultant' });
+      }
+    });
+    out.sort(function (a, b) {
+      var am = a.role === 'master' ? 0 : 1;
+      var bm = b.role === 'master' ? 0 : 1;
+      if (am !== bm) return am - bm;
+      return String(a.name).localeCompare(String(b.name), 'ko');
+    });
+    return out;
+  }
 
-    $all('[data-edit]', body).forEach(function (b) {
+  function fillFilterSelect(sel, values, allLabel, current) {
+    if (!sel) return;
+    var html = ['<option value="">' + allLabel + '</option>'];
+    values.forEach(function (v) {
+      html.push('<option value="' + esc(v.value) + '">' + esc(v.label) + '</option>');
+    });
+    sel.innerHTML = html.join('');
+    sel.value = values.some(function (v) { return v.value === current; }) ? current : '';
+  }
+
+  function renderStoreFilters() {
+    var regions = ['서울', '경기', '인천', '기타'];
+    state.listings.forEach(function (L) {
+      var r = String(L.region || '').trim();
+      if (r && regions.indexOf(r) === -1) regions.push(r);
+    });
+    if (state.storeFilters.region && regions.indexOf(state.storeFilters.region) === -1) state.storeFilters.region = '';
+    fillFilterSelect($('#storeFilterRegion'), regions.map(function (r) { return { value: r, label: r }; }),
+      '전체 지역', state.storeFilters.region);
+
+    var cats = ['카페', '디저트', '음식점', '치킨', '기타'];
+    state.listings.forEach(function (L) {
+      var c = String(L.category || '').trim();
+      if (c && cats.indexOf(c) === -1) cats.push(c);
+    });
+    if (state.storeFilters.category && cats.indexOf(state.storeFilters.category) === -1) state.storeFilters.category = '';
+    fillFilterSelect($('#storeFilterCategory'), cats.map(function (c) { return { value: c, label: c }; }),
+      '전체 업종', state.storeFilters.category);
+
+    var owners = consultantOptions();
+    if (state.storeFilters.consultant && !owners.some(function (o) { return o.id === state.storeFilters.consultant; })) {
+      state.storeFilters.consultant = '';
+    }
+    fillFilterSelect($('#storeFilterConsultant'), owners.map(function (o) {
+      return { value: o.id, label: consultantLabel(o.name) };
+    }), '매장 전체', state.storeFilters.consultant);
+  }
+
+  function filteredListings() {
+    var f = state.storeFilters;
+    var q = String(f.q || '').toLowerCase();
+    return state.listings.filter(function (L) {
+      if (f.region && String(L.region || '') !== f.region) return false;
+      if (f.category && String(L.category || '') !== f.category) return false;
+      var closed = L.status === 'closed' || L.visible === false;
+      if (f.status === 'live' && closed) return false;
+      if (f.status === 'closed' && !closed) return false;
+      if (f.status === 'private' && !L.private_only) return false;
+      var owner = consultantOf(L);
+      if (f.consultant && owner.id !== f.consultant) return false;
+      if (q) {
+        var hay = [codeOf(L), L.area, L.brand, L.category, L.district, L.area_note, branchOf(L), owner.name]
+          .join(' ').toLowerCase();
+        if (hay.indexOf(q) === -1) return false;
+      }
+      return true;
+    });
+  }
+
+  function storeCardHTML(L) {
+    var closed = L.status === 'closed' || L.visible === false;
+    var code = codeOf(L);
+    var branch = branchOf(L);
+    var owner = consultantOf(L);
+    var cost = (L.initial_cost && L.initial_cost.label) || '-';
+    var sales = String((L.monthly_sales && L.monthly_sales.label) || '').replace(/^월 평균\s*/, '') || '-';
+    var profitRaw = (L.profit && (L.profit.label || L.profit.avg_manwon)) || '';
+    var profit = profitRaw
+      ? (String(L.profit.label || '').replace(/^월 약\s*/, '') || (comma(L.profit.avg_manwon) + '만 원'))
+      : '-';
+    var by = (L.registered_by || L.updated_by)
+      ? '등록 ' + (L.registered_by || '-') + (L.updated_by && L.updated_by !== L.registered_by ? ' · 수정 ' + L.updated_by : '')
+      : '';
+    return '' +
+      '<article class="store-card' + (closed ? ' is-closed' : '') + '" data-code="' + esc(code) + '" data-id="' + esc(L.id) + '" data-consultant="' + esc(owner.id) + '">' +
+        '<div class="store-card-head">' +
+          '<div class="store-card-title">' +
+            '<span class="store-code">No. ' + esc(code || '-') + '</span>' +
+            '<h3>' + esc(L.brand || '(브랜드 미정)') + '</h3>' +
+            (branch ? '<span class="branch-badge" title="관리자 전용 비공개 지점명 — 손님 화면에는 보이지 않습니다">[' + esc(branch) + ']</span>' : '') +
+          '</div>' +
+          '<div class="store-card-state">' + statusBadge(L) +
+            (L.private_only ? ' <span class="status-badge sample">비공개전용</span>' : '') + '</div>' +
+        '</div>' +
+        '<p class="store-public"><span>고객 노출</span>' + esc(L.area || '-') + '</p>' +
+        '<p class="store-note">' + esc([L.category, L.store_spec, L.area_note].filter(Boolean).join(' · ')) + '</p>' +
+        '<dl class="store-figures">' +
+          '<div><span>초기 인수</span><b>' + esc(cost) + '</b></div>' +
+          '<div><span>월 매출</span><b>' + esc(sales) + '</b></div>' +
+          '<div><span>예상 수익</span><b>' + esc(profit) + '</b></div>' +
+          '<div><span>담당 컨설턴트</span><b class="store-owner">' + esc(consultantLabel(owner.name)) + '</b></div>' +
+        '</dl>' +
+        (by ? '<p class="store-by">' + esc(by) + '</p>' : '') +
+        '<div class="store-card-foot">' +
+          '<select class="store-status" data-status aria-label="' + esc((L.brand || '') + ' 노출 상태') + '">' +
+            '<option value="live"' + (closed ? '' : ' selected') + '>노출 중</option>' +
+            '<option value="closed"' + (closed ? ' selected' : '') + '>거래완료 · 비노출</option>' +
+          '</select>' +
+          '<div class="row-actions">' +
+            '<button type="button" class="gold" data-edit="' + esc(L.id) + '">수정</button>' +
+            '<button type="button" class="danger" data-del="' + esc(L.id) + '">삭제</button>' +
+          '</div>' +
+        '</div>' +
+      '</article>';
+  }
+
+  function renderStores() {
+    var wrap = $('#storeCards');
+    if (!wrap) return;
+    renderStoreFilters();
+    var list = filteredListings();
+    var label = $('#storeCountLabel');
+    if (label) label.textContent = '(' + list.length + '/' + state.listings.length + ')';
+    var empty = $('#storeEmpty');
+    if (empty) empty.hidden = list.length > 0;
+    wrap.innerHTML = list.map(storeCardHTML).join('');
+    bindStoreCardActions(wrap);
+  }
+
+  function bindStoreCardActions(wrap) {
+    $all('[data-edit]', wrap).forEach(function (b) {
       b.addEventListener('click', function () {
         var L = findListing(b.getAttribute('data-edit'));
         if (L) openForm(L);
       });
     });
-    $all('[data-toggle]', body).forEach(function (b) {
+    $all('[data-del]', wrap).forEach(function (b) {
       b.addEventListener('click', function () {
-        var L = findListing(b.getAttribute('data-toggle'));
+        var id = b.getAttribute('data-del');
+        var L = findListing(id);
         if (!L) return;
-        if (L.status === 'closed' || L.visible === false) {
-          L.status = L.status_prev || 'live';
-          L.visible = true;
-          delete L.status_prev;
-          toast('거래완료를 해제했습니다. 사이트에 다시 노출됩니다.');
-        } else {
+        if (!window.confirm('"' + L.area + ' ' + L.brand + '" 매장을 목록에서 삭제할까요?\n삭제 후에는 되돌릴 수 없습니다.')) return;
+        state.listings = state.listings.filter(function (x) { return x.id !== id; });
+        persist();
+        renderStats();
+        renderStores();
+        toast('매장을 삭제했습니다.');
+      });
+    });
+    $all('[data-status]', wrap).forEach(function (sel) {
+      sel.addEventListener('change', function () {
+        var card = sel.closest('.store-card');
+        var id = card ? card.getAttribute('data-id') : '';
+        var L = findListing(id);
+        if (!L) return;
+        if (sel.value === 'closed') {
           L.status_prev = L.status;
           L.status = 'closed';
           L.visible = false;
           toast('거래완료로 돌렸습니다. 사이트 목록에서 감춰집니다.');
+        } else {
+          L.status = L.status_prev || 'live';
+          L.visible = true;
+          delete L.status_prev;
+          toast('거래완료를 해제했습니다. 사이트에 다시 노출됩니다.');
         }
         persist();
         renderStats();
         renderStores();
       });
     });
-    $all('[data-del]', body).forEach(function (b) {
-      b.addEventListener('click', function () {
-        var id = b.getAttribute('data-del');
-        var L = findListing(id);
-        if (!L) return;
-        if (!window.confirm('"' + L.area + ' ' + L.brand + '" 점포를 목록에서 삭제할까요?\n삭제 후에는 되돌릴 수 없습니다.')) return;
-        state.listings = state.listings.filter(function (x) { return x.id !== id; });
-        persist();
-        renderStats();
-        renderStores();
-        toast('점포를 삭제했습니다.');
-      });
+  }
+
+  function initStoreFilters() {
+    var search = $('#storeSearch');
+    if (search) search.addEventListener('input', function () {
+      state.storeFilters.q = String(search.value || '').trim();
+      renderStores();
     });
+    [['#storeFilterRegion', 'region'], ['#storeFilterCategory', 'category'],
+      ['#storeFilterStatus', 'status'], ['#storeFilterConsultant', 'consultant']]
+      .forEach(function (pair) {
+        var el = $(pair[0]);
+        if (!el) return;
+        el.addEventListener('change', function () {
+          state.storeFilters[pair[1]] = el.value;
+          renderStores();
+        });
+      });
+    var reset = $('#storeFilterReset');
+    if (reset) reset.addEventListener('click', function () {
+      state.storeFilters = { q: '', region: '', category: '', status: '', consultant: '' };
+      if (search) search.value = '';
+      renderStores();
+    });
+  }
+
+  /* 텔레그램에서 연 admin.html?id=AP-005 — 해당 카드로 스크롤하고 잠시 강조합니다. */
+  function parseDeepCode() {
+    var raw = '';
+    try {
+      var q = new URLSearchParams(location.search || '');
+      raw = q.get('id') || q.get('code') || '';
+    } catch (e) { raw = ''; }
+    if (!raw) {
+      var h = String(location.hash || '').replace(/^#!?\/?/, '');
+      if (/^(?:ap-?)?[0-9]{1,4}$/i.test(h)) {
+        raw = h;
+      } else {
+        var m = h.match(/(?:^|[&?])id=([A-Za-z0-9%\-]+)/);
+        if (m) {
+          try { raw = decodeURIComponent(m[1]); } catch (e2) { raw = m[1]; }
+        }
+      }
+    }
+    raw = String(raw || '').trim();
+    return raw ? (normalizeCode(raw) || '') : '';
+  }
+
+  function focusStoreByCode(code) {
+    if (!code) return;
+    selectTab(0);
+    var wrap = $('#storeCards');
+    if (!wrap) return;
+    var card = $('.store-card[data-code="' + code + '"]', wrap);
+    if (!card) {
+      /* 필터에 가려져 있으면 필터를 풀고 다시 찾습니다. */
+      state.storeFilters = { q: '', region: '', category: '', status: '', consultant: '' };
+      var searchEl = $('#storeSearch');
+      if (searchEl) searchEl.value = '';
+      renderStores();
+      card = $('.store-card[data-code="' + code + '"]', wrap);
+    }
+    if (!card) {
+      toast(code + ' 매장을 이 브라우저에서 찾지 못했습니다. 매장 DB에서 번호로 검색해 주세요.');
+      var search = $('#storeSearch');
+      if (search) { search.value = code; state.storeFilters.q = code; renderStores(); }
+      return;
+    }
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.classList.add('is-focus');
+    setTimeout(function () { card.classList.remove('is-focus'); }, 8000);
+    toast('알림에서 연 ' + code + ' 매장입니다.');
   }
 
   /* ---------------- 손님 DB ---------------- */
@@ -2189,13 +2661,16 @@
 
   /* ---------------- boot ---------------- */
   document.addEventListener('DOMContentLoaded', function () {
+    state.deepCode = parseDeepCode();
     initLogin();
     initTabs();
     initForm();
     initBulk();
+    initStoreFilters();
     initLeadFilters();
     initSellActions();
     initTelegram();
+    initPwModal();
     initAccountsPanel();
     renderAccounts();
     if (isAuthed()) enterApp();
