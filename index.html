@@ -49,7 +49,7 @@
 
     <nav class="main-nav" id="mainNav" aria-label="주요 메뉴">
       <a href="#listings">점포 둘러보기</a>
-      <a href="#concierge">AI 매칭</a>
+      <a href="#concierge">AI 추천</a>
       <a href="#process">진행 절차</a>
       <a href="#contact">상담 안내</a>
     </nav>
@@ -72,181 +72,33 @@
 </header>
 
 <main>
-  <!-- ============ HERO ============ -->
+  <!-- ============ HERO (슬림) ============ -->
   <section class="hero">
     <div class="hero-glow" aria-hidden="true"></div>
     <div class="wrap hero-inner">
-      <div class="hero-copy">
-        <p class="eyebrow"><span class="eyebrow-line"></span>FRANCHISE M&amp;A ADVISORY · SEOUL</p>
-        <h1>투명한 데이터와 현장 실사로<br />연결하는 <em>프랜차이즈 양도양수</em></h1>
-        <p class="hero-lead">
-          점포의 매출과 지출 구조를 숫자로 먼저 확인하고,
-          직접 걸어본 현장과 함께 조건을 정리합니다.
-          처음 상담부터 계약까지 김현율 팀장이 담당합니다.
-        </p>
-        <div class="hero-cta">
-          <a class="btn btn-gold btn-lg" href="tel:010-2885-5553">
-            <svg viewBox="0 0 24 24" aria-hidden="true" class="ico"><path d="M6.6 3h2.5l1.5 4-2 1.4a12 12 0 0 0 5 5L15 11.4l4 1.5v2.5c0 1.1-.9 2-2 2A14.5 14.5 0 0 1 3.5 5c0-1.1.9-2 2-2Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
-            전화 상담
-          </a>
-          <button class="btn btn-outline-light btn-lg" type="button" data-copy-kakao>
-            <svg viewBox="0 0 24 24" aria-hidden="true" class="ico"><path d="M12 4c-4.4 0-8 2.6-8 5.9 0 2 1.3 3.8 3.4 4.9l-.8 3 3-1.6c.8.2 1.6.3 2.4.3 4.4 0 8-2.6 8-5.9S16.4 4 12 4Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
-            카톡 상담 <span class="btn-sub">hyunyul89</span>
-          </button>
-        </div>
-        <p class="hero-meta"><span class="nowrap">카카오톡 <b>hyunyul89</b></span> · <span class="nowrap">등록 <b>M-019448</b></span> · <a href="https://blog.naver.com/hyunyul89" target="_blank" rel="noopener">블로그 현장 후기</a></p>
-      </div>
-
-      <aside class="hero-panel" aria-label="상담에서 정리되는 내용">
-        <div class="panel-head">
-          <span class="panel-label">BRIEFING</span>
-          <span class="panel-title">상담 한 번에 정리되는 것</span>
-        </div>
-        <ol class="panel-list">
-          <li><span class="num">01</span><div><strong>조건에 맞는 점포 후보</strong><p>지역·예산에 맞춰 2~3곳으로 압축해 드립니다.</p></div></li>
-          <li><span class="num">02</span><div><strong>매출·지출 원자료</strong><p>점주 제시 자료를 바탕으로 재료비·인건비·고정비를 함께 봅니다.</p></div></li>
-          <li><span class="num">03</span><div><strong>수익 구조 비교</strong><p>인력 운영과 배달 비중에 따라 달라지는 수익을 정리합니다.</p></div></li>
-        </ol>
-        <div class="panel-foot">
-          <span class="dot" aria-hidden="true"></span>
-          김현율 팀장 · 프랜차이즈 양도양수 전문
-        </div>
-      </aside>
-    </div>
-
-    <div class="wrap">
-      <ul class="hero-facts">
-        <li><b>현장 실사</b><span>상권·동선·시설 직접 확인</span></li>
-        <li><b>원자료 공개</b><span>상세 자료는 상담에서 안내</span></li>
-        <li><b>수익 시뮬레이션</b><span>인력·배달 비중별 예상 수익 비교</span></li>
-        <li><b>계약 체크리스트</b><span>인수 항목·일정까지 함께</span></li>
-      </ul>
-    </div>
-  </section>
-
-  <!-- ============ AI CONCIERGE ============ -->
-  <section class="section section-concierge" id="concierge">
-    <div class="wrap">
-      <header class="section-head">
-        <p class="eyebrow dark"><span class="eyebrow-line"></span>AI MATCHING CONCIERGE</p>
-        <h2>조건을 말하면, 맞는 점포부터 보여드립니다</h2>
-        <p class="section-lead">
-          지역·예산을 고르거나 문장으로 적어 주세요.
-          컨시어지가 등록된 점포 중 조건에 가까운 후보를 1~2곳 골라 드립니다.
-          세부 수익 구조와 실제 위치는 상담에서 안내합니다.
-        </p>
-      </header>
-
-      <div class="concierge-grid">
-        <div class="chat-window">
-          <div class="chat-head">
-            <span class="chat-avatar" aria-hidden="true">AP</span>
-            <div class="chat-head-text">
-              <strong>AP 매칭 컨시어지</strong>
-              <span>조건을 분석해 후보를 골라 드립니다</span>
-            </div>
-            <span class="chat-status">실시간 매칭</span>
-          </div>
-
-          <div class="chat-log" id="chatLog" role="log" aria-live="polite" aria-label="AI 컨시어지 대화">
-            <div class="msg msg-bot">
-              <p>안녕하세요, 에이피파트너 매칭 컨시어지입니다.</p>
-              <p>희망 지역과 예산대를 알려주시면 조건에 가까운 점포를 먼저 보여드릴게요. 아래에서 고르셔도 되고, 문장으로 적으셔도 됩니다.</p>
-            </div>
-          </div>
-
-          <form class="chat-form" id="conciergeForm" novalidate>
-            <div class="chip-groups">
-              <div class="chip-group" role="group" aria-label="희망 지역">
-                <span class="chip-label">지역</span>
-                <div class="chips" data-group="region">
-                  <button type="button" class="chip" data-value="서울">서울</button>
-                  <button type="button" class="chip" data-value="경기">경기</button>
-                  <button type="button" class="chip" data-value="인천">인천</button>
-                  <button type="button" class="chip" data-value="">전체</button>
-                </div>
-              </div>
-              <div class="chip-group" role="group" aria-label="예산대">
-                <span class="chip-label">예산</span>
-                <div class="chips" data-group="budget">
-                  <button type="button" class="chip" data-value="1억 미만">1억 미만</button>
-                  <button type="button" class="chip" data-value="1억대">1억대</button>
-                  <button type="button" class="chip" data-value="2억대">2억대</button>
-                  <button type="button" class="chip" data-value="3억 이상">3억 이상</button>
-                </div>
-              </div>
-            </div>
-
-            <div class="chat-input-row">
-              <label class="visually-hidden" for="conciergeInput">조건 입력</label>
-              <input id="conciergeInput" type="text" autocomplete="off"
-                     placeholder="예: 서울 2억대 카페 / 경기 1억 미만 디저트" />
-              <button class="btn btn-gold" type="submit">
-                추천 받기
-                <svg viewBox="0 0 24 24" aria-hidden="true" class="ico"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </button>
-            </div>
-            <p class="chat-foot">현재 등록된 점포를 기준으로 안내합니다. 맞춤 매칭 결과와 상세 지출은 업종·지역·예산·연락처 4항목 입력 후 열립니다.</p>
-          </form>
-        </div>
-
-        <aside class="concierge-side">
-          <h3>이렇게 물어보세요</h3>
-          <ul class="example-list">
-            <li><button type="button" class="example" data-example="서울 2억대 카페">서울 2억대 카페</button></li>
-            <li><button type="button" class="example" data-example="경기 1억 미만 카페">경기 1억 미만 카페</button></li>
-            <li><button type="button" class="example" data-example="주차 되는 경기 카페">주차 되는 경기 카페</button></li>
-            <li><button type="button" class="example" data-example="풀오토로 돌릴 만한 카페">풀오토로 돌릴 만한 카페</button></li>
-            <li><button type="button" class="example" data-example="매출 큰 카페 2억대">매출 큰 카페 2억대</button></li>
-          </ul>
-          <div class="side-note">
-            <strong>컨시어지가 하지 않는 것</strong>
-            <p>세부 수익 구조와 정확한 위치는 화면에 표시하지 않습니다. 조건을 좁혀 드리고, 판단에 필요한 원자료는 상담에서 김현율 팀장이 직접 설명드립니다.</p>
-          </div>
-          <div class="side-note step-note">
-            <strong>2단계에서 받는 4가지</strong>
-            <p>① 희망 업종·브랜드 ② 희망 지역 ③ 가용 예산 ④ 연락처. 한 번 입력하면 다시 묻지 않고, 상세 지출과 확인 포인트가 바로 열립니다.</p>
-          </div>
-          <a class="side-call" href="tel:010-2885-5553">
-            <span>바로 통화하기</span>
-            <b>010-2885-5553</b>
-          </a>
-        </aside>
+      <p class="eyebrow"><span class="eyebrow-line"></span>FRANCHISE M&amp;A · SEOUL</p>
+      <h1>실사 마친 점포를<br /><em>숫자로 먼저</em> 봅니다</h1>
+      <p class="hero-lead">인수 비용·월 매출·예상 순수익을 한눈에 보고, 그대로 문의하세요.</p>
+      <div class="hero-cta">
+        <a class="btn btn-gold btn-lg" href="#listings">
+          점포 바로 보기
+          <svg viewBox="0 0 24 24" aria-hidden="true" class="ico"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a class="btn btn-outline-light btn-lg" href="#contact">상담 문의</a>
       </div>
     </div>
   </section>
 
-  <!-- ============ LISTINGS ============ -->
+  <!-- ============ LISTINGS (맨 앞 주인공) ============ -->
   <section class="section section-listings" id="listings">
     <div class="wrap">
-      <header class="section-head split">
-        <div>
-          <p class="eyebrow dark"><span class="eyebrow-line"></span>STORE LISTINGS</p>
-          <h2>점포 둘러보기</h2>
-          <p class="section-lead">지역과 업종, 초기 인수 비용으로 좁혀 보세요. 목록과 기본 정보는 연락처 없이 바로 열람하고, 상세 지출·확인 포인트는 4항목 입력 후 확인하실 수 있습니다.</p>
-        </div>
-        <div class="listing-count"><b id="listingCount">5</b><span>곳의 점포</span></div>
+      <header class="section-head">
+        <p class="eyebrow dark"><span class="eyebrow-line"></span>STORE LISTINGS</p>
+        <h2>실사 마친 점포 <em class="head-count" id="listingCount">5</em>곳</h2>
+        <p class="section-lead">지역·업종·비용으로 좁혀 보세요.</p>
       </header>
 
-      <ol class="flow-strip" aria-label="이용 단계">
-        <li class="flow-step">
-          <span class="flow-num">1단계 · 무료</span>
-          <div>
-            <strong>목록·조건 검색 바로 열람</strong>
-            <p>지역·업종·예산 필터로 점포를 연락처 없이 둘러봅니다.</p>
-          </div>
-        </li>
-        <li class="flow-arrow" aria-hidden="true">
-          <svg viewBox="0 0 24 24" class="ico"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </li>
-        <li class="flow-step">
-          <span class="flow-num accent">2단계 · 4항목</span>
-          <div>
-            <strong>맞춤 매칭 · 상세 지출 확인</strong>
-            <p>업종·지역·예산·연락처를 남기면 잠금이 풀립니다.</p>
-          </div>
-        </li>
-      </ol>
+      <p class="listing-caption">실제 현장 실사 완료 점포 · 상세 지번은 상담 시 안내</p>
 
       <div class="lead-status" id="leadStatus" hidden>
         <span class="dot" aria-hidden="true"></span>
@@ -255,11 +107,6 @@
           <button class="btn btn-quiet" type="button" data-view-lead>DB 페이로드</button>
           <button class="btn btn-quiet" type="button" data-reset-lead>다시 입력</button>
         </div>
-      </div>
-
-      <div class="sample-notice" role="note">
-        <span class="sample-tag">현장 실사</span>
-        <p><b>현재 등록된 5곳</b>은 김현율 팀장이 현장 실사를 마친 실제 점포입니다. 점포마다 상담·문의에 쓰는 고유번호(No. AP-001 ~ AP-005)가 있으며, 지점명과 상세 지번은 점주 보호를 위해 공개하지 않습니다. 표시된 수치는 점주 제시 자료를 기준으로 정리했습니다. 세부 조건은 상담에서 안내합니다.</p>
       </div>
 
       <div class="filter-bar" role="search">
@@ -309,37 +156,109 @@
         조건에 맞는 점포가 아직 없습니다. 조건을 조금 넓히시거나, 바로 상담으로 문의해 주세요.
         <a href="tel:010-2885-5553">전화 상담 010-2885-5553</a>
       </p>
+
+      <p class="listing-foot">상세 지출은 4항목 입력 후 열립니다 · 비교 최대 3곳</p>
     </div>
   </section>
 
-  <!-- ============ PROCESS ============ -->
+  <!-- ============ AI 추천 (컴팩트) ============ -->
+  <section class="section section-concierge" id="concierge">
+    <div class="wrap concierge-wrap">
+      <header class="section-head center">
+        <p class="eyebrow dark"><span class="eyebrow-line"></span>AI MATCHING</p>
+        <h2>조건만 말하면, 맞는 점포부터</h2>
+        <p class="section-lead">지역·예산을 고르거나 문장으로 적어 주세요. 등록된 점포 중 조건에 가까운 후보를 골라 드립니다.</p>
+      </header>
+
+      <div class="chat-window">
+        <div class="chat-head">
+          <span class="chat-avatar" aria-hidden="true">AP</span>
+          <div class="chat-head-text">
+            <strong>AP 매칭 컨시어지</strong>
+            <span>조건을 분석해 후보를 골라 드립니다</span>
+          </div>
+          <span class="chat-status">실시간 매칭</span>
+        </div>
+
+        <div class="chat-log" id="chatLog" role="log" aria-live="polite" aria-label="AI 컨시어지 대화">
+          <div class="msg msg-bot">
+            <p>안녕하세요, 에이피파트너 매칭 컨시어지입니다.</p>
+            <p>희망 지역과 예산을 알려주시면 조건에 가까운 점포를 먼저 보여드릴게요. 아래에서 고르셔도 되고, 문장으로 적으셔도 됩니다.</p>
+          </div>
+        </div>
+
+        <form class="chat-form" id="conciergeForm" novalidate>
+          <div class="example-row">
+            <button type="button" class="example" data-example="서울 2억대 카페">서울 2억대 카페</button>
+            <button type="button" class="example" data-example="경기 1억 미만 카페">경기 1억 미만 카페</button>
+            <button type="button" class="example" data-example="주차 되는 경기 카페">주차 되는 경기 카페</button>
+            <button type="button" class="example" data-example="풀오토로 돌릴 만한 카페">풀오토 운영 카페</button>
+          </div>
+
+          <div class="chip-groups">
+            <div class="chip-group" role="group" aria-label="희망 지역">
+              <span class="chip-label">지역</span>
+              <div class="chips" data-group="region">
+                <button type="button" class="chip" data-value="서울">서울</button>
+                <button type="button" class="chip" data-value="경기">경기</button>
+                <button type="button" class="chip" data-value="인천">인천</button>
+                <button type="button" class="chip" data-value="">전체</button>
+              </div>
+            </div>
+            <div class="chip-group" role="group" aria-label="예산대">
+              <span class="chip-label">예산</span>
+              <div class="chips" data-group="budget">
+                <button type="button" class="chip" data-value="1억 미만">1억 미만</button>
+                <button type="button" class="chip" data-value="1억대">1억대</button>
+                <button type="button" class="chip" data-value="2억대">2억대</button>
+                <button type="button" class="chip" data-value="3억 이상">3억 이상</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="chat-input-row">
+            <label class="visually-hidden" for="conciergeInput">조건 입력</label>
+            <input id="conciergeInput" type="text" autocomplete="off"
+                   placeholder="예: 서울 2억대 카페 / 경기 1억 미만 디저트" />
+            <button class="btn btn-gold" type="submit">
+              추천 받기
+              <svg viewBox="0 0 24 24" aria-hidden="true" class="ico"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+          <p class="chat-foot">등록된 점포를 기준으로 안내합니다. 상세 지출은 4항목 입력 후 열립니다.</p>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 진행 절차 · 안심 가이드 ============ -->
   <section class="section section-process" id="process">
     <div class="wrap">
       <header class="section-head center">
         <p class="eyebrow dark"><span class="eyebrow-line"></span>HOW IT WORKS</p>
         <h2>상담은 이렇게 진행됩니다</h2>
-        <p class="section-lead">정보를 먼저 확인하고, 판단은 함께 합니다. 각 단계에서 필요한 자료를 정리해 드립니다.</p>
+        <p class="section-lead">정보를 먼저 확인하고, 판단은 함께 합니다.</p>
       </header>
       <ol class="process-list">
         <li>
           <span class="step-num">01</span>
           <h3>1차 상담</h3>
-          <p>전화·카톡으로 예산과 운영 계획, 희망 지역을 정리합니다.</p>
+          <p>예산과 운영 계획, 희망 지역을 정리합니다.</p>
         </li>
         <li>
           <span class="step-num">02</span>
           <h3>후보 압축</h3>
-          <p>조건에 맞는 점포 2~3곳과 매출·지출 원자료 요약을 함께 보내 드립니다.</p>
+          <p>조건에 맞는 점포 2~3곳과 매출·지출 요약을 보내 드립니다.</p>
         </li>
         <li>
           <span class="step-num">03</span>
           <h3>현장 실사</h3>
-          <p>상권·동선·시설을 직접 확인하고, 인력·배달 비중별 예상 수익을 비교합니다.</p>
+          <p>상권·동선·시설을 직접 확인하고 예상 수익을 비교합니다.</p>
         </li>
         <li>
           <span class="step-num">04</span>
           <h3>조건 협의</h3>
-          <p>인수 항목과 일정, 계약 조건을 점주와 조율합니다. 체크리스트로 마무리합니다.</p>
+          <p>인수 항목과 일정, 계약 조건을 체크리스트로 마무리합니다.</p>
         </li>
       </ol>
 
@@ -347,43 +266,47 @@
         <div class="guide-head">
           <p class="eyebrow dark"><span class="eyebrow-line"></span>DUE DILIGENCE GUIDE</p>
           <h3>실사 · 계약 안심 가이드</h3>
-          <p>점주님이 주신 자료를 그대로 믿고 넘기지 않습니다. 아래 네 가지를 계약 전에 직접 확인합니다.</p>
+          <p>점주님이 주신 자료를 그대로 믿고 넘기지 않습니다. 계약 전에 아래 네 가지를 직접 확인합니다.</p>
         </div>
         <ol class="guide-list">
           <li>
             <span class="guide-num">01</span>
             <h4>포스 · 카드 매출 원자료 대조</h4>
-            <p>최근 12개월 포스 출력물과 카드사 정산내역을 제출 자료와 한 달씩 맞춰 봅니다. 현금·배달·쿠폰 매출도 함께 확인합니다.</p>
+            <p>최근 12개월 포스 출력물과 카드사 정산내역을 제출 자료와 한 달씩 맞춰 봅니다.</p>
           </li>
           <li>
             <span class="guide-num">02</span>
             <h4>권리금 산정 근거 확인</h4>
-            <p>시설·영업권·바닥권을 나눠 보고, 상권 실사와 유사 거래 사례로 권리금 근거를 정리합니다. 근거 없는 금액은 조정 대상으로 올립니다.</p>
+            <p>시설·영업권·바닥권을 나눠 보고, 상권 실사와 유사 거래 사례로 근거를 정리합니다.</p>
           </li>
           <li>
             <span class="guide-num">03</span>
             <h4>본사 가맹 승계 점검</h4>
-            <p>가맹본부 승계 가능 여부, 재계약 시점, 교육·위약금·예치금 조건을 계약 전에 서면으로 확인합니다.</p>
+            <p>승계 가능 여부와 재계약 시점, 교육·위약금·예치금 조건을 서면으로 확인합니다.</p>
           </li>
           <li>
             <span class="guide-num">04</span>
             <h4>계약 체크포인트</h4>
-            <p>잔금·명도·시설 이전·직원 승계·예치금 반환 조건을 체크리스트로 정리하고, 특약 사항까지 문서에 남깁니다.</p>
+            <p>잔금·명도·시설 이전·직원 승계·예치금 반환 조건을 특약까지 문서에 남깁니다.</p>
           </li>
         </ol>
         <div class="guide-foot">
           <span class="guide-badge">현장 동행 실사</span>
-          <p>상담 후 조건이 맞으면 김현율 팀장이 현장에 함께 가서 상권·동선·시설·매출 자료를 직접 확인합니다. 확인된 내용은 계약 전 요약본으로 정리해 드립니다.</p>
+          <p>조건이 맞으면 김현율 팀장이 현장에 함께 가서 상권·동선·시설·매출 자료를 직접 확인하고, 계약 전 요약본으로 정리해 드립니다. 등록 M-019448.</p>
         </div>
       </div>
+    </div>
+  </section>
+
+  <!-- ============ 상담 · 명함 ============ -->
   <section class="section section-contact" id="contact">
     <div class="wrap contact-inner">
       <div class="contact-copy">
         <p class="eyebrow light"><span class="eyebrow-line"></span>CONSULTATION</p>
         <h2>조건만 알려주시면,<br />나머지는 함께 정리합니다</h2>
         <p class="contact-lead">
-          지금 운영 중인 점포의 수익 구조를 기준으로, 무리하지 않는 조건을 찾아 드립니다.
           어떤 점포를 보실지 정해지지 않아도 괜찮습니다.
+          지금 상황에 맞는 무리 없는 조건을 함께 찾습니다.
         </p>
         <div class="contact-actions">
           <a class="btn btn-gold btn-lg" href="tel:010-2885-5553">
@@ -391,9 +314,12 @@
             전화 상담
           </a>
           <button class="btn btn-outline-light btn-lg" type="button" data-copy-kakao>카톡 ID 복사</button>
-          <button class="btn btn-outline-light btn-lg" type="button" data-open-sell>내 매장 양도 의뢰</button>
-          <a class="btn btn-outline-light btn-lg" href="https://blog.naver.com/hyunyul89" target="_blank" rel="noopener">블로그 보기</a>
         </div>
+        <p class="contact-links">
+          <button type="button" data-open-sell>내 매장 양도 의뢰</button>
+          <span aria-hidden="true">·</span>
+          <a href="https://blog.naver.com/hyunyul89" target="_blank" rel="noopener">블로그 현장 후기</a>
+        </p>
         <dl class="contact-facts">
           <div><dt>담당</dt><dd>김현율 팀장</dd></div>
           <div><dt>전화</dt><dd><a href="tel:010-2885-5553">010-2885-5553</a></dd></div>
@@ -421,7 +347,7 @@
     </div>
     <div class="footer-links">
       <a href="#listings">점포 둘러보기</a>
-      <a href="#concierge">AI 매칭</a>
+      <a href="#concierge">AI 추천</a>
       <a href="#process">진행 절차</a>
       <a href="tel:010-2885-5553">010-2885-5553</a>
     </div>

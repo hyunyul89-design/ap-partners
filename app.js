@@ -1870,35 +1870,30 @@
   }
 
   function cardHTML(L) {
-    var band = budgetBand(L.initial_cost.total_manwon);
-    var tags = (L.keywords || []).slice(0, 2).map(function (k) {
-      return '<span class="tag">' + esc(k) + '</span>';
-    }).join('');
+    /* 카드에는 지역명이 이미 있으므로, 상권 표기에서는 앞의 시·도 이름을 덜어냅니다. */
+    var areaShort = String(L.area || '').replace(/^(서울|경기|인천)\s*/, '') || L.area;
+    var note = storeLineText(L);
     return '' +
       '<article class="listing-card" role="button" tabindex="0" data-id="' + esc(L.id) + '" ' +
         'aria-label="' + esc(L.area + ' ' + L.brand + ' 상세 보기') + '">' +
         '<div class="card-visual">' +
-          '<span class="card-monogram" aria-hidden="true">' + esc(shortName(L.district)) + '</span>' +
           '<div class="card-region">' +
             '<span>' + esc(L.region.toUpperCase()) + ' · ' + esc(L.category) + '</span>' +
-            '<strong>' + esc(L.area) + '</strong>' +
+            '<strong>' + esc(areaShort) + '</strong>' +
           '</div>' +
-          '<div class="card-badges">' +
-            '<span class="badge-code">No. ' + esc(codeOf(L)) + '</span>' +
-            '<span class="badge-sample live">현장 실사</span>' +
-            (L.private_only ? '<span class="badge-private">비공개전용</span>' : '') +
-            '<span class="badge-cat">' + esc(bandLabel(band)) + '</span>' +
-          '</div>' +
+          '<span class="card-code">No. ' + esc(codeOf(L)) + '</span>' +
+          (L.private_only ? '<span class="card-flag">비공개전용</span>' : '') +
         '</div>' +
         '<div class="card-body">' +
-          '<h3 class="card-title">' + esc(L.brand) + ' <span style="font-weight:500;color:#6C7688;font-size:13px">· ' + esc(L.brand_note) + '</span></h3>' +
-          '<p class="card-note">' + esc(storeLineText(L)) + '</p>' +
+          '<h3 class="card-title">' + esc(L.brand) +
+            (L.brand_note ? '<em>' + esc(L.brand_note) + '</em>' : '') +
+          '</h3>' +
+          (note ? '<p class="card-note">' + esc(note) + '</p>' : '') +
           '<div class="card-figures">' +
             '<div><span>초기 인수 비용</span><b class="gold">' + esc(L.initial_cost.label) + '</b></div>' +
             '<div><span>월 평균 매출</span><b>' + esc(L.monthly_sales.label.replace('월 평균 ', '')) + '</b></div>' +
-            '<div><span>예상 순수익</span><b>' + esc(L.profit.label.replace('월 ', '')) + '</b></div>' +
+            '<div><span>예상 순수익</span><b>' + esc(L.profit.label.replace(/^월\s*(약\s*)?/, '')) + '</b></div>' +
           '</div>' +
-          (tags ? '<div class="card-tags">' + tags + '</div>' : '') +
           '<div class="card-footer">' +
             '<span class="card-more">상세 보기 ' +
               '<svg viewBox="0 0 24 24" aria-hidden="true" class="ico"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
@@ -3039,7 +3034,7 @@
         notice.className = 'sample-notice-fallback';
         notice.style.cssText = 'margin:-8px 0 18px;font-size:12px;color:#8A6D3B;';
         notice.textContent = '지금은 파일로 직접 열려 예비 데이터를 보여드리고 있습니다. 로컬 서버나 배포 환경에서는 data/listings.json 내용이 그대로 반영됩니다.';
-        var anchor = $('.sample-notice');
+        var anchor = $('.listing-caption') || $('.filter-bar');
         if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(notice, anchor.nextSibling);
       }
       renderListings();
