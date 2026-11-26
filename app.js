@@ -2095,11 +2095,11 @@
   }
 
   /* 텔레그램에서 눌러 바로 그 물건 상세 창이 열리는 주소(손님용).
-     예: https://hyunyul89-design.github.io/ap-partners/?id=AP-005 */
-  var SITE_BASE_URL = 'https://hyunyul89-design.github.io/ap-partners/';
+     예: https://apchangup.com/?id=AP-005 */
+  var SITE_BASE_URL = 'https://apchangup.com/';
 
   /* 관리자 확인용 링크 — 텔레그램 알림에서 누르면 관리자 페이지가 그 매장 카드로 열립니다.
-     예: https://hyunyul89-design.github.io/ap-partners/admin.html?id=AP-005 */
+     예: https://apchangup.com/admin.html?id=AP-005 */
   var ADMIN_BASE_URL = SITE_BASE_URL + 'admin.html';
 
   function listingUrl(L) {

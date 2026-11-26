@@ -1,7 +1,7 @@
 /* ==========================================================================
    AP PARTNERS · 에이피파트너 — 서비스 워커 (Service Worker)
-   배포 위치: https://hyunyul89-design.github.io/ap-partners/sw.js
-   스코프    : /ap-partners/  (이 파일이 있는 폴더가 그대로 스코프가 됩니다)
+   배포 위치: https://apchangup.com/sw.js
+   스코프    : /  (이 파일이 있는 폴더가 그대로 스코프가 됩니다)
 
    캐시 정책
    - 정적 자산(styles.css · app.js · 아이콘 등): 캐시 우선 + 뒤에서 조용히 네트워크 갱신
@@ -12,11 +12,11 @@
    - 그 밖의 요청(상담 접수 POST, 구글 시트, 외부 도메인)은 가로채지 않고 브라우저에 그대로 넘깁니다.
    ========================================================================== */
 
-var SW_VERSION = 'v1.1.8';
+var SW_VERSION = 'v1.1.9';
 var STATIC_CACHE = 'ap-static-' + SW_VERSION;
 var DATA_CACHE = 'ap-data-' + SW_VERSION;
 
-/* 앱을 처음 열 때 미리 받아 두는 파일 (sw.js 기준 상대 경로 = /ap-partners/) */
+/* 앱을 처음 열 때 미리 받아 두는 파일 (sw.js 기준 상대 경로 = /) */
 var PRECACHE_URLS = [
   './',
   './index.html',
@@ -88,7 +88,7 @@ function isDataRequest(url) {
 function isHtmlRequest(request, url) {
   if (request.mode === 'navigate') return true;
   if (/\.html$/.test(url.pathname)) return true;
-  /* 폴더 주소(/ap-partners/)로 들어오는 요청도 문서입니다. */
+  /* 폴더 주소(/)로 들어오는 요청도 문서입니다. */
   return url.pathname.charAt(url.pathname.length - 1) === '/';
 }
 

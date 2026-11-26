@@ -2749,7 +2749,7 @@
       + '· 연락처: 010-1234-5678\n'
       + '\n'
       + '· 관심 점포: [AP-005] 우지커피 · 서울 서초구 주거상권\n'
-      + '  (https://hyunyul89-design.github.io/ap-partners/?id=AP-005)\n'
+      + '  (https://apchangup.com/?id=AP-005)\n'
       + '\n'
       + '[에이피파트너] 양도 의뢰\n'
       + '· 접수: 2026-11-25 05:10\n'

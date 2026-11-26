@@ -62,7 +62,7 @@ python3 -m http.server 8000
 * 표시: 점포 카드·상세 모달·비교표·비교 칩·AI 매칭 결과·상담 접수 화면에 `No. AP-005` 형태로 나옴.
 * 검색: 검색창에 `AP-005`·`ap5`·`005` 중 무엇을 적어도 그 점포로 좁혀집니다.
 * 알림: 텔레그램·문자에 실리는 점포 표기는 `[AP-005] 우지커피 · 서울 서초구 주거상권`이고, 페이로드에는 `store.code`·`store_codes`가 함께 들어갑니다(상세·비교·AI 매칭 모두).
-* 텔레그램 페이로드의 `stores` 항목에는 **관리자 페이지에서 바로 열리는 링크**가 붙습니다: `[AP-005] 우지커피 · 서울 서초구 주거상권 (https://hyunyul89-design.github.io/ap-partners/admin.html?id=AP-005)`. 링크만 따로 담은 `store_links` 배열과 `store.url`도 같은 관리자 링크입니다. 화면·문자·복사/공유에는 링크 없이 `storeLabel` 표기만 쓰고, 손님용 `?id=AP-005` 딥링크는 그대로 유지합니다.
+* 텔레그램 페이로드의 `stores` 항목에는 **관리자 페이지에서 바로 열리는 링크**가 붙습니다: `[AP-005] 우지커피 · 서울 서초구 주거상권 (https://apchangup.com/admin.html?id=AP-005)`. 링크만 따로 담은 `store_links` 배열과 `store.url`도 같은 관리자 링크입니다. 화면·문자·복사/공유에는 링크 없이 `storeLabel` 표기만 쓰고, 손님용 `?id=AP-005` 딥링크는 그대로 유지합니다.
 * 링크 열기: 손님 사이트에서 `?id=AP-005` · `?id=ap-005` · `#AP-005`로 들어오면 그 매물(`code`/`id` 매칭)의 **상세 모달을 자동으로 엽니다**. 거래완료·비노출 매물은 열리지 않습니다. 관리자 페이지에서는 `admin.html?id=AP-005`(또는 `#AP-005`)로 들어오면 **매장 DB의 그 카드로 스크롤하며 강조**하고, 로그인 전이면 로그인 직후에 엽니다.
 * 관리자: 등록 폼의 **고유번호** 칸은 비워 두면 다음 번호가 자동 제안됩니다. 이미 쓰는 번호는 저장되지 않고, CSV 일괄 등록에서 번호를 비우면 빈 번호가 자동으로 붙습니다.
 
@@ -218,12 +218,21 @@ function doPost(e) {
 
 ## 배포
 
-- **GitHub Pages**: 저장소에 `site/` 폴더를 올리고 Settings → Pages → Branch `main`, 폴더 `/site` 선택
+- **GitHub Pages**: `site/` 내용을 `hyunyul89-design/ap-partners` 저장소 `main` 루트에 올리고 Settings → Pages → Branch `main`, 폴더 `/ (root)` 선택
 - **Vercel**: 저장소 연결 후 Root Directory를 `site`로 지정 (프레임워크: Other, 빌드 명령 없음)
+
+### 고유 도메인 `apchangup.com` (2026-11-26 연결)
+
+- 저장소 루트에 `CNAME` 파일(`apchangup.com`)을 두고, Settings → Pages → Custom domain 에 `apchangup.com` 입력 → `Enforce HTTPS` 체크
+- 가비아 DNS 관리(`dns.gabia.com`) 레코드 5줄
+  - `A @ 185.199.108.153` · `185.199.109.153` · `185.199.110.153` · `185.199.111.153`
+  - `CNAME www hyunyul89-design.github.io.`
+- 도메인이 루트로 오므로 서비스 워커 스코프·매니페스트 `start_url`·`scope`·`id` 는 `/`(예전 `/ap-partners/`), 사이트 기준 URL(`app.js` `SITE_BASE_URL`, `scripts/build_seo_pages.py` `BASE_URL`)은 `https://apchangup.com` 입니다.
+- 예전 주소 `https://hyunyul89-design.github.io/ap-partners/` 는 GitHub가 새 도메인으로 자동 리다이렉트합니다.
 
 ## 검색엔진 최적화 (2026-11-25 추가)
 
-- **사이트**: `https://hyunyul89-design.github.io/ap-partners/` (저장소 `hyunyul89-design/ap-partners`, 커밋 `bd8a188`·`f11bc44`)
+- **사이트**: `https://apchangup.com/` (저장소 `hyunyul89-design/ap-partners`, 커밋 `bd8a188`·`f11bc44`)
 - `robots.txt`: 전체 허용, `/admin.html`만 차단, 사이트맵 위치 안내
 - `sitemap.xml`: 메인 + 브랜드·점포 정적 페이지 전체 URL(21개). `site/scripts/build_seo_pages.py`가 자동으로 다시 씁니다.
 - `index.html` head: `canonical`, `description`, `og:*`(title·description·url·image·type·site_name·locale), `twitter:card`, `naver-site-verification` 메타태그

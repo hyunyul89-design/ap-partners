@@ -1,12 +1,12 @@
 {
-  "id": "/ap-partners/",
+  "id": "/",
   "name": "에이피파트너 · 창업 양도양수",
   "short_name": "AP파트너",
   "description": "에이피파트너 프랜차이즈 양도양수 컨설팅. 서울·경기 카페·디저트 점포 실사 리포트와 AI 맞춤 추천, 1:1 상담.",
   "lang": "ko",
   "dir": "ltr",
-  "start_url": "/ap-partners/",
-  "scope": "/ap-partners/",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#0F1F38",
   "theme_color": "#0F1F38",
@@ -29,7 +29,7 @@
     {
       "name": "관리자 페이지",
       "short_name": "관리자",
-      "url": "/ap-partners/admin.html",
+      "url": "/admin.html",
       "icons": [
         {
           "src": "assets/icon-192.png",

@@ -30,7 +30,7 @@ import re
 import sys
 from pathlib import Path
 
-BASE_URL = "https://hyunyul89-design.github.io/ap-partners"
+BASE_URL = "https://apchangup.com"
 PHONE = "010-2885-5553"
 PHONE_TEL = "tel:010-2885-5553"
 KAKAO = "hyunyul89"
