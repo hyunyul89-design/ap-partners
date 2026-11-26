@@ -1567,6 +1567,18 @@
     return 'LEAD-' + leadStamp(new Date()) + '-' + String(Math.floor(Math.random() * 9000) + 1000);
   }
 
+  /* 손님 화면에 보이는 접수번호는 한글 접두어로 보여 줍니다.
+     (텔레그램 웹훅·관리자 저장소가 읽는 lead_id · request_id 값은 그대로 둡니다) */
+  function displayReceiptNo(id) {
+    var s = String(id || '');
+    var m = s.match(/^(LEAD|SELL|REQ)-(\d{4})(\d{2})(\d{2})-(\d+)$/);
+    if (m) {
+      var label = m[1] === 'LEAD' ? '상담' : m[1] === 'SELL' ? '양도' : '문의';
+      return label + '-' + m[2] + '-' + m[3] + '-' + m[4] + '-' + m[5];
+    }
+    return s.replace(/^LEAD-/, '상담-').replace(/^SELL-/, '양도-').replace(/^REQ-/, '문의-');
+  }
+
   function leadCriteriaText(c) {
     if (!c) return '';
     var parts = [];
@@ -1724,7 +1736,7 @@
         : '조건에 맞는 후보의 매칭 이유와 상세 내용을 바로 확인합니다.';
     return '' +
       '<div class="gate-hero">' +
-        '<p class="eyebrow"><span class="eyebrow-line"></span>STEP 2 · 4-FIELD ACCESS</p>' +
+        '<p class="eyebrow"><span class="eyebrow-line"></span>상세 비용 확인 · 4가지 입력</p>' +
         '<h3 id="gateTitle">4가지만 남기면 바로 열립니다</h3>' +
         '<p>' + sub + '</p>' +
         '<ol class="gate-steps">' +
@@ -1806,7 +1818,7 @@
         '<div class="gate-receipt">' +
           '<div class="gate-receipt-head">' +
             '<span class="receipt-icon">' + checkIcon() + '</span>' +
-            '<div><strong>접수번호 ' + esc(payload.lead_id) + '</strong><span>' + esc(sourceLabel) + '</span></div>' +
+            '<div><strong>접수번호 ' + esc(displayReceiptNo(payload.lead_id)) + '</strong><span>' + esc(sourceLabel) + '</span></div>' +
           '</div>' +
           '<div class="receipt-summary">' + gateSummaryRows(payload) + '</div>' +
         '</div>' +
@@ -2464,13 +2476,13 @@
       '<div class="modal-hero">' +
         '<p class="eyebrow"><span class="eyebrow-line"></span>REQUEST RECEIVED</p>' +
         '<h3 id="sellTitle">양도 의뢰가 접수됐습니다</h3>' +
-        '<p>접수번호 <b style="color:#E7D6B0">' + esc(payload.request_id) + '</b></p>' +
+        '<p>접수번호 <b style="color:#E7D6B0">' + esc(displayReceiptNo(payload.request_id)) + '</b></p>' +
       '</div>' +
       '<div class="modal-content">' +
         '<div class="receipt">' +
           '<div class="receipt-icon" aria-hidden="true">' + checkIcon() + '</div>' +
           '<h4>' + esc(payload.brand) + ' · ' + esc(payload.area) + '</h4>' +
-          '<p class="no">' + esc(payload.request_id) + '</p>' +
+          '<p class="no">' + esc(displayReceiptNo(payload.request_id)) + '</p>' +
           '<div class="receipt-summary">' +
             '<div><span>브랜드 / 업종</span><b>' + esc(payload.brand) + '</b></div>' +
             '<div><span>지역</span><b>' + esc(payload.area) + '</b></div>' +
@@ -2847,7 +2859,7 @@
           : '<div class="detail-lock">' +
               '<div class="detail-lock-blur" aria-hidden="true" inert>' + detailSectionsHTML(L) + '</div>' +
               '<div class="detail-lock-overlay">' +
-                '<span class="lock-badge">' + lockIcon() + '2단계 잠금</span>' +
+                '<span class="lock-badge">' + lockIcon() + '상세 지출 잠금</span>' +
                 '<strong>상세 지출 구성은<br />4항목 입력 후 열립니다</strong>' +
                 '<p>희망 업종·지역·예산·연락처를 한 번만 남기시면 항목별 지출 금액과 비율, 인력 운영 포인트까지 바로 보실 수 있습니다.</p>' +
                 '<button class="btn btn-gold btn-lg" type="button" data-open-gate="detail">상세 지출 더 보기</button>' +
@@ -2915,8 +2927,10 @@
   }
 
   function receiptHTML(L, data) {
-    /* 접수번호는 매물 고유번호(AP-001)와 헷갈리지 않게 REQ- 로 시작합니다. */
-    var no = 'REQ-' + new Date().toISOString().slice(2, 10).replace(/-/g, '') + '-' + String(Math.floor(Math.random() * 9000) + 1000);
+    /* 접수번호는 매물 고유번호(AP-001)와 헷갈리지 않게 '문의-'로 시작합니다. (화면 전용 값) */
+    var nowNo = new Date();
+    var no = '문의-' + nowNo.getFullYear() + '-' + pad2(nowNo.getMonth() + 1) + '-' + pad2(nowNo.getDate()) +
+      '-' + String(Math.floor(Math.random() * 9000) + 1000);
     var bodyLines = [
       '[에이피파트너 상담 요청]',
       '점포: ' + storeLabel(L),
@@ -3125,7 +3139,6 @@
 
   /* ---------------- AI concierge ---------------- */
   var chatBusy = false;
-  var lastUserEl = null;
 
   function addMessage(html, kind, extraClass) {
     var log = $('#chatLog');
@@ -3133,7 +3146,6 @@
     el.className = 'msg ' + (kind === 'user' ? 'msg-user' : 'msg-bot') + (extraClass ? ' ' + extraClass : '');
     el.innerHTML = html;
     log.appendChild(el);
-    if (kind === 'user') lastUserEl = el;
     log.scrollTop = log.scrollHeight;
     return el;
   }
@@ -3158,16 +3170,50 @@
     return '';
   }
 
+  /* 손님이 말한 지역을 지역명으로 정리합니다.
+     등록 점포가 있는 지역뿐 아니라 전국 시·도를 알아듣고, 등록 점포가 없는 지역을 물었을 때
+     "부산 → 서울 매물"처럼 조용히 바꿔 보여 주지 않도록 하기 위해 씁니다. */
+  var REGION_WORDS = [
+    { name: '서울', re: /서울|마포|강남|종로|영등포|관악|금천|송파|홍대|서초|강서|강동|용산|성동|광진|노원|은평|동작/ },
+    { name: '경기', re: /경기|성남|분당|수원|용인|부천|안양|일산|위례|고양|평택|안산|남양주|하남|김포/ },
+    { name: '인천', re: /인천|부평|송도|계양|미추홀|연수구|남동구/ },
+    { name: '대전', re: /대전|둔산|유성/ },
+    { name: '충남', re: /충남|충청남도|천안|아산|당진|서산/ },
+    { name: '부산', re: /부산|해운대|광안리|남포동|동래|수영구|부산진/ },
+    { name: '대구', re: /대구|동성로|수성구|달서구/ },
+    { name: '광주', re: /광주|상무지구|충장로/ },
+    { name: '울산', re: /울산|삼산동/ },
+    { name: '세종', re: /세종|조치원/ },
+    { name: '충북', re: /충북|충청북도|청주|충주|제천/ },
+    { name: '전북', re: /전북|전라북도|전주|군산|익산/ },
+    { name: '전남', re: /전남|전라남도|여수|순천|목포/ },
+    { name: '경북', re: /경북|경상북도|포항|구미|경주/ },
+    { name: '경남', re: /경남|경상남도|창원|김해|양산|진주/ },
+    { name: '제주', re: /제주|서귀포/ },
+    { name: '강원', re: /강원|춘천|원주|강릉/ }
+  ];
+
+  function regionOfText(text) {
+    var t = String(text || '').toLowerCase().replace(/\s+/g, ' ').trim();
+    if (!t) return '';
+    for (var i = 0; i < REGION_WORDS.length; i++) {
+      if (REGION_WORDS[i].re.test(t)) return REGION_WORDS[i].name;
+    }
+    return '';
+  }
+
+  /* 지금 등록된 점포가 있는 지역인지 */
+  function regionHasStores(name) {
+    if (!name) return true;
+    return (state.listings || []).some(function (L) { return L.region === name; });
+  }
+
   function parseInput(text) {
     var out = { region: '', budget: '', category: '', tokens: [] };
     var t = String(text || '').toLowerCase().replace(/\s+/g, ' ').trim();
     if (!t) return out;
 
-    if (/서울|마포|강남|종로|영등포|관악|금천|송파|홍대/.test(t)) out.region = '서울';
-    else if (/경기|성남|분당|수원|용인|부천|안양|일산|위례/.test(t)) out.region = '경기';
-    else if (/인천|부평|송도|계양/.test(t)) out.region = '인천';
-    else if (/대전|둔산|유성/.test(t)) out.region = '대전';
-    else if (/충남|충청남도|천안|아산|당진|서산/.test(t)) out.region = '충남';
+    out.region = regionOfText(t);
 
     if (/3\s*억/.test(t)) out.budget = '3억 이상';
     else if (/1\s*억\s*미만|[5-9]\s*천|오천|육천|칠천/.test(t)) out.budget = '1억 미만';
@@ -3182,7 +3228,7 @@
     else if (/식당|음식|분식|고기|국밥|주점|술집/.test(t)) out.category = '음식점';
     else if (/카페|커피/.test(t)) out.category = '카페';
 
-    var stop = /^(서울|경기|인천|대전|충남|천안|마포|강남|종로|성남|분당|수원|부평|둔산|억|억대|만원|카페|커피|디저트|음식점|패스트푸드|치킨|오토|반오토|직접|운영|매장|점포|있는|하고|싶어요|싶습니다|해주세요|추천|찾아|보여|주세요|그리고|정도|이상|미만)$/;
+    var stop = /^(서울|경기|인천|대전|충남|부산|대구|광주|울산|세종|충북|전북|전남|경북|경남|제주|강원|천안|마포|강남|종로|성남|분당|수원|부평|둔산|억|억대|만원|카페|커피|디저트|음식점|패스트푸드|치킨|오토|반오토|직접|운영|매장|점포|있는|하고|싶어요|싶습니다|해주세요|추천|찾아|보여|주세요|그리고|정도|이상|미만)$/;
     out.tokens = t.split(' ').filter(function (w) { return w.length > 1 && !stop.test(w); });
     return out;
   }
@@ -3341,12 +3387,12 @@
 
   function miniCardHTML(m, masked) {
     var L = m.listing;
-    var title = masked ? (L.region + ' · ●●') : (L.area + ' · ' + L.brand);
+    var title = masked ? (L.region + ' · 지역 비공개') : (L.area + ' · ' + L.brand);
     var reason = masked
       ? L.category
       : (m.reasons.join(' / ') || L.area_note);
     function fig(label, value) {
-      return '<div><span>' + label + '</span><b>' + (masked ? '●●●' : esc(value)) + '</b></div>';
+      return '<div><span>' + label + '</span><b>' + (masked ? '입력 후 공개' : esc(value)) + '</b></div>';
     }
     return '' +
       '<div class="mini-list">' +
@@ -3355,7 +3401,7 @@
           '<div class="mini-top">' +
             '<span class="mini-code">No. ' + esc(codeOf(L)) + '</span>' +
             '<strong>' + esc(title) + '</strong>' +
-            '<span class="mini-tag">' + (masked ? 'LOCKED' : 'MATCH') + '</span>' +
+            '<span class="mini-tag">' + (masked ? '비공개 대기' : 'MATCH') + '</span>' +
           '</div>' +
           '<p class="mini-reason">' + esc(reason) + '</p>' +
           '<div class="mini-figures">' +
@@ -3368,36 +3414,68 @@
       '</div>';
   }
 
-  function teaserHTML(matches) {
+  function teaserHTML(matches, note) {
     var rows = matches.map(function (m) {
       var L = m.listing;
       return '' +
         '<div class="teaser-row">' +
           '<span class="tr-lock" aria-hidden="true">' + lockIcon() + '</span>' +
           '<div class="tr-main">' +
-            '<strong>' + esc(L.region + ' · ●●') + '</strong>' +
-            '<span>No. ' + esc(codeOf(L)) + ' · ' + esc(L.category) + ' · 초기 인수 ●●●</span>' +
+            '<strong>' + esc(L.region) + ' · 지역 비공개</strong>' +
+            '<span>No. ' + esc(codeOf(L)) + ' · ' + esc(L.category) + '</span>' +
           '</div>' +
-          '<span class="tr-fig" aria-hidden="true">●●●</span>' +
+          '<span class="tr-open">초기 인수<br />입력 후 공개</span>' +
         '</div>';
     }).join('');
 
     return '' +
       '<div class="teaser">' +
         '<div class="teaser-head">' +
-          '<span class="lock-badge">' + lockIcon() + '2단계 · 4항목 입력 후 공개</span>' +
+          '<span class="lock-badge">' + lockIcon() + '4가지 입력 후 공개</span>' +
           '<strong>후보 ' + matches.length + '곳이 준비됐습니다</strong>' +
           '<p>희망 업종·지역·예산·연락처를 남기면 매칭 이유와 상세 요약이 바로 열립니다.</p>' +
         '</div>' +
         '<div class="teaser-rows">' + rows + '</div>' +
+        (note ? '<p class="teaser-note">' + esc(note) + '</p>' : '') +
         '<button class="btn btn-gold teaser-cta" type="button" data-open-gate="match">AI 맞춤 매칭 결과 확인</button>' +
       '</div>';
   }
 
-  function scrollToLastUser() {
+  /* 응답 뒤에는 사용자 질문이 아니라 '방금 온 답변과 다음 동작 버튼'이 보이도록 채팅 로그를 내립니다.
+     (예전에는 마지막 질문 자리로 되돌려 답변·CTA가 로그 아래로 잘렸습니다)
+     상단 고정 헤더에 가려지는 부분은 보이는 영역에서 제외합니다. */
+  function visibleLogTop(log, logRect) {
+    var top = logRect.top;
+    var head = document.querySelector('.site-header');
+    if (head) {
+      var hs = window.getComputedStyle(head);
+      if (hs.position === 'fixed' || hs.position === 'sticky') {
+        top = Math.max(top, head.getBoundingClientRect().bottom);
+      }
+    }
+    return top;
+  }
+
+  function scrollChatToAction(actionEl) {
     var log = $('#chatLog');
-    if (lastUserEl && log && log.scrollHeight > log.clientHeight) {
-      log.scrollTop = Math.max(0, lastUserEl.offsetTop - 2);
+    if (!log) return;
+    var target = actionEl || log.lastElementChild;
+    if (!target) return;
+    var lr = log.getBoundingClientRect();
+    var tr = target.getBoundingClientRect();
+    var viewTop = visibleLogTop(log, lr);
+    var visH = lr.bottom - viewTop;
+    if (visH < 80) visH = lr.height;   // 헤더에 다 가려진 예외 상황은 로그 높이 기준으로
+    var hidden = Math.max(0, viewTop - lr.top);
+    var top = tr.top - lr.top + log.scrollTop;
+    var bottom = tr.bottom - lr.top + log.scrollTop;
+    var pad = 10;
+    if (bottom - top <= visH - pad) {
+      /* 답변 블록이 보이는 영역에 다 들어오면 위쪽에 맞춘다 */
+      log.scrollTop = Math.max(0, top - hidden - pad);
+    } else {
+      /* 길면 버튼이 있는 아래쪽이 보이도록 내린다 */
+      log.scrollTop = Math.max(0, bottom - hidden - visH + pad);
     }
   }
 
@@ -3408,8 +3486,14 @@
     state.lastCriteria = criteria;
     state.lastMatches = res.matches.map(function (m) { return m.listing; });
 
+    var regionMissing = (criteria.region && !regionHasStores(criteria.region)) ? criteria.region : '';
+
     var intro;
-    if (!cond) {
+    if (regionMissing) {
+      /* 등록 점포가 없는 지역을 물었을 때는 조용히 다른 지역 매물만 보여 주지 않고 먼저 밝힙니다. */
+      intro = '<p>현재 <b>' + esc(regionMissing) + '</b>에 공개 등록된 점포가 없습니다. ' +
+        '조건을 남겨 주시면 비공개 매물 입고 시 먼저 안내드리며, 참고용으로 조건이 비슷한 다른 지역 점포를 함께 보여 드립니다.</p>';
+    } else if (!cond) {
       intro = '<p>조건을 조금 더 알려주시면 딱 맞는 후보를 골라 드릴 수 있어요. 우선 <b>등록된 점포</b> 중에서 조건을 넓게 봤을 때 비교적 무난한 두 곳을 골랐습니다.</p>';
     } else if (res.loose) {
       intro = '<p>말씀하신 <b>' + esc(cond) + '</b> 조건에 정확히 맞는 점포는 아직 등록되어 있지 않습니다. 대신 조건에 가까운 순서로 <b>' + res.matches.length + '곳</b>을 추렸습니다.</p>';
@@ -3420,10 +3504,12 @@
       intro += '<p class="op-note">점포마다 운영 형태를 따로 표시하지는 않습니다. 대신 <b>매출 규모 · 인건비 비중 · 매장 규모</b>를 보고 말씀하신 운영 계획이 통할 점포를 골라, 아래 카드에 판단 이유를 적었습니다.</p>';
     }
 
-    // 2단계 잠금: 매칭 결과는 4항목 입력 후에 공개됩니다.
+    // 잠금 안내: 매칭 결과 상세는 4가지 입력 후에 공개됩니다.
     if (!hasLead() && res.matches.length) {
       addMessage(intro);
-      addMessage(teaserHTML(res.matches), 'bot', 'msg-wide');
+      var teaserMsg = addMessage(teaserHTML(res.matches, regionMissing
+        ? regionMissing + '에는 공개 등록 점포가 없어, 조건이 비슷한 다른 지역 후보를 참고용으로 보여 드립니다.'
+        : ''), 'bot', 'msg-wide');
       addMessage(
         '<p>희망 업종·지역·예산·연락처 4가지를 남기시면 매칭 이유와 상세 요약이 바로 열립니다. 한 번 입력하면 이 브라우저에서는 다시 묻지 않습니다.</p>' +
         '<div class="msg-cta">' +
@@ -3431,7 +3517,7 @@
         '</div>'
       );
       bindChatActions();
-      scrollToLastUser();
+      scrollChatToAction(teaserMsg.querySelector('.teaser') || teaserMsg);
       return;
     }
 
@@ -3452,7 +3538,7 @@
       );
     }
     bindChatActions();
-    scrollToLastUser();
+    scrollChatToAction();
   }
 
   function bindChatActions() {

@@ -485,6 +485,7 @@ section[id] { scroll-margin-top: 90px; }
 .listing-card:hover .card-more .ico { transform: translateX(3px); }
 
 .empty-state {
+  margin: 0 0 22px;
   border: 1px dashed #D5DAE2; border-radius: var(--radius); padding: 38px 20px;
   text-align: center; font-size: 14px; color: var(--muted);
 }
@@ -1014,7 +1015,19 @@ body.gate-open { overflow: hidden; }
 .tr-main strong { font-size: 12.5px; color: var(--navy); letter-spacing: -0.01em; }
 .tr-main span { font-size: 11.5px; color: #9AA1AE; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tr-fig { margin-left: auto; font-size: 12px; letter-spacing: .12em; color: #C9BFA6; flex: none; }
+/* 잠금 상태 값 자리: 깨진 글자 같은 점 대신 "입력 후 공개" 배지로 표시 */
+.tr-open {
+  margin-left: auto; flex: none; text-align: center;
+  font-size: 10px; font-weight: 700; line-height: 1.35; letter-spacing: -0.01em;
+  color: #8C6F32; background: #F7EEDC; border: 1px solid #EBDCBC;
+  border-radius: 6px; padding: 4px 7px;
+}
 .teaser-cta { width: 100%; padding: 11px 16px; font-size: 13.5px; }
+.teaser-note {
+  margin: 0 0 11px; padding: 9px 11px; border-radius: 7px;
+  background: #FBF3E2; border: 1px dashed #E4D2AA;
+  font-size: 11.5px; line-height: 1.6; color: #7A6330; word-break: keep-all;
+}
 
 .detail-lock { position: relative; margin-top: 22px; }
 .detail-lock-blur {
@@ -1250,6 +1263,13 @@ body.gate-open { overflow: hidden; }
   width: 100%; border: 1px solid #DCE0E7; border-radius: 7px; padding: 10px 11px;
   font-family: inherit; font-size: 13.5px; font-weight: 400; color: var(--ink); background: #fff;
 }
+/* 평수 칸: 단위(평)를 입력칸 안쪽에 두어 칸 밖으로 밀리지 않게 */
+.admin-spec-field { position: relative; flex: 1 1 auto; min-width: 0; display: flex; }
+.admin-spec-field input { padding-right: 30px; }
+.admin-spec-field .admin-spec-unit {
+  position: absolute; right: 11px; top: 50%; transform: translateY(-50%);
+  pointer-events: none;
+}
 .admin-spec-inputs #fFloor { flex: 0 0 46%; }
 .admin-spec-inputs input:focus { outline: none; border-color: var(--navy); box-shadow: 0 0 0 3px rgba(15,30,54,.05); }
 .admin-spec-sep { color: #9AA1AE; font-weight: 500; }
@@ -1394,6 +1414,12 @@ body.gate-open { overflow: hidden; }
 .admin-empty strong { display: block; font-size: 14.5px; color: var(--navy); margin-bottom: 6px; }
 .admin-empty p { font-size: 12.5px; color: var(--muted); line-height: 1.7; }
 .admin-empty a { color: var(--gold-deep); font-weight: 600; }
+.admin-notice {
+  margin: 0 0 14px; padding: 11px 14px; border-radius: 8px;
+  background: #FBF8F1; border: 1px solid #ECE0C5;
+  font-size: 12px; line-height: 1.65; color: #6E5B32; word-break: keep-all;
+}
+.admin-notice b { color: #5A4720; }
 .lead-detail-sub { display: block; font-size: 11px; color: #9AA1AE; margin-top: 2px; }
 
 @media (max-width: 1080px) {
@@ -1455,7 +1481,11 @@ body.gate-open { overflow: hidden; }
 }
 
 @media (max-width: 560px) {
-  .admin-grid { grid-template-columns: 1fr; }
+  /* 한 열로 바뀌면 'span 2'가 두 번째 열을 새로 만들어 입력칸을 반으로 줄입니다 → 모두 한 열로 고정 */
+  .admin-grid { grid-template-columns: minmax(0, 1fr); }
+  .admin-grid > * { grid-column: 1 / -1 !important; }
+  .admin-spec-inputs { gap: 5px; }
+  .admin-spec-inputs #fFloor { flex: 0 0 42%; }
   .expense-grid { grid-template-columns: 1fr 1fr; }
   .admin-total { grid-column: span 1; }
   .admin-login-card { padding: 26px 20px 22px; }

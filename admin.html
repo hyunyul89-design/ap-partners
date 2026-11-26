@@ -249,8 +249,10 @@
                 <div class="admin-spec-inputs">
                   <input id="fFloor" type="text" placeholder="1층" aria-label="층수 (예: 1층, 2층, 지하 1층)" />
                   <span class="admin-spec-sep" aria-hidden="true">·</span>
-                  <input id="fPyeong" type="text" inputmode="decimal" placeholder="13" aria-label="평수" />
-                  <span class="admin-spec-unit">평</span>
+                  <span class="admin-spec-field">
+                    <input id="fPyeong" type="text" inputmode="decimal" placeholder="13" aria-label="평수" />
+                    <span class="admin-spec-unit">평</span>
+                  </span>
                 </div>
                 <small class="field-preview" id="fSpecPreview"></small>
               </div>
@@ -386,6 +388,11 @@
           <button class="btn btn-navy" type="button" id="btnCsv">CSV 다운로드</button>
         </div>
 
+        <p class="admin-notice" id="leadsScopeNotice">
+          <b>표시 범위 안내</b> · 손님 문의는 텔레그램으로 실시간 도착하며, 이 화면에는 현재 기기에서 접수된 내역만 표시됩니다.
+          다른 기기·다른 방문자의 접수는 텔레그램 알림에서 확인해 주세요.
+        </p>
+
         <div class="lead-filters" role="group" aria-label="상태 필터" id="leadFilters">
           <button class="chip" type="button" data-filter="all" aria-pressed="true">전체 <b>0</b></button>
           <button class="chip" type="button" data-filter="new" aria-pressed="false">신규 <b>0</b></button>
@@ -417,6 +424,11 @@
           </div>
           <button class="btn btn-navy" type="button" id="btnSellCsv">CSV 다운로드</button>
         </div>
+
+        <p class="admin-notice" id="sellScopeNotice">
+          <b>표시 범위 안내</b> · 양도 문의는 텔레그램으로 실시간 도착하며, 이 화면에는 현재 기기에서 접수된 내역만 표시됩니다.
+          다른 기기·다른 방문자의 접수는 텔레그램 알림에서 확인해 주세요.
+        </p>
 
         <div class="admin-table-wrap" id="sellTableWrap">
           <table class="admin-table" id="sellTable">

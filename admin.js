@@ -494,9 +494,20 @@
     return shortStyle ? (md + ' ' + hm) : (t.getUTCFullYear() + '-' + md + ' ' + hm);
   }
 
+  /* 접수번호 표시용: 저장·전송에 쓰는 값(lead_id·request_id)은 그대로 두고 화면에만 한글 접두어로 보여 줍니다.
+     텔레그램 알림 원문과 대조할 수 있게 원래 값은 title 로 붙입니다. */
+  function displayReceiptNo(id) {
+    var s = String(id || '');
+    var m = s.match(/^(LEAD|SELL|REQ)-(\d{4})(\d{2})(\d{2})-(\d+)$/);
+    if (m) {
+      var label = m[1] === 'LEAD' ? '상담' : m[1] === 'SELL' ? '양도' : '문의';
+      return label + '-' + m[2] + '-' + m[3] + '-' + m[4] + '-' + m[5];
+    }
+    return s.replace(/^LEAD-/, '상담-').replace(/^SELL-/, '양도-').replace(/^REQ-/, '문의-');
+  }
+
   var toastTimer = null;
-  function toast(msg) {
-    var el = $('#toast');
+  function toast(msg) {    var el = $('#toast');
     if (!el) return;
     el.textContent = msg;
     el.classList.add('show');
@@ -2681,7 +2692,7 @@
       return '' +
         '<tr data-lead="' + esc(L.lead_id) + '">' +
           '<td data-label="접수"><div class="cell-main"><b>' + esc(kst(L.submitted_at, true)) + '</b>' +
-            '<span class="lead-detail-sub">' + esc(L.lead_id) + '</span></div></td>' +
+            '<span class="lead-detail-sub" title="' + esc(L.lead_id) + '">' + esc(displayReceiptNo(L.lead_id)) + '</span></div></td>' +
           '<td data-label="업종·브랜드"><div class="cell-main"><b>' + esc(brandText) + '</b>' +
             (storeLine ? '<span>' + esc(storeLine) + '</span>' : '') + '</div></td>' +
           '<td data-label="지역">' + esc((c.area || []).join(', ') || '-') + '</td>' +
@@ -2746,7 +2757,7 @@
       return '' +
         '<tr>' +
           '<td data-label="접수"><div class="cell-main"><b>' + esc(kst(R.submitted_at, true)) + '</b>' +
-            '<span class="lead-detail-sub">' + esc(R.request_id) + '</span></div></td>' +
+            '<span class="lead-detail-sub" title="' + esc(R.request_id) + '">' + esc(displayReceiptNo(R.request_id)) + '</span></div></td>' +
           '<td data-label="브랜드"><div class="cell-main"><b>' + esc(R.brand) + '</b>' +
             '<span>' + esc(kst(R.submitted_at)) + '</span></div></td>' +
           '<td data-label="지역">' + esc(R.area) + '</td>' +
@@ -3318,6 +3329,7 @@
         if (err) { err.textContent = 'Bot Token과 Chat ID를 먼저 입력해 주세요.'; err.hidden = false; }
         return;
       }
+      if (!window.confirm('실제 텔레그램 방으로 테스트 알림이 전송됩니다. 보낼까요?')) return;
       if (res) { res.hidden = false; res.textContent = '테스트 메시지를 보내는 중…'; }
       fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
         method: 'POST',
