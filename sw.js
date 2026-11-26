@@ -12,7 +12,7 @@
    - 그 밖의 요청(상담 접수 POST, 구글 시트, 외부 도메인)은 가로채지 않고 브라우저에 그대로 넘깁니다.
    ========================================================================== */
 
-var SW_VERSION = 'v1.1.12';
+var SW_VERSION = 'v1.1.13';
 var STATIC_CACHE = 'ap-static-' + SW_VERSION;
 var DATA_CACHE = 'ap-data-' + SW_VERSION;
 

@@ -1701,7 +1701,7 @@
     if (line) {
       var text = leadCriteriaText(lead.criteria);
       if (lead.contact && lead.contact.phone) text += (text ? ' · ' : '') + lead.contact.phone;
-      line.textContent = text;
+      line.textContent = text ? '· ' + text : '';
     }
   }
 
@@ -1792,17 +1792,15 @@
     }).join('');
   }
 
-  /* 내 입력 정보 다시 보기 화면. 손님에게는 입력한 4항목과 접수번호만 요약해 보여 주고,
-     개발자용 JSON 페이로드는 화면에 노출하지 않습니다. */
+  /* 내 입력 정보 다시 보기 화면. 손님에게는 입력한 4항목과 접수번호만 요약해 보여 줍니다. */
   function gateSuccessHTML(payload, isView) {
     var sourceLabel = payload.source === 'detail' ? '상세 보기 잠금 해제'
       : payload.source === 'matching' ? '맞춤 매칭 잠금 해제'
       : payload.source === 'compare' ? '비교 상담 신청' : '4항목 접수';
     return '' +
       '<div class="gate-hero">' +
-        '<p class="eyebrow"><span class="eyebrow-line"></span>LEAD · SAVED</p>' +
         '<h3 id="gateTitle">저장된 4항목 정보</h3>' +
-        '<p>이 브라우저에 저장된 입력값입니다. 아래 <b>다시 입력</b>을 누르면 상세 내용이 다시 잠깁니다.</p>' +
+        '<p>이 브라우저에 저장된 입력값입니다. 아래 <b>조건 다시 입력</b>을 누르면 상세 내용이 다시 잠깁니다.</p>' +
       '</div>' +
       '<div class="gate-body">' +
         '<div class="gate-receipt">' +
@@ -1815,7 +1813,7 @@
         '<p class="gate-foot">접수 내용은 이 브라우저에 저장되고 담당자에게도 전달됩니다. 남겨주신 번호로 김현율 팀장이 바로 확인합니다.</p>' +
         '<div class="gate-actions">' +
           '<button type="button" class="btn btn-navy btn-lg" data-close-gate>닫기</button>' +
-          '<button type="button" class="btn btn-quiet" data-gate-restart>다시 입력</button>' +
+          '<button type="button" class="btn btn-quiet" data-gate-restart>조건 다시 입력</button>' +
         '</div>' +
       '</div>';
   }
@@ -2023,9 +2021,6 @@
   }
 
   function initLeadStatus() {
-    $all('#leadStatus [data-view-lead]').forEach(function (btn) {
-      btn.addEventListener('click', function () { openGate('view'); });
-    });
     $all('#leadStatus [data-reset-lead]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         clearLead();
@@ -2847,7 +2842,7 @@
         '</div>' +
         (unlocked
           ? '<div class="unlock-line">' + checkIcon() + '4항목 확인 완료 · 잠금 해제' +
-              (leadLine ? '<span>' + esc(leadLine) + '</span>' : '') + '</div>' +
+              (leadLine ? '<span>· ' + esc(leadLine) + '</span>' : '') + '</div>' +
             detailSectionsHTML(L)
           : '<div class="detail-lock">' +
               '<div class="detail-lock-blur" aria-hidden="true" inert>' + detailSectionsHTML(L) + '</div>' +
