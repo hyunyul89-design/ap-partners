@@ -145,6 +145,13 @@ a.sx-chip:hover { border-color: var(--gold); color: var(--gold-deep); background
   display: block; padding: 20px; border: 1px solid var(--line); border-radius: 10px;
   background: #fff; transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
 }
+.sx-brand-tags { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.sx-badge {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .03em; padding: 3px 9px;
+  border-radius: 999px; white-space: nowrap;
+}
+.sx-badge-open { color: #1B6B4A; background: rgba(27, 107, 74, .07); border: 1px solid rgba(27, 107, 74, .24); }
+.sx-badge-alert { color: var(--gold-deep); background: rgba(200, 164, 93, .1); border: 1px solid rgba(200, 164, 93, .42); }
 .sx-brand-card:hover { border-color: rgba(200, 164, 93, .7); box-shadow: var(--shadow-md); transform: translateY(-2px); }
 .sx-brand-card h3 { margin-top: 6px; font-size: 17px; font-weight: 700; color: var(--navy); letter-spacing: -0.02em; }
 .sx-brand-card p { margin-top: 6px; font-size: 12.5px; color: var(--muted); }
@@ -152,6 +159,12 @@ a.sx-chip:hover { border-color: var(--gold); color: var(--gold-deep); background
 .sx-brand-card dl div { display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; }
 .sx-brand-card dt { color: var(--muted); }
 .sx-brand-card dd { color: var(--ink); font-weight: 600; }
+
+/* ---------- FAQ ---------- */
+.sx-faq { display: grid; gap: 12px; }
+.sx-faq-item { padding: 16px 18px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.sx-faq-item h3 { font-size: 14.5px; font-weight: 700; color: var(--navy); letter-spacing: -0.02em; line-height: 1.5; }
+.sx-faq-item p { margin-top: 8px; font-size: 13.5px; line-height: 1.75; color: var(--ink-2); word-break: keep-all; }
 
 /* ---------- footer brand row ---------- */
 .sx-foot-brands {

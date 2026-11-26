@@ -68,6 +68,242 @@ BRAND_SLUGS = {
     "명랑핫도그": "myeongrang",
 }
 
+# ---------------------------------------------------------------- 브랜드 가이드
+# 공개 점포가 아직 없는 주요 프랜차이즈.
+# 허위 점포·수치를 만들지 않고, 브랜드별 실사 체크포인트와 비공개 입고 우선 알림만 안내합니다.
+GUIDE_BRANDS = [
+    {
+        "slug": "twosome",
+        "brand": "투썸플레이스",
+        "short": "투썸",
+        "category": "카페·디저트",
+        "note": "케이크와 디저트, 홀 좌석이 함께 있는 프리미엄 카페",
+        "intro": "투썸플레이스는 커피와 함께 케이크·디저트를 매장에서 판매하고, 홀 좌석에서 머무는 손님 비중이 큰 브랜드입니다. 같은 카페라도 디저트 진열과 좌석 구성이 매출을 가르기 때문에, 인수 전에 확인할 항목이 다른 브랜드와 다릅니다.",
+        "fit": "디저트 진열과 홀 응대를 직접 챙길 수 있고, 좌석 회전보다 객단가와 재방문을 보는 운영을 원하는 분에게 맞습니다.",
+        "checkpoints": [
+            ("점포 면적과 좌석 구성", "디저트 케이스와 홀 좌석이 함께 들어가야 해서 평수와 동선을 직접 확인해야 합니다. 시설·영업권에 포함되는 집기 범위와, 인수 후 좌석 배치를 바꿀 수 있는지도 함께 봅니다."),
+            ("디저트 공급과 폐기 기준", "케이크·디저트는 유통기한이 짧아 남는 수량이 그대로 손실이 됩니다. 본사 공급 주기, 진열 수량, 당일 판매 후 남은 제품을 어떻게 처리하는지 점주에게 확인합니다."),
+            ("점포 사용료와 관리비 비중", "홀 중심 매장은 면적이 넓어 점포 사용료와 관리비 비중이 커집니다. 최근 12개월 고지서로 사용료·관리비·공과금을 확인하고, 매출 대비 비중을 함께 계산합니다."),
+            ("본사 시설 기준과 리뉴얼", "본사가 요구하는 인테리어·집기 기준과 다음 리뉴얼 시점, 비용 부담 주체를 서면으로 확인합니다. 인수 직후 큰 시설 공사가 필요한지가 총비용을 바꿉니다."),
+        ],
+        "faq": (
+            "투썸플레이스 매장은 디저트 매출을 어떻게 확인하나요?",
+            "최근 12개월 포스 자료에서 음료와 디저트 매출을 나눠 달라고 요청하고, 디저트 폐기 수량과 본사 공급 단가를 함께 확인합니다. 디저트 비중이 높은 매장은 폐기 관리가 수익을 크게 가릅니다.",
+        ),
+    },
+    {
+        "slug": "baskinrobbins",
+        "brand": "배스킨라빈스",
+        "short": "배스킨",
+        "category": "아이스크림·디저트",
+        "note": "아이스크림과 아이스크림 케이크를 파는 디저트 전문점",
+        "intro": "배스킨라빈스는 아이스크림과 아이스크림 케이크를 매장에서 판매하는 디저트 전문점입니다. 계절에 따라 매출 차이가 크고, 냉동 설비와 본사 인테리어 기준이 매장 운영을 좌우합니다.",
+        "fit": "가족·학생 손님이 많은 동네 상권에서, 예약 주문까지 꼼꼼히 챙길 수 있는 분에게 맞습니다.",
+        "checkpoints": [
+            ("성수기·비수기 매출 차이", "아이스크림은 여름과 겨울 매출 차이가 큰 업종입니다. 최근 12개월 월별 매출 자료로 성수기와 비수기의 폭을 확인하고, 비수기에도 점포 사용료와 인건비를 견딜 수 있는지 계산합니다."),
+            ("본사 인테리어·리뉴얼 주기", "아이스크림 진열 케이스와 매장 인테리어는 본사 기준이 정해져 있습니다. 다음 리뉴얼 시점과 비용 부담, 최근 케이스 교체 이력을 확인합니다."),
+            ("냉동·냉장 설비와 전기료", "케이스와 냉동고가 하루 종일 돌아가 전기 사용량이 많습니다. 설비 연식과 수리 이력, 최근 전기·수도 요금 고지서를 확인합니다."),
+            ("케이크 예약과 인력", "아이스크림 케이크는 예약 주문 비중이 있습니다. 예약을 누가 어떻게 처리하는지, 주말·저녁에 필요한 인력이 몇 명인지 실제 근무표로 확인합니다."),
+        ],
+        "faq": (
+            "배스킨라빈스 매장 인수에서 가장 큰 변수는 무엇인가요?",
+            "계절 매출 차이와 설비 상태입니다. 성수기 매출만 보고 결정하면 비수기 고정비를 놓치기 쉬우므로, 12개월 월별 매출과 전기료·시설 수리 이력을 함께 보는 것이 좋습니다.",
+        ),
+    },
+    {
+        "slug": "tenpercent",
+        "brand": "텐퍼센트커피",
+        "short": "텐퍼센트",
+        "category": "저가·테이크아웃 카페",
+        "note": "작은 평수에서 테이크아웃 중심으로 운영하는 저가 커피",
+        "intro": "텐퍼센트커피는 소형 매장에서 테이크아웃 중심으로 운영하는 저가 커피 브랜드입니다. 객단가가 낮은 대신 회전이 빠르기 때문에, 점포 사용료와 유동 인구가 수익을 크게 가릅니다.",
+        "fit": "혼자 또는 1~2명으로 짧게 운영하며 회전을 보는 쪽을 원하는 분에게 맞습니다.",
+        "checkpoints": [
+            ("평수와 제조 동선", "테이크아웃 중심이라 매장이 좁고 제조 동선이 짧습니다. 인수 후 키오스크·제빙기·그라인더 배치를 바꿀 수 있는지, 창고 공간이 있는지 확인합니다."),
+            ("점포 사용료 비중", "저가 커피는 객단가가 낮아 점포 사용료가 수익을 크게 좌우합니다. 최근 12개월 고지서로 사용료·관리비·공과금을 확인하고 매출 대비 비중을 계산합니다."),
+            ("유동 인구와 임차 조건", "역세권·대학가·오피스 상권은 시간대별 유동 차이가 큽니다. 평일·주말, 오전·점심·오후 매출을 나눠 보고 임차 계약 잔여 기간과 재계약 조건을 확인합니다."),
+            ("1~2인 운영 구조", "점주가 직접 서는 것을 전제로 한 매장이 많습니다. 피크 시간에 몇 명이 필요한지, 매니저를 두면 인건비가 얼마인지 실제 근무표로 확인합니다."),
+        ],
+        "faq": (
+            "텐퍼센트커피는 어떤 상권이 유리한가요?",
+            "짧은 시간에 손님이 몰리는 역세권·대학가·오피스 상권이 일반적입니다. 다만 같은 상권이라도 층과 위치, 동선에 따라 차이가 커서 시간대별 매출 자료와 실제 유동을 함께 보는 것이 좋습니다.",
+        ),
+    },
+    {
+        "slug": "halmaebeer",
+        "brand": "역전할머니맥주",
+        "short": "역전할머니맥주",
+        "category": "주점·호프",
+        "note": "생맥주와 안주를 중심으로 늦은 시간까지 영업하는 호프 주점",
+        "intro": "역전할머니맥주는 생맥주와 안주를 중심으로 운영하는 호프 주점 브랜드입니다. 주류 매출 비중이 크고 영업 시간이 늦어, 상권 특성과 영업 허가 형태를 먼저 확인해야 합니다.",
+        "fit": "야간 영업과 손님 응대를 직접 챙길 수 있고, 주류 중심 운영을 이해하는 분에게 맞습니다.",
+        "checkpoints": [
+            ("영업 허가 형태와 주류 판매", "일반음식점인지 단란주점인지에 따라 주류 판매와 영업 시간 조건이 달라집니다. 허가 형태와 인수 시 승계되는지, 위반 이력이 없는지 확인합니다."),
+            ("심야 상권과 민원 가능성", "늦은 시간까지 영업하는 구조라 심야 유동과 소음·민원 가능성을 함께 봅니다. 건물주와 이웃 상가의 관계, 영업 시간 제한 여부를 확인합니다."),
+            ("주방·배기 설비", "안주 조리 주방의 배기·환기 상태와 조리 설비 연식을 확인합니다. 기름과 냄새 관리가 안 되면 민원으로 이어질 수 있습니다."),
+            ("평일·주말, 학기 매출 차이", "대학가·번화가·주거 혼합 상권에 따라 손님층이 다릅니다. 최근 12개월 자료로 평일·주말, 학기·방학 매출 차이를 확인합니다."),
+        ],
+        "faq": (
+            "역전할머니맥주 매장 인수에서 놓치기 쉬운 점은 무엇인가요?",
+            "영업 허가 형태와 심야 영업에 따른 민원 가능성입니다. 매출 자료만 보면 보이지 않으므로, 허가증과 건물주·이웃과의 관계, 영업 시간 조건을 직접 확인하는 것이 좋습니다.",
+        ),
+    },
+    {
+        "slug": "paikdabang",
+        "brand": "빽다방",
+        "short": "빽다방",
+        "category": "저가 카페",
+        "note": "큰 용량 메뉴와 저렴한 가격이 특징인 생활형 카페",
+        "intro": "빽다방은 큰 용량과 저렴한 가격을 앞세운 생활형 카페 브랜드입니다. 테이크아웃과 홀이 함께 있는 매장이 많아, 좌석 구성과 재료 보관 공간을 함께 봐야 합니다.",
+        "fit": "동네 상권에서 가족·학생 손님을 상대하며, 큰 회전보다 꾸준한 단골을 원하는 분에게 맞습니다.",
+        "checkpoints": [
+            ("재료 보관 공간", "큰 용량 메뉴가 많아 냉장·냉동 보관 공간과 창고가 필요합니다. 매장 뒤 창고 크기와 냉장 설비 상태를 확인합니다."),
+            ("홀과 테이크아웃 비중", "같은 브랜드라도 홀 손님과 포장 손님 비중이 다릅니다. 좌석 수, 홀 회전, 배달 여부를 최근 매출 자료로 확인합니다."),
+            ("점포 사용료와 면적", "저가 브랜드는 점포 사용료 비중이 수익을 좌우합니다. 면적 대비 사용료가 적정한지 12개월 고지서로 확인합니다."),
+            ("부가 메뉴 설비", "아이스크림·디저트를 함께 파는 매장은 전용 설비가 있습니다. 설비 연식과 수리 이력, 해당 메뉴 매출 비중을 확인합니다."),
+        ],
+        "faq": (
+            "빽다방과 다른 저가 커피 브랜드는 무엇이 다른가요?",
+            "메뉴 구성과 매장 형태가 브랜드마다 다릅니다. 같은 저가 커피라도 홀 비중, 부가 메뉴, 평수에 따라 필요한 인력과 점포 사용료 부담이 달라지므로, 인수할 매장의 실제 매출 구조를 기준으로 비교해야 합니다.",
+        ),
+    },
+    {
+        "slug": "ediya",
+        "brand": "이디야커피",
+        "short": "이디야",
+        "category": "카페",
+        "note": "동네 상권을 중심으로 매장이 많은 토종 커피 브랜드",
+        "intro": "이디야커피는 동네 상권과 오피스 상권에 매장이 많은 커피 브랜드입니다. 브랜드 인지도가 있는 대신 가맹점이 많아, 같은 상권 안 경쟁과 본사 승계 조건을 함께 봐야 합니다.",
+        "fit": "동네에서 안정적인 단골을 만들며 오래 운영할 매장을 찾는 분에게 맞습니다.",
+        "checkpoints": [
+            ("상권과 손님층", "동네 상권·오피스·학원가에 따라 손님층과 시간대 매출이 다릅니다. 최근 12개월 자료로 평일·주말, 시간대별 매출을 확인합니다."),
+            ("본사 승계 조건", "가맹점이 많은 브랜드라 승계 심사와 교육 일정이 정해져 있습니다. 승계 절차, 교육 비용, 재계약 시점과 조건을 서면으로 확인합니다."),
+            ("시설·집기 연식", "커피 머신·제빙기·쇼케이스의 연식과 수리 이력을 확인합니다. 시설·영업권 금액에 어떤 집기가 포함되는지도 목록으로 대조합니다."),
+            ("점포 사용료와 관리비", "사용료·관리비·공과금을 고지서로 확인하고 매출 대비 비중을 계산합니다. 인수 후 인상 조건이 있는지도 확인합니다."),
+        ],
+        "faq": (
+            "이디야커피 매장 인수 시 본사 승계는 어떻게 진행되나요?",
+            "본사 심사와 교육을 거쳐 가맹 계약을 승계하는 절차가 일반적입니다. 필요한 서류와 일정, 비용은 본사 기준에 따라 달라지므로 후보 매장을 정한 뒤 본사에 직접 확인하는 것이 정확합니다.",
+        ),
+    },
+    {
+        "slug": "theventi",
+        "brand": "더벤티",
+        "short": "더벤티",
+        "category": "저가·테이크아웃 카페",
+        "note": "큰 용량과 빠른 회전을 앞세운 테이크아웃 커피",
+        "intro": "더벤티는 큰 용량과 합리적인 가격을 앞세운 테이크아웃 중심 커피 브랜드입니다. 짧은 시간에 손님이 몰리는 상권에 맞춰져 있어, 유동 인구와 주문 처리 속도가 중요합니다.",
+        "fit": "짧은 시간에 회전을 내는 운영을 선호하고, 시스템 중심으로 매장을 돌리고 싶은 분에게 맞습니다.",
+        "checkpoints": [
+            ("키오스크와 주문 시스템", "키오스크 도입 여부와 결제·주문 시스템을 그대로 인수할 수 있는지 확인합니다. 유지보수 비용과 본사 지원 범위도 함께 봅니다."),
+            ("컵·재료 재고 공간", "큰 용량 메뉴 중심이라 컵과 재료 재고가 많습니다. 창고와 적재 공간, 발주 주기를 확인합니다."),
+            ("시간대별 유동", "역세권·학원가·오피스 등 짧은 유동이 많은 상권에 맞습니다. 오전·점심·오후 매출을 나눠 보고 임차 계약 잔여 기간을 확인합니다."),
+            ("점포 사용료 비중", "저가 브랜드는 사용료 비중이 수익을 가릅니다. 12개월 고지서로 사용료·관리비를 확인합니다."),
+        ],
+        "faq": (
+            "더벤티 매장은 무인 운영이 가능한가요?",
+            "키오스크와 주문 시스템 비중이 높은 브랜드지만, 제조와 마감은 사람이 해야 합니다. 실제 운영 인력과 근무표를 확인하고, 최소 인력으로 돌릴 수 있는 구조인지 점주에게 직접 물어보는 것이 정확합니다.",
+        ),
+    },
+    {
+        "slug": "banapresso",
+        "brand": "바나프레소",
+        "short": "바나프레소",
+        "category": "저가·테이크아웃 카페",
+        "note": "시그니처 바나나 음료로 알려진 테이크아웃 커피",
+        "intro": "바나프레소는 바나나우유를 활용한 시그니처 음료로 알려진 테이크아웃 중심 커피 브랜드입니다. 소형 매장이 많아 평수와 동선, 시그니처 재료 관리가 수익을 가릅니다.",
+        "fit": "작은 매장에서 빠르게 회전하는 운영을 원하고, 혼자 서는 시간이 많은 구조를 감당할 수 있는 분에게 맞습니다.",
+        "checkpoints": [
+            ("시그니처 재료 관리", "바나나우유 등 시그니처 재료는 유통기한과 공급 주기가 정해져 있습니다. 발주 단위와 폐기 기준, 남은 재료 처리 방식을 확인합니다."),
+            ("소형 매장 동선", "테이크아웃 중심 소형 매장은 제조 동선이 짧아야 합니다. 설비 배치와 창고 공간, 인수 후 배치 변경 가능성을 확인합니다."),
+            ("역세권·유동과 임차", "역세권·대학가 등 유동 중심 상권에 맞습니다. 시간대별 매출과 임차 계약 잔여 기간, 재계약 조건을 확인합니다."),
+            ("점포 사용료와 관리비", "면적이 작아도 사용료 비중이 큰 경우가 있습니다. 12개월 고지서로 사용료·관리비·공과금을 확인합니다."),
+        ],
+        "faq": (
+            "바나프레소 매장 인수 전에 무엇을 확인해야 하나요?",
+            "시그니처 재료의 공급·폐기 기준과 실제 제조 동선입니다. 여기에 시간대별 매출과 임차 계약 잔여 기간을 더해 보면, 인수 후 운영이 무리 없는지 판단하기 쉽습니다.",
+        ),
+    },
+    {
+        "slug": "gongcha",
+        "brand": "공차",
+        "short": "공차",
+        "category": "음료·티 카페",
+        "note": "티와 버블티, 토핑을 중심으로 하는 음료 전문점",
+        "intro": "공차는 티 베이스 음료와 버블티, 토핑을 중심으로 운영하는 음료 전문 브랜드입니다. 토핑 종류가 많고 계절 음료 비중이 커, 재고와 폐기 관리가 중요합니다.",
+        "fit": "음료 제조와 재고 관리를 꼼꼼히 챙기고, 젊은 손님층을 상대하는 매장을 원하는 분에게 맞습니다.",
+        "checkpoints": [
+            ("토핑·재료 재고와 폐기", "토핑은 종류가 많고 유통기한이 짧습니다. 발주 주기와 폐기 기준, 재고를 얼마나 들고 운영하는지 확인합니다."),
+            ("계절 매출 차이", "차가운 음료 비중이 커 여름과 겨울 매출 차이가 큽니다. 최근 12개월 월별 매출로 성수기·비수기 폭을 확인합니다."),
+            ("홀 좌석과 제조 동선", "홀 비중이 있는 매장은 좌석 수와 제조 동선을 함께 봅니다. 포장·배달 비중도 매출 자료로 확인합니다."),
+            ("위생·교육 기준", "음료 제조 위생과 직원 교육 기준이 정해져 있습니다. 인수 시 교육 이수 조건과 현재 직원의 교육 상태를 확인합니다."),
+        ],
+        "faq": (
+            "공차 매장은 여름과 겨울 매출 차이가 큰가요?",
+            "차가운 음료 중심이라 계절 차이가 있는 편입니다. 정확한 차이는 매장별로 다르므로 최근 12개월 월별 매출 자료와 겨울 음료 판매 비중을 함께 확인하는 것이 좋습니다.",
+        ),
+    },
+    {
+        "slug": "bhc",
+        "brand": "BHC치킨",
+        "short": "BHC",
+        "category": "치킨",
+        "note": "튀김 치킨과 시그니처 메뉴를 중심으로 하는 치킨 프랜차이즈",
+        "intro": "BHC치킨은 튀김 치킨과 시그니처 메뉴를 중심으로 운영하는 치킨 프랜차이즈입니다. 주방 설비와 배달 비중, 저녁 피크 인력이 수익을 가릅니다.",
+        "fit": "저녁과 주말 피크를 직접 챙길 수 있고, 배달과 홀을 함께 운영해 본 경험이 있거나 배우려는 분에게 맞습니다.",
+        "checkpoints": [
+            ("주방·배기·기름 관리", "튀김 주방은 후드와 배기 상태, 기름 교체 주기가 중요합니다. 설비 연식과 기름 처리 방식을 확인합니다."),
+            ("배달과 홀 매출 비중", "배달 비중이 높으면 배달앱 수수료와 배달 동선이 수익에 영향을 줍니다. 최근 12개월 배달·홀 매출 비중을 확인합니다."),
+            ("피크 인력과 근무표", "저녁 피크에 주방·홀 인력이 몇 명 필요한지 실제 근무표로 확인합니다. 점주 근무 시간과 매니저 인건비 구조도 함께 봅니다."),
+            ("가맹 승계와 시설 기준", "본사 승계 심사, 재계약 시점, 인테리어·집기 기준을 서면으로 확인합니다."),
+        ],
+        "faq": (
+            "BHC치킨 매장 인수 시 배달 수수료는 어떻게 확인하나요?",
+            "최근 12개월 배달 정산 자료에서 배달 매출과 수수료를 함께 확인합니다. 배달 비중이 높은 매장은 수수료율과 배달 지역 범위가 수익에 큰 영향을 주므로, 정산서 원본을 요청하는 것이 정확합니다.",
+        ),
+    },
+    {
+        "slug": "bbq",
+        "brand": "BBQ치킨",
+        "short": "BBQ",
+        "category": "치킨",
+        "note": "대표 메뉴 중심으로 운영하는 치킨 프랜차이즈",
+        "intro": "BBQ치킨은 대표 메뉴 중심으로 운영하는 치킨 프랜차이즈입니다. 배달 비중이 높은 매장이 많아 배달 구조와 주방 설비, 주거 상권 수요를 확인해야 합니다.",
+        "fit": "배달 중심 운영을 이해하고, 저녁 피크에 주방을 직접 관리할 수 있는 분에게 맞습니다.",
+        "checkpoints": [
+            ("배달 구조와 배달앱", "배달 비중과 배달앱 수수료, 자체 배달 여부를 확인합니다. 배달 지역 범위와 평균 배달 시간도 수익에 영향을 줍니다."),
+            ("주방 설비와 환기", "튀김 설비 연식과 배기 상태, 기름 관리 방식을 확인합니다. 설비 교체가 필요한 시점인지도 함께 봅니다."),
+            ("주거 밀도와 경쟁", "아파트·주거 밀집 상권은 저녁·주말 수요가 큽니다. 반경 내 경쟁 매장 수와 시간대별 매출을 확인합니다."),
+            ("가맹 승계와 시설 공사", "본사 승계·교육·재계약 조건과 인수 후 필요한 시설 공사 범위를 서면으로 확인합니다."),
+        ],
+        "faq": (
+            "BBQ치킨 매장은 배달과 홀 중 어디를 봐야 하나요?",
+            "매장별로 다릅니다. 최근 12개월 매출에서 배달과 홀 비중을 나눠 보고, 배달 수수료와 홀 좌석 회전을 각각 계산해 보는 것이 좋습니다.",
+        ),
+    },
+    {
+        "slug": "subway",
+        "brand": "서브웨이",
+        "short": "서브웨이",
+        "category": "샌드위치·패스트푸드",
+        "note": "주문 제조 방식의 샌드위치와 샐러드를 파는 패스트푸드 매장",
+        "intro": "서브웨이는 손님 앞에서 샌드위치를 만들어 주는 방식의 패스트푸드 브랜드입니다. 신선 재료 관리와 직원 교육이 운영의 중심이고, 점심 수요가 있는 상권에 맞습니다.",
+        "fit": "직원 교육과 위생 관리를 꾸준히 챙기고, 점심 시간대 회전을 운영해 본 분에게 맞습니다.",
+        "checkpoints": [
+            ("신선 재료 발주와 폐기", "야채와 빵은 유통기한이 짧아 발주 주기와 폐기 기준이 수익에 직결됩니다. 냉장·작업대 설비와 실제 폐기 수량을 확인합니다."),
+            ("직원 교육과 위생", "제조가 직원 손에 달려 있어 교육과 위생 관리가 중요합니다. 현재 근무 인력과 교육 이수 상태, 이직 빈도를 확인합니다."),
+            ("점심 수요 상권", "오피스·학원가·병원 등 점심 수요가 있는 상권에 맞습니다. 평일 점심 시간대 매출 비중과 주말 매출을 확인합니다."),
+            ("본사 승계와 리뉴얼", "본사 승계 심사, 인테리어 기준과 다음 리뉴얼 시점을 확인합니다. 시설·영업권에 포함되는 집기 목록도 대조합니다."),
+        ],
+        "faq": (
+            "서브웨이 매장 인수 시 가장 중요한 것은 무엇인가요?",
+            "신선 재료 관리와 직원 운영입니다. 폐기 수량과 발주 주기, 근무 인력의 교육 상태를 확인하면 인수 후 운영이 무리 없이 이어질지 판단하기 쉽습니다.",
+        ),
+    },
+]
+
+GUIDE_BY_SLUG = {B["slug"]: B for B in GUIDE_BRANDS}
+
 # 지출(비공개) 성격이 드러나는 표현 — 점포 페이지 '특징'에서 제외
 EXPENSE_TOKENS = [
     "인건비", "지출", "수수료", "재료비", "고정비", "잡비", "로열티", "관리비",
@@ -81,6 +317,29 @@ CATEGORY_LABEL = {
     "패스트푸드": "패스트푸드",
     "치킨": "치킨",
 }
+
+# 공식 채널 (푸터) — 새 탭으로 열립니다.
+CHANNELS = [
+    ("블로그 · 에이피파트너", "https://blog.naver.com/hyunyul89"),
+    ("블로그 · 창업의 법칙", "https://blog.naver.com/kdh5117654"),
+    ("인스타그램", "https://www.instagram.com/ap_artners/"),
+    ("스레드", "https://www.threads.com/@ap_artners"),
+]
+
+
+def channel_links(indent: str = "    ") -> str:
+    chips = "\n".join(
+        f'{indent}  <a href="{esc(url)}" target="_blank" rel="noopener noreferrer">{esc(label)}'
+        f' <span aria-hidden="true">↗</span></a>'
+        for label, url in CHANNELS
+    )
+    return (
+        f'{indent}<div class="footer-channels" aria-label="공식 채널">\n'
+        f'{indent}  <span>공식 채널</span>\n'
+        f'{chips}\n'
+        f'{indent}</div>'
+    )
+
 
 FAVICON = (
     "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E"
@@ -174,13 +433,15 @@ def group_by_brand(listings: list) -> dict:
 
 # ---------------------------------------------------------------- layout
 def page_head(title: str, description: str, keywords: str, canonical: str,
-              extra_ld: dict | None = None) -> str:
+              extra_ld: dict | list | None = None) -> str:
     ld = ""
     if extra_ld:
-        ld = (
+        blocks = extra_ld if isinstance(extra_ld, list) else [extra_ld]
+        ld = "".join(
             '<script type="application/ld+json">\n'
-            + json.dumps(extra_ld, ensure_ascii=False, indent=2)
+            + json.dumps(block, ensure_ascii=False, indent=2)
             + "\n</script>\n"
+            for block in blocks
         )
     return f"""<!DOCTYPE html>
 <html lang="ko">
@@ -262,6 +523,7 @@ def page_foot(brand_links: list) -> str:
     <div class="sx-foot-brands">
       <span>브랜드별</span>{chips}
     </div>
+{channel_links()}
     <p>에이피파트너 · {MANAGER} · {PHONE} · 카카오톡 {KAKAO} · 등록 {REGISTER_NO}</p>
     <p>등록된 점포 정보는 {MANAGER}이 현장 실사를 마친 뒤 점주 제시 자료를 기준으로 정리한 값이며, 인력 운영과 배달 비중에 따라 실제 수익은 달라질 수 있습니다. 지점명과 상세 위치, 항목별 지출은 점주 보호를 위해 공개하지 않고 상담 시 안내합니다.</p>
     <p>© 2026 AP PARTNERS. All rights reserved.</p>
@@ -462,7 +724,10 @@ def brand_card(brand: str, items: list) -> str:
     areas = unique([L.get("district", "") for L in items])
     return f"""
         <a class="sx-brand-card" href="../brands/{esc(slug_for(brand))}.html">
-          <span class="sx-store-code">{esc(items[0]['category'])} · {len(items)}곳</span>
+          <div class="sx-brand-tags">
+            <span class="sx-store-code">{esc(items[0]['category'])}</span>
+            <span class="sx-badge sx-badge-open">공개 {len(items)}곳</span>
+          </div>
           <h3>{esc(brand)} 양도양수</h3>
           <p>{esc(', '.join(areas[:4]))} 실사 매장</p>
           <dl>
@@ -472,8 +737,25 @@ def brand_card(brand: str, items: list) -> str:
         </a>"""
 
 
+def guide_card(B: dict) -> str:
+    return f"""
+        <a class="sx-brand-card" href="../brands/{esc(B['slug'])}.html">
+          <div class="sx-brand-tags">
+            <span class="sx-store-code">{esc(B['category'])}</span>
+            <span class="sx-badge sx-badge-alert">비공개 · 우선 알림</span>
+          </div>
+          <h3>{esc(B['brand'])} 양도양수 가이드</h3>
+          <p>{esc(B['note'])}</p>
+          <dl>
+            <div><dt>공개 점포</dt><dd>0곳</dd></div>
+            <div><dt>비공개 입고</dt><dd>우선 알림</dd></div>
+          </dl>
+          <span class="sx-store-more">가이드 보기 →</span>
+        </a>"""
+
+
 # ---------------------------------------------------------------- brand page
-def build_brand_page(brand: str, items: list, brand_links: list) -> str:
+def build_brand_page(brand: str, items: list, store_links: list) -> str:
     slug = slug_for(brand)
     n = len(items)
     costs = [L["initial_cost"]["total_manwon"] for L in items]
@@ -523,9 +805,13 @@ def build_brand_page(brand: str, items: list, brand_links: list) -> str:
         f"같은 기준으로 정리했습니다. 지점명과 상세 위치는 점주 보호를 위해 공개하지 않으며, 매장별 상세 지출은 상담에서 안내합니다.</p>"
     )
 
-    other_brands = [(b, s) for b, s in brand_links if b != brand][:6]
+    other_brands = [(b, s) for b, s in store_links if b != brand][:6]
     other_html = "".join(
-        f'<a class="sx-chip" href="../brands/{esc(s)}.html">{esc(b)}</a>' for b, s in other_brands
+        f'<a class="sx-chip" href="../brands/{esc(s)}.html">{esc(b)} 양도양수</a>' for b, s in other_brands
+    )
+    guide_html = "".join(
+        f'<a class="sx-chip" href="../brands/{esc(B["slug"])}.html">{esc(B["brand"])} 가이드</a>'
+        for B in GUIDE_BRANDS
     )
 
     html_out = page_head(title, description, keywords, canonical, ld)
@@ -569,6 +855,10 @@ def build_brand_page(brand: str, items: list, brand_links: list) -> str:
 
       <h2>다른 브랜드 매장</h2>
       <div class="sx-kw">{other_html}</div>
+
+      <h2>공개 점포가 없는 브랜드 가이드</h2>
+      <p class="sx-para">아래 브랜드는 지금 공개된 점포가 없어, 인수 전 실사 체크포인트와 비공개 입고 우선 알림만 안내합니다.</p>
+      <div class="sx-kw">{guide_html}</div>
       <p class="sx-more"><a href="index.html">브랜드별 보기 전체 →</a> · <a href="../stores/index.html">전체 점포 색인 →</a></p>
     </div>
 
@@ -578,32 +868,219 @@ def build_brand_page(brand: str, items: list, brand_links: list) -> str:
   </div>
 </main>
 """
-    html_out += page_foot(brand_links)
+    html_out += page_foot(store_links + [(B["brand"], B["slug"]) for B in GUIDE_BRANDS])
+    return html_out
+
+
+# ---------------------------------------------------------------- guide page
+def guide_keywords(B: dict) -> list:
+    brand = B["brand"]
+    short = B.get("short") or brand
+    return unique([
+        f"{brand} 양도양수", f"{brand} 창업", f"{brand} 인수", f"{brand} 매물",
+        f"{brand} 점포", f"{brand} 창업비용", f"{brand} 가맹", f"{brand} 양도",
+        f"{short} 창업", f"{short} 양도양수", f"{B['category'].replace('·', ' ')} 창업",
+    ])
+
+
+def guide_faqs(B: dict) -> list:
+    brand = B["brand"]
+    first_head, first_body = B["checkpoints"][0]
+    return [
+        (f"현재 {brand} 공개 매물이 있나요?",
+         f"지금 에이피파트너에 공개된 {brand} 점포는 0곳입니다. 없는 매물을 있는 것처럼 올리지 않습니다. "
+         f"희망 조건을 남겨 주시면 비공개로 들어오는 {brand} 점포와 신규 입고 소식을 먼저 알려 드립니다."),
+        (f"{brand} 양도양수는 어떤 순서로 진행하나요?",
+         "희망 지역·예산·운영 계획을 정리하는 1차 상담 → 조건에 맞는 후보 압축 → 현장 실사와 포스·정산 자료 대조 "
+         "→ 본사 가맹 승계와 계약 순서로 진행합니다. 단계마다 확인한 자료는 문서로 남깁니다."),
+        (f"{brand} 인수 전에 가장 먼저 확인할 것은 무엇인가요?",
+         f"{first_head}입니다. {first_body}"),
+        B["faq"],
+    ]
+
+
+def build_guide_page(B: dict, store_links: list, guide_links: list) -> str:
+    brand = B["brand"]
+    slug = B["slug"]
+    category = B["category"]
+    canonical = f"{BASE_URL}/brands/{slug}.html"
+
+    title = f"{brand} 양도양수 가이드 · 창업 전 실사 체크포인트 | 에이피파트너"
+    description = (
+        f"{brand}({category}) 양도양수·창업을 준비할 때 확인할 실사 항목과 상담 절차를 정리했습니다. "
+        f"현재 공개 점포 0곳 · 비공개 매물 우선 알림 신청. {MANAGER} {PHONE}."
+    )
+    keywords = ",".join(guide_keywords(B))
+
+    faqs = guide_faqs(B)
+    ld_faq = {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+            {"@type": "Question", "name": q,
+             "acceptedAnswer": {"@type": "Answer", "text": a}}
+            for q, a in faqs
+        ],
+    }
+    ld_crumb = {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "에이피파트너", "item": BASE_URL + "/"},
+            {"@type": "ListItem", "position": 2, "name": "브랜드별 보기", "item": f"{BASE_URL}/brands/index.html"},
+            {"@type": "ListItem", "position": 3, "name": f"{brand} 양도양수 가이드", "item": canonical},
+        ],
+    }
+
+    checks = "".join(
+        f"<li><b>{esc(head)}</b> — {esc(body)}</li>" for head, body in B["checkpoints"]
+    )
+    faq_html = "".join(
+        f'<div class="sx-faq-item"><h3>{esc(q)}</h3><p>{esc(a)}</p></div>' for q, a in faqs
+    )
+    kw_chips = "".join(f'<span class="sx-chip">{esc(k)}</span>' for k in guide_keywords(B))
+
+    other_store = "".join(
+        f'<a class="sx-chip" href="../brands/{esc(s)}.html">{esc(b)} 양도양수</a>'
+        for b, s in store_links if b != brand
+    )
+    other_guide = "".join(
+        f'<a class="sx-chip" href="../brands/{esc(G["slug"])}.html">{esc(G["brand"])} 가이드</a>'
+        for G in guide_links if G["slug"] != slug
+    )
+
+    html_out = page_head(title, description, keywords, canonical, [ld_faq, ld_crumb])
+    html_out += crumbs([
+        ("홈", "../index.html"),
+        ("브랜드별 보기", "index.html"),
+        (f"{brand} 양도양수 가이드", None),
+    ])
+    html_out += f"""
+<main id="main">
+  <section class="sx-hero">
+    <div class="wrap">
+      <p class="eyebrow light"><span class="eyebrow-line"></span>BRAND GUIDE · {esc(brand)}</p>
+      <h1>{esc(brand)} 양도양수 가이드<br /><em>{esc(category)} 창업, 인수 전 확인 포인트</em></h1>
+      <p class="sx-lead">{esc(brand)}는 {esc(B['note'])}입니다. 이 페이지는 공개된 점포가 없는 브랜드를 위해, 인수 전에 확인할 실사 항목과 비공개로 들어오는 점포를 먼저 받아보는 방법을 정리한 가이드입니다. 확인되지 않은 매출·가맹 조건 수치는 쓰지 않았습니다.</p>
+      <div class="sx-tags">
+        <span>{esc(category)}</span>
+        <span>공개 점포 0곳</span>
+        <span>비공개 · 우선 알림</span>
+        <span>실사 체크포인트</span>
+      </div>
+      <div class="sx-facts">
+        <div class="sx-fact"><span>공개 점포</span><b class="gold">0곳</b></div>
+        <div class="sx-fact"><span>알림 방식</span><b>비공개 입고 우선 알림</b></div>
+        <div class="sx-fact"><span>업종</span><b>{esc(category)}</b></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap sx-body">
+    <div class="sx-main">
+      <h2>현재 {esc(brand)} 공개 매물 0건입니다</h2>
+      <p class="sx-para">{esc(brand)} 점포는 아직 공개 등록된 곳이 없습니다. 없는 매물을 있는 것처럼 올리지 않습니다. 대신 인수 전에 확인해야 할 항목을 브랜드 특성에 맞춰 정리했고, 조건을 남겨 주시면 비공개로 들어오는 점포를 먼저 알려 드립니다.</p>
+
+      <div class="sx-lock">
+        <p class="sx-lock-badge">우선 알림</p>
+        <h3>{esc(brand)} 비공개 매물 · 신규 입고 우선 알림 신청</h3>
+        <p>희망 지역과 예산, 운영 형태(직접 운영·반오토·풀오토)를 남겨 주시면 {esc(brand)} 점포가 비공개로 들어오는 순서대로 먼저 연락드립니다. {esc(brand)} 외에 조건에 맞는 다른 브랜드 점포도 함께 추려 안내합니다.</p>
+        <div class="sx-lock-actions">
+          <a class="btn btn-gold btn-lg" href="{BASE_URL}/#concierge">우선 알림 · 조건 상담 신청</a>
+          <a class="btn btn-outline-navy btn-lg" href="{PHONE_TEL}">전화 상담 {PHONE}</a>
+        </div>
+        <p class="sx-note">카카오톡 <b>{KAKAO}</b>로 문의하셔도 됩니다. 사이트에서 남긴 조건은 담당자에게 바로 접수되며, 점포별 상세 지출과 위치는 상담에서 안내합니다.</p>
+      </div>
+
+      <h2>{esc(brand)} 인수 전 실사 체크포인트</h2>
+      <p class="sx-para">{esc(B['intro'])}</p>
+      <ul class="sx-list">{checks}</ul>
+
+      <h2>{esc(brand)} 창업, 이런 점포주에게 맞습니다</h2>
+      <p class="sx-para">{esc(B['fit'])}</p>
+      <p class="sx-para">같은 브랜드라도 상권·평수·인력 운영에 따라 수익 구조가 달라집니다. 아래 절차대로 후보를 좁히고, 확인한 자료를 문서로 남기는 것이 안전합니다.</p>
+
+      <h2>양도양수 진행 절차</h2>
+      <ul class="sx-list">
+        <li><b>1차 상담</b> — 희망 지역·예산·운영 계획을 정리합니다. {esc(brand)} 외 대안 브랜드도 함께 놓고 봅니다.</li>
+        <li><b>후보 압축</b> — 공개·비공개 점포 중 조건에 가까운 2~3곳과 비용 구조를 보내 드립니다.</li>
+        <li><b>현장 실사</b> — 상권·동선·시설을 직접 확인하고 포스·카드 정산 자료로 매출을 대조합니다.</li>
+        <li><b>본사 승계·계약</b> — 가맹 승계 조건과 <b>시설·영업권</b>·<b>점포 예치금</b> 항목을 서면으로 확인한 뒤 계약합니다.</li>
+      </ul>
+
+      <h2>자주 묻는 질문</h2>
+      <div class="sx-faq">{faq_html}</div>
+
+      <h2>{esc(brand)} 매장 검색 키워드</h2>
+      <div class="sx-kw">{kw_chips}</div>
+
+      <h2>공개 점포가 있는 다른 브랜드</h2>
+      <div class="sx-kw">{other_store}</div>
+
+      <h2>브랜드별 가이드</h2>
+      <div class="sx-kw">{other_guide}</div>
+      <p class="sx-more"><a href="index.html">브랜드별 보기 전체 →</a> · <a href="../stores/index.html">전체 점포 색인 →</a></p>
+    </div>
+
+    <aside class="sx-side">
+      <div class="sx-card">
+        <p class="sx-card-eyebrow">WAITING LIST</p>
+        <h2 class="sx-card-title">{esc(brand)} 우선 알림</h2>
+        <p class="sx-card-text">공개 점포는 0곳입니다. 조건을 남겨 주시면 비공개로 들어오는 {esc(brand)} 점포부터 알려 드립니다.</p>
+        <div class="sx-card-actions">
+          <a class="btn btn-gold" href="{BASE_URL}/#concierge">조건 상담 신청</a>
+          <a class="btn btn-outline-navy" href="{PHONE_TEL}">전화 {PHONE}</a>
+        </div>
+        <dl class="sx-card-facts">
+          <div><dt>담당</dt><dd>{MANAGER}</dd></div>
+          <div><dt>카카오톡</dt><dd>{KAKAO}</dd></div>
+          <div><dt>등록</dt><dd>{REGISTER_NO}</dd></div>
+        </dl>
+      </div>
+    </aside>
+  </div>
+</main>
+"""
+    html_out += page_foot(store_links + [(G["brand"], G["slug"]) for G in guide_links])
     return html_out
 
 
 # ---------------------------------------------------------------- index pages
 def build_brand_index(brand_links: list, groups: dict) -> str:
-    title = "브랜드별 보기 · 메가커피·컴포즈·우지·교촌 양도양수 창업 | 에이피파트너"
+    guide_links = [(B["brand"], B["slug"]) for B in GUIDE_BRANDS]
+    total_pages = len(groups) + len(GUIDE_BRANDS)
+    total_stores = sum(len(v) for v in groups.values())
+    title = (
+        "브랜드별 보기 · 투썸·배스킨라빈스·이디야·BHC 등 18개 브랜드 "
+        "양도양수 창업 가이드 | 에이피파트너"
+    )
     description = (
-        "프랜차이즈 양도양수 창업 브랜드별 실사 매장 목록입니다. 메가커피·컴포즈커피·우지커피·백억커피·"
-        "교촌치킨·맘스터치 등 브랜드별로 초기 인수 비용과 월 매출, 예상 순수익을 비교하세요."
+        "프랜차이즈 양도양수 창업 브랜드별 페이지입니다. 메가커피·컴포즈커피·우지커피·백억커피·교촌치킨·"
+        "맘스터치 실사 매장과 함께, 투썸플레이스·배스킨라빈스·텐퍼센트·역전할머니맥주·빽다방·이디야커피·"
+        "더벤티·바나프레소·공차·BHC치킨·BBQ치킨·서브웨이는 인수 전 실사 체크포인트와 비공개 매물 우선 알림을 안내합니다."
     )
     keywords = ",".join(unique(
         [f"{b} 양도양수" for b in groups] + [f"{b} 창업" for b in groups]
-        + ["프랜차이즈 양도양수", "카페 창업", "양도양수 창업"]
+        + [f"{B['brand']} 양도양수" for B in GUIDE_BRANDS]
+        + [f"{B['brand']} 창업" for B in GUIDE_BRANDS]
+        + ["프랜차이즈 양도양수", "카페 창업", "치킨 창업", "양도양수 창업"]
     ))
     canonical = f"{BASE_URL}/brands/index.html"
     cards = "".join(brand_card(b, items) for b, items in groups.items())
+    guide_cards = "".join(guide_card(B) for B in GUIDE_BRANDS)
     ld = {
         "@context": "https://schema.org",
         "@type": "ItemList",
-        "name": "브랜드별 양도양수 창업 매장",
+        "name": "브랜드별 양도양수 창업 매장 · 가이드",
         "url": canonical,
+        "numberOfItems": total_pages,
         "itemListElement": [
             {"@type": "ListItem", "position": i + 1, "name": f"{b} 양도양수",
-             "url": f"{BASE_URL}/brands/{slug_for(b)}.html"}
-            for i, b in enumerate(groups)
+             "url": f"{BASE_URL}/brands/{s}"}
+            for i, (b, s) in enumerate(
+                [(b, slug_for(b) + ".html") for b in groups]
+                + [(B["brand"], B["slug"] + ".html") for B in GUIDE_BRANDS]
+            )
         ],
     }
     html_out = page_head(title, description, keywords, canonical, ld)
@@ -613,15 +1090,19 @@ def build_brand_index(brand_links: list, groups: dict) -> str:
   <section class="sx-hero">
     <div class="wrap">
       <p class="eyebrow light"><span class="eyebrow-line"></span>BRANDS</p>
-      <h1>브랜드별 양도양수 창업<br /><em>실사 마친 매장을 브랜드로</em></h1>
-      <p class="sx-lead">메가커피·컴포즈커피·우지커피·백억커피·교촌치킨·맘스터치 등 브랜드별로 현장 실사를 마친 매장을 모았습니다. 브랜드마다 초기 인수 비용과 상권 구조가 달라, 같은 예산이라도 확인할 항목이 다릅니다.</p>
-      <div class="sx-tags"><span>{len(groups)}개 브랜드</span><span>{sum(len(v) for v in groups.values())}곳 등록</span><span>현장 실사 완료</span></div>
+      <h1>브랜드별 양도양수 창업<br /><em>{total_pages}개 브랜드 · 실사 매장과 인수 가이드</em></h1>
+      <p class="sx-lead">현장 실사를 마친 매장이 있는 {len(groups)}개 브랜드와, 인수 전 확인 항목을 정리한 가이드 {len(GUIDE_BRANDS)}개 브랜드를 한곳에 모았습니다. 공개 점포가 없는 브랜드는 매물을 만들어 올리지 않고, 실사 체크포인트와 비공개 입고 우선 알림만 안내합니다.</p>
+      <div class="sx-tags"><span>{total_pages}개 브랜드</span><span>공개 점포 {total_stores}곳</span><span>가이드 {len(GUIDE_BRANDS)}개</span></div>
     </div>
   </section>
   <div class="wrap sx-body sx-body-wide">
     <div class="sx-main">
-      <h2>브랜드 목록</h2>
+      <h2>공개 점포가 있는 브랜드 <span class="sx-count">{len(groups)}개</span></h2>
       <div class="sx-brand-grid">{cards}</div>
+
+      <h2>가이드 · 비공개 우선 알림 브랜드 <span class="sx-count">{len(GUIDE_BRANDS)}개</span></h2>
+      <p class="sx-para">아래 브랜드는 지금 공개된 점포가 0곳입니다. 대신 브랜드별로 인수 전에 확인할 실사 항목을 정리했고, 조건을 남기면 비공개로 들어오는 점포를 먼저 알려 드립니다.</p>
+      <div class="sx-brand-grid">{guide_cards}</div>
       <p class="sx-more"><a href="../stores/index.html">전체 점포 색인 →</a></p>
     </div>
     <aside class="sx-side">
@@ -700,6 +1181,8 @@ def build_sitemap(groups: dict, updated_at: str) -> str:
     urls.append(f"{BASE_URL}/brands/index.html")
     for brand in groups:
         urls.append(f"{BASE_URL}/brands/{slug_for(brand)}.html")
+    for B in GUIDE_BRANDS:
+        urls.append(f"{BASE_URL}/brands/{B['slug']}.html")
     urls.append(f"{BASE_URL}/stores/index.html")
     for items in groups.values():
         for L in items:
@@ -763,14 +1246,18 @@ def main() -> int:
 
     listings = load_listings()
     groups = group_by_brand(listings)
-    brand_links = [(b, slug_for(b)) for b in groups]
+    store_links = [(b, slug_for(b)) for b in groups]
+    guide_links = [(B["brand"], B["slug"]) for B in GUIDE_BRANDS]
+    brand_links = store_links + guide_links
     updated_at = json.loads(DATA_FILE.read_text(encoding="utf-8")).get("updated_at", "")
 
     missing = [b for b in groups if b not in BRAND_SLUGS]
     outputs = {}
 
     for brand, items in groups.items():
-        outputs[BRANDS_DIR / f"{slug_for(brand)}.html"] = build_brand_page(brand, items, brand_links)
+        outputs[BRANDS_DIR / f"{slug_for(brand)}.html"] = build_brand_page(brand, items, store_links)
+    for B in GUIDE_BRANDS:
+        outputs[BRANDS_DIR / f"{B['slug']}.html"] = build_guide_page(B, store_links, GUIDE_BRANDS)
     outputs[BRANDS_DIR / "index.html"] = build_brand_index(brand_links, groups)
     outputs[STORES_DIR / "index.html"] = build_store_index(groups, brand_links)
     for items in groups.values():
@@ -780,7 +1267,7 @@ def main() -> int:
 
     if args.check:
         stale = [str(p) for p, body in outputs.items() if not p.exists() or p.read_text(encoding="utf-8") != body]
-        print(f"점포 {len(listings)}곳 · 브랜드 {len(groups)}개 · 페이지 {len(outputs)}개")
+        print(f"점포 {len(listings)}곳 · 브랜드 {len(groups)}개 · 가이드 {len(GUIDE_BRANDS)}개 · 페이지 {len(outputs)}개")
         print("최신 상태" if not stale else "다시 생성 필요:\n  " + "\n  ".join(stale))
         return 0 if not stale else 1
 

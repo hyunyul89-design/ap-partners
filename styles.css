@@ -1903,3 +1903,14 @@ body.compare-on .toast { bottom: 100px; }
 .footer-seo-links a { color: rgba(255,255,255,.52); }
 .footer-seo-links a:hover { color: var(--gold-soft); }
 .footer-seo-links .footer-seo-sep { color: rgba(255,255,255,.18); }
+
+/* ---------- footer: 공식 채널 (블로그·SNS) ---------- */
+.footer-channels {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px;
+  padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,.08);
+  font-size: 11.5px;
+}
+.footer-channels > span { color: rgba(255,255,255,.3); letter-spacing: .06em; }
+.footer-channels a { color: rgba(255,255,255,.55); }
+.footer-channels a:hover { color: var(--gold-soft); }
+.footer-channels a span { font-size: 10px; opacity: .55; margin-left: 2px; }
