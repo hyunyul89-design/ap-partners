@@ -2797,7 +2797,7 @@
     if (reason === 'no-endpoint') return '웹훅 주소가 비어 있습니다. [알림 설정 → 물건카드 연동]에서 주소를 저장해 주세요.';
     if (reason === 'no_doget') return 'Apps Script에 물건카드 조회(doGet)가 아직 배포되지 않았습니다. docs/apps-script-property-cards.gs의 [2] 블록을 붙이고 새 버전으로 배포해 주세요.';
     if (reason === 'auth') return 'Apps Script 배포가 공개되지 않았습니다. [배포 관리]에서 액세스 권한을 모든 사용자로 바꿔 주세요.';
-    if (reason === 'network') return '웹훅에 연결하지 못했습니다. 주소·인터넷 연결, Apps Script 배포 액세스 권한(모든 사용자)을 확인해 주세요.';
+    if (reason === 'network') return '웹훅에 연결하지 못했습니다. Apps Script에 물건카드 코드(doGet)를 붙여 새 버전으로 배포했는지, 배포 액세스 권한이 "모든 사용자"인지 확인해 주세요. [알림 설정 → 응답 미리 보기 ↗]로 실제 응답을 볼 수 있습니다.';
     return '물건카드를 불러오지 못했습니다' + (reason ? ' (' + reason + ')' : '') + '.';
   }
 
