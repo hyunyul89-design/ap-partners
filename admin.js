@@ -1,9 +1,10 @@
 /* ==========================================================================
-   AP PARTNERS · 에이피파트너 — 관리자 시안 (site/admin.html)
+   AP PARTNERS · 에이피파트너 — 관리자 (site/admin.html)
    - 로그인: 관리자 아이디 + 비밀번호(SHA-256 해시 검증) → sessionStorage 유지
-   - 계정 관리: 대표 관리자 1명 + 팀원(관리자) 계정 추가 · 비밀번호 변경/초기화 → localStorage 'apAdminAccounts'
-   - 점포 관리: 등록 · 수정 · 거래완료(비노출) · 삭제 → localStorage 'apPartnerCatalog'
-     (index.html 이 이 목록을 우선 사용하므로 저장 즉시 사이트에 반영)
+   - 권한: master(최종관리자) / consultant(일반 컨설턴트) → 계정·권한 탭은 master 전용
+   - 계정 관리: 최종관리자만 계정 추가·권한 변경·비밀번호 초기화/삭제 → localStorage 'apAdminAccounts'
+   - 매장 관리: 카드 목록 · 비공개 지점명 배지 · 담당 컨설턴트 필터 → localStorage 'apPartnerCatalog'
+     비공개 지점명은 관리자 전용 'apAdminBranches'에만 두고 손님 화면에는 내보내지 않습니다.
    - 손님 DB: index.html 4항목 게이트가 'apPartnerLeads' 에 쌓은 DB → 상태 변경 · CSV 다운로드
    ========================================================================== */
 (function () {
@@ -11,8 +12,8 @@
 
   /* ---------------- 관리자 계정 · 비밀번호 ----------------
      공개 저장소 소스에 평문 비밀번호를 두지 않도록 SHA-256 해시로만 검증합니다.
-     기본 대표 관리자 1명(초기 비밀번호 = 기존 관리자 비밀번호)으로 시작하고,
-     로그인 후 '계정·비밀번호' 탭에서 바로 바꿀 수 있습니다. */
+     기본 최종관리자 1명(초기 비밀번호 = 기존 관리자 비밀번호)으로 시작하고,
+     로그인 후 상단의 '내 비밀번호'에서 바로 바꿀 수 있습니다. */
   var ACCOUNTS_KEY = 'apAdminAccounts';
   var AUTH_KEY = 'apAdminAuth';
   var DEFAULT_ACCOUNT = {
@@ -552,7 +553,7 @@
         enterApp();
         toast(account.name + '님, 관리자 화면을 열었습니다.');
         if (account.must_change) {
-          toast('아직 최초 비밀번호입니다. 계정·비밀번호 탭에서 바로 바꿔 주세요.');
+          toast('아직 최초 비밀번호입니다. 오른쪽 위 "내 비밀번호"에서 바로 바꿔 주세요.');
         }
       });
     });
@@ -995,7 +996,7 @@
   function openForm(L) {
     state.editingId = L ? L.id : null;
     $('#storeForm').hidden = false;
-    $('#storeFormTitle').textContent = L ? '점포 수정' : '새 점포 등록';
+    $('#storeFormTitle').textContent = L ? '매장 수정' : '새 매장 등록';
 
     if (!L) {
       $('#fRegion').value = '서울';
@@ -1369,7 +1370,7 @@
     closeForm();
     renderStats();
     renderStores();
-    toast(existing ? '점포를 수정했습니다. 사이트 목록에 반영됩니다.' : '새 점포를 등록했습니다. 사이트 목록에 반영됩니다.');
+    toast(existing ? '매장을 수정했습니다. 사이트 목록에 반영됩니다.' : '새 매장을 등록했습니다. 사이트 목록에 반영됩니다.');
   }
 
   function findListing(id) {
