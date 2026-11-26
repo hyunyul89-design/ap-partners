@@ -82,6 +82,7 @@
   function safeParse(raw) { try { return raw ? JSON.parse(raw) : null; } catch (e) { return null; } }
   function readStore(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
   function writeStore(key, val) { try { localStorage.setItem(key, val); return true; } catch (e) { return false; } }
+  function removeStore(key) { try { localStorage.removeItem(key); } catch (e) { /* 무시 */ } }
   function readSession(key) { try { return sessionStorage.getItem(key); } catch (e) { return null; } }
   function writeSession(key, val) {
     try {
@@ -481,6 +482,69 @@
     }
   }
 
+  /* ---------------- 이 기기에서 로그인 유지 (자동 로그인) ----------------
+     체크박스가 켜져 있으면 세션을 sessionStorage 뿐 아니라 localStorage 에도 남겨,
+     브라우저를 완전히 껐다 켜도 다시 로그인하지 않습니다.
+     비밀번호 원문은 저장하지 않고, 계정의 비밀번호 해시로 만든 '세션 토큰'만 저장합니다.
+     그래서 비밀번호가 바뀌거나 계정이 삭제되면 저장된 토큰이 맞지 않아 자동으로 풀립니다. */
+  var REMEMBER_KEY = 'apAdminRememberSession';
+  var REMEMBER_CHOICE_KEY = 'apAdminRememberChoice';
+  var LAST_ID_KEY = 'apAdminLastId';
+  var REMEMBER_SALT = 'ap-admin-remember-v1';
+  var REMEMBER_DAYS = 30;
+
+  function rememberTokenOf(account) {
+    return sha256Hex(String(account.id).toLowerCase() + '|' + String(account.password_hash || '') + '|' + REMEMBER_SALT);
+  }
+
+  function readRemember() {
+    var rec = safeParse(readStore(REMEMBER_KEY));
+    if (!rec || !rec.id || !rec.token) return null;
+    return rec;
+  }
+
+  function saveRemember(account) {
+    if (!account) return Promise.resolve(false);
+    return rememberTokenOf(account).then(function (token) {
+      writeStore(REMEMBER_KEY, JSON.stringify({
+        v: 1,
+        id: account.id,
+        name: account.name,
+        role: normalizeRole(account.role),
+        token: token,
+        saved_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + REMEMBER_DAYS * 86400000).toISOString()
+      }));
+      writeStore(LAST_ID_KEY, account.id);
+      return true;
+    });
+  }
+
+  function clearRemember() {
+    removeStore(REMEMBER_KEY);
+  }
+
+  function rememberFor(id) {
+    var rec = readRemember();
+    return !!rec && rec.id.toLowerCase() === String(id || '').toLowerCase();
+  }
+
+  /* 저장된 자동 로그인 정보를 확인해 세션을 다시 엽니다. 맞지 않으면 지우고 false. */
+  function restoreRemember() {
+    var rec = readRemember();
+    if (!rec) return Promise.resolve(false);
+    var expired = !!(rec.expires_at && Date.parse(rec.expires_at) < Date.now());
+    var account = findAccount(rec.id);
+    if (expired || !account) { clearRemember(); return Promise.resolve(false); }
+    return rememberTokenOf(account).then(function (token) {
+      if (token !== rec.token) { clearRemember(); return false; }
+      writeSession(AUTH_KEY, JSON.stringify({
+        id: account.id, name: account.name, role: account.role, at: new Date().toISOString(), remembered: true
+      }));
+      return true;
+    });
+  }
+
   function showLogin() {
     $('#adminLogin').hidden = false;
     $('#adminApp').hidden = true;
@@ -492,6 +556,15 @@
     if (who) { who.hidden = true; who.textContent = ''; }
     var pw = $('#adminPw');
     if (pw) pw.value = '';
+    /* 마지막에 로그인한 아이디와 '로그인 유지' 선택을 그대로 채워 둡니다. */
+    var lastId = readStore(LAST_ID_KEY);
+    var idEl = $('#adminId');
+    if (idEl && lastId && !idEl.value) idEl.value = lastId;
+    var remember = $('#loginRemember');
+    if (remember) {
+      var choice = readStore(REMEMBER_CHOICE_KEY);
+      remember.checked = choice === null || choice === undefined ? true : choice === '1';
+    }
   }
 
   function renderHeaderUser(account) {
@@ -555,7 +628,12 @@
         if (btn) { btn.disabled = false; btn.textContent = '로그인';
         }
         if (err) err.hidden = true;
+        writeStore(LAST_ID_KEY, account.id);
+        var remember = $('#loginRemember');
+        var keep = !!(remember && remember.checked);
+        writeStore(REMEMBER_CHOICE_KEY, keep ? '1' : '0');
         setAuthed(account);
+        if (keep) saveRemember(account); else clearRemember();
         enterApp();
         toast(account.name + '님, 관리자 화면을 열었습니다.');
         if (account.must_change) {
@@ -566,6 +644,7 @@
     var logout = $('#logoutBtn');
     if (logout) logout.addEventListener('click', function () {
       setAuthed(null);
+      clearRemember();
       if ($('#bulkPanel')) closeBulk();
       closePwModal();
       showLogin();
@@ -698,6 +777,8 @@
       });
       writeAccounts(list);
       renderAccounts();
+      /* 임시 비밀번호로 바뀐 계정의 저장된 자동 로그인은 풀립니다. */
+      if (rememberFor(acc.id)) clearRemember();
       showAccountMsg(acc.id + ' 계정의 임시 비밀번호는 "' + temp + '" 입니다. 본인에게 전달하고 첫 로그인 후 바꾸도록 안내하세요.');
       toast(acc.name + ' 계정의 비밀번호를 초기화했습니다.');
     });
@@ -720,6 +801,7 @@
     if (!window.confirm('"' + acc.name + ' (' + acc.id + ')" 관리자 계정을 삭제할까요?\n삭제 후에는 되돌릴 수 없습니다.')) return;
     writeAccounts(list.filter(function (a) { return a.id !== acc.id; }));
     renderAccounts();
+    if (rememberFor(acc.id)) clearRemember();
     showAccountMsg(acc.id + ' 계정을 삭제했습니다.');
     toast('관리자 계정을 삭제했습니다.');
   }
@@ -791,6 +873,9 @@
           });
           writeAccounts(updated);
           renderAccounts();
+          /* 이 기기에서 자동 로그인 중이었다면 바뀐 비밀번호로 토큰을 다시 맞춥니다. */
+          var meNow = findAccount(me.id);
+          if (meNow && rememberFor(meNow.id)) saveRemember(meNow);
           pwForm.reset();
           toast('비밀번호를 바꿨습니다.');
           closePwModal();
@@ -2683,6 +2768,13 @@
     initAccountsPanel();
     renderAccounts();
     if (isAuthed()) enterApp();
-    else showLogin();
+    else restoreRemember().then(function (restored) {
+      if (restored) {
+        enterApp();
+        toast('저장된 로그인으로 관리자 화면을 열었습니다.');
+      } else {
+        showLogin();
+      }
+    });
   });
 })();

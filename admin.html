@@ -55,6 +55,11 @@
         <label for="adminPw" class="login-label-pw">비밀번호</label>
         <input id="adminPw" type="password" autocomplete="current-password" placeholder="비밀번호 입력" />
         <p class="login-error" id="loginError" hidden></p>
+        <label class="login-remember" for="loginRemember">
+          <input id="loginRemember" type="checkbox" checked />
+          <span>이 기기에서 로그인 유지 <em>(자동 로그인)</em></span>
+        </label>
+        <p class="login-remember-note">다른 사람과 함께 쓰는 기기에서는 체크를 해제하세요. 로그인 정보는 이 브라우저에만 30일간 저장되고, <b>로그아웃</b>하면 바로 지워집니다.</p>
         <button class="btn btn-gold btn-lg" type="submit">로그인</button>
       </form>
       <div class="login-note">
