@@ -28,7 +28,7 @@
 
   /* ---------------- 관리자 전용 비공개 지점명 ----------------
      지점명은 손님 화면(index.html · app.js · data/listings.json)에 절대 넣지 않습니다.
-     기본 6곳은 아래 seed 로만 두고, 등록·수정한 지점명은 이 브라우저의
+     기본 9곳은 아래 seed 로만 두고, 등록·수정한 지점명은 이 브라우저의
      관리자 전용 저장소(apAdminBranches)에만 보관합니다. */
   var BRANCH_KEY = 'apAdminBranches';
   var BRANCH_SEED = {
@@ -37,7 +37,10 @@
     'AP-003': '신림푸르지오점',
     'AP-004': '강서가양점',
     'AP-005': '반포점',
-    'AP-006': '강동고덕역점'
+    'AP-006': '강동고덕역점',
+    'AP-007': '인천신기사거리점',
+    'AP-008': '일산문화광장점',
+    'AP-009': '둔산타임월드점'
   };
   var DEFAULT_CONSULTANT_ID = 'hyunyul89';
   var CATALOG_KEY = 'apPartnerCatalog';
@@ -1011,8 +1014,8 @@
       $('#fFixed').value = '180';
       $('#fEtc').value = '115';
     } else {
-      $('#fRegion').value = ['서울', '경기', '인천'].indexOf(L.region) !== -1 ? L.region : '기타';
-      $('#fCategory').value = ['카페', '디저트', '음식점', '치킨'].indexOf(L.category) !== -1 ? L.category : '기타';
+      $('#fRegion').value = ['서울', '경기', '인천', '대전'].indexOf(L.region) !== -1 ? L.region : '기타';
+      $('#fCategory').value = ['카페', '디저트', '음식점', '패스트푸드', '치킨'].indexOf(L.category) !== -1 ? L.category : '기타';
       $('#fPrivate').value = L.private_only ? 'Y' : 'N';
       $('#fCode').value = codeOf(L);
       $('#fDistrict').value = L.district || '';
@@ -1380,11 +1383,12 @@
   /* ---------------- 엑셀(CSV) 일괄 등록 ---------------- */
   var BULK_MAX_BYTES = 5 * 1024 * 1024;
   var BULK_MAX_ROWS = 300;
-  var CSV_CATEGORIES = ['카페', '디저트', '음식점', '치킨', '기타'];
+  var CSV_CATEGORIES = ['카페', '디저트', '음식점', '패스트푸드', '치킨', '기타'];
   var REGION_ALIAS = {
     '서울': '서울', '서울시': '서울', '서울특별시': '서울',
     '경기': '경기', '경기도': '경기',
-    '인천': '인천', '인천시': '인천', '인천광역시': '인천'
+    '인천': '인천', '인천시': '인천', '인천광역시': '인천',
+    '대전': '대전', '대전시': '대전', '대전광역시': '대전'
   };
 
   /* 양식 열 순서 · 별칭 · 필수 여부
@@ -1645,7 +1649,7 @@
         region = '기타';
         district = areaRaw;
         area = areaRaw;
-        out.notes.push('지역 "' + areaRaw + '"은(는) 서울·경기·인천이 아니라 기타로 분류됩니다.');
+        out.notes.push('지역 "' + areaRaw + '"은(는) 서울·경기·인천·대전이 아니라 기타로 분류됩니다.');
       }
     }
 
@@ -2098,7 +2102,7 @@
   }
 
   function renderStoreFilters() {
-    var regions = ['서울', '경기', '인천', '기타'];
+    var regions = ['서울', '경기', '인천', '대전', '기타'];
     state.listings.forEach(function (L) {
       var r = String(L.region || '').trim();
       if (r && regions.indexOf(r) === -1) regions.push(r);
