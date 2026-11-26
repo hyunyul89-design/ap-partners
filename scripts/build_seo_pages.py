@@ -451,7 +451,7 @@ def store_card(L: dict) -> str:
             <div><dt>초기 인수 비용</dt><dd>{esc(L['initial_cost']['label'])}</dd></div>
             <div><dt>월 평균 매출</dt><dd>{esc(L['monthly_sales']['label'].replace('월 평균 ', ''))}</dd></div>
             <div><dt>예상 순수익</dt><dd>{esc(L['profit']['label'])}</dd></div>
-            <div><dt>규모</dt><dd>{esc(L.get('store_spec', '-'))}</dd></div>
+            <div><dt>규모</dt><dd>{esc((' · '.join(x for x in [L.get('store_floor', ''), (str(L.get('store_pyeong', '')) + '평') if L.get('store_pyeong') else ''] if x)) or L.get('store_spec', '-'))}</dd></div>
           </dl>
           <span class="sx-store-more">상세 보기 →</span>
         </a>"""
