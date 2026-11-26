@@ -30,6 +30,11 @@ site/
 ├─ index.html                 화면 구조 (히어로 · 점포 목록 · AI 추천 · 절차·실사 가이드 · 상담)
 ├─ admin.html                 관리자 화면 (로그인 · 매장 DB · 손님 DB · 양도 의뢰 · 계정·권한 관리 · 알림 설정)
 ├─ styles.css                 디자인 (딥네이비 #0F1E36 · 골드 #C8A45D · 화이트/라이트그레이)
+├─ seo.css                    브랜드·점포 정적 페이지 전용 스타일 (sx- 접두사)
+├─ brands/                    브랜드별 랜딩 페이지 (mega-coffee.html 등) + index.html 색인
+├─ stores/                    점포별 상세 페이지 (ap-001.html ~ ap-012.html) + index.html 색인
+├─ scripts/
+│   └─ build_seo_pages.py     브랜드·점포 페이지 · sitemap.xml 자동 생성기
 ├─ app.js                     필터 · 상세 모달 · AI 매칭 · 4항목 게이트 · 비교 · 양도 의뢰
 ├─ admin.js                   관리자 계정 로그인(SHA-256) · 점포 CRUD · DB 목록 · CSV · 텔레그램 설정
 ├─ assets/business-card.jpg   명함 이미지 (상담 섹션)
@@ -220,12 +225,28 @@ function doPost(e) {
 
 - **사이트**: `https://hyunyul89-design.github.io/ap-partners/` (저장소 `hyunyul89-design/ap-partners`, 커밋 `bd8a188`·`f11bc44`)
 - `robots.txt`: 전체 허용, `/admin.html`만 차단, 사이트맵 위치 안내
-- `sitemap.xml`: 사이트 루트 URL 1개
+- `sitemap.xml`: 메인 + 브랜드·점포 정적 페이지 전체 URL(21개). `site/scripts/build_seo_pages.py`가 자동으로 다시 씁니다.
 - `index.html` head: `canonical`, `description`, `og:*`(title·description·url·image·type·site_name·locale), `twitter:card`, `naver-site-verification` 메타태그
 - `assets/og-cover.png`: 공유 미리보기용 1200×630 이미지. `tools/make_og_cover.py`로 다시 만들 수 있음(Noto Sans/Serif KR, 네이비·골드)
 - **루트 저장소** `hyunyul89-design/hyunyul89-design.github.io`: 네이버 서치어드바이저가 호스트 단위로만 사이트를 받기 때문에 만든 저장소. `index.html`은 `/ap-partners/`로 넘기는 안내 페이지이고, 루트 `robots.txt`와 네이버 확인 파일(`naver157fc89ea794a6ebeab98219ec2df593.html`)이 함께 있다. 확인 파일을 지우면 네이버 소유확인이 풀리므로 삭제하지 말 것.
 - **네이버 서치어드바이저**(`hyunyul89` 계정): 사이트 `https://hyunyul89-design.github.io` 등록·소유확인 완료, 사이트맵 `ap-partners/sitemap.xml` 제출, `/ap-partners/` 수집 요청, robots.txt 수집·검증 완료
 - 도메인을 새로 붙이면 서치어드바이저에 그 도메인을 사이트로 다시 등록하고 소유확인해야 한다.
+
+## 브랜드·점포별 정적 SEO 페이지 (2026-11-26 추가)
+
+검색 키워드(`메가커피 양도양수`, `컴포즈커피 창업`, `교촌치킨 양도양수` 등)로 개별 페이지가 잡히도록, `data/listings.json`만 읽어 정적 HTML을 자동 생성합니다.
+
+```bash
+python3 site/scripts/build_seo_pages.py          # 생성
+python3 site/scripts/build_seo_pages.py --check  # 최신 상태인지 검사만
+```
+
+- **브랜드 페이지** `brands/{slug}.html` — 브랜드별 매장 목록·비용 범위·확인 포인트. 슬러그는 `scripts/build_seo_pages.py`의 `BRAND_SLUGS`에 한 줄 추가하면 되고, 매핑이 없는 새 브랜드는 `brand-xxxxxx` 대체 슬러그로 자동 생성되며 실행 시 경고가 뜹니다.
+- **점포 페이지** `stores/ap-001.html` ~ — 초기 인수 비용(구성 포함)·월 매출·예상 순수익·상권·규모·특징, `지출 비공개` 안내와 메인 `../?id=AP-xxx` 바로가기 버튼, `<title>`·`meta description`·`canonical`·JSON-LD(BreadcrumbList).
+- **색인 페이지** `brands/index.html`, `stores/index.html` — 메인 푸터의 `브랜드별 보기` / `전체 점포 색인` 링크 대상.
+- **메인 푸터 브랜드 링크** — `index.html`의 `<!-- SEO:BRAND-LINKS:START -->` ~ `END` 사이를 생성기가 다시 채웁니다. 마커를 지우면 자동 갱신이 멈춥니다.
+- **지출은 페이지에 쓰지 않습니다.** 인건비·재료비·고정비·수수료가 담긴 `points` 문장은 생성기가 걸러냅니다(`EXPENSE_TOKENS`). 지점명·지번·역명도 생성하지 않습니다.
+- 새 매물을 `listings.json`에 추가한 뒤 생성기를 한 번 돌리고 배포하면 브랜드·점포 페이지와 sitemap이 함께 갱신됩니다.
 
 ## 화면 구성 (v13, 2026-11-26 담당자별 중복 지점명 업데이트)
 
