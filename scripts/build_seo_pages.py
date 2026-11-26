@@ -356,7 +356,19 @@ def build_store_page(L: dict, brand_links: list, siblings: list) -> str:
     kw_chips = "".join(f'<span class="sx-chip">{esc(k)}</span>' for k in L.get("keywords", []))
 
     same_brand = [S for S in siblings if S["id"] != L["id"]][:3]
-    same_html = "".join(store_card(S) for S in same_brand)
+    if same_brand:
+        same_section = (
+            f'<h2>같은 브랜드 다른 매장</h2>'
+            f'<div class="sx-card-grid">{"".join(store_card(S) for S in same_brand)}</div>'
+            f'<p class="sx-more"><a href="../brands/{esc(slug_for(brand))}.html">{esc(brand)} 매장 전체 보기 →</a></p>'
+        )
+    else:
+        same_section = (
+            '<h2>다른 브랜드 매장 둘러보기</h2>'
+            f'<p class="sx-para">이 {esc(brand)} 매장은 현재 1곳만 등록되어 있습니다. 브랜드별 보기에서 다른 브랜드 매장과 비용·상권을 비교해 보세요.</p>'
+            '<p class="sx-more"><a href="../brands/index.html">브랜드별 보기 →</a> · '
+            '<a href="../stores/index.html">전체 점포 색인 →</a></p>'
+        )
 
     html_out = page_head(title, description, keywords, canonical, ld)
     html_out += crumbs([
@@ -416,9 +428,7 @@ def build_store_page(L: dict, brand_links: list, siblings: list) -> str:
         <p class="sx-note">정확한 위치와 원자료는 점주 보호를 위해 상담에서 안내합니다.</p>
       </div>
 
-      <h2>같은 브랜드 다른 매장</h2>
-      <div class="sx-card-grid">{same_html}</div>
-      <p class="sx-more"><a href="../brands/{esc(slug_for(brand))}.html">{esc(brand)} 매장 전체 보기 →</a></p>
+      {same_section}
     </div>
 
     <aside class="sx-side">
