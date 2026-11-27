@@ -57,7 +57,7 @@ BRAND_SLUGS = {
     "백억커피": "baekuk-coffee",
     "맘스터치&피자": "momstouch",
     "교촌치킨": "kyochon",
-    "투썸플레이스": "twosome-place",
+    "투썸플레이스": "twosome",
     "이디야커피": "ediya-coffee",
     "빽다방": "paikdabang",
     "할리스커피": "hollys",
@@ -77,25 +77,6 @@ BRAND_SLUGS = {
 # 공개 점포가 아직 없는 주요 프랜차이즈.
 # 허위 점포·수치를 만들지 않고, 브랜드별 실사 체크포인트와 비공개 입고 우선 알림만 안내합니다.
 GUIDE_BRANDS = [
-    {
-        "slug": "twosome",
-        "brand": "투썸플레이스",
-        "short": "투썸",
-        "category": "카페·디저트",
-        "note": "케이크와 디저트, 홀 좌석이 함께 있는 프리미엄 카페",
-        "intro": "투썸플레이스는 커피와 함께 케이크·디저트를 매장에서 판매하고, 홀 좌석에서 머무는 손님 비중이 큰 브랜드입니다. 같은 카페라도 디저트 진열과 좌석 구성이 매출을 가르기 때문에, 인수 전에 확인할 항목이 다른 브랜드와 다릅니다.",
-        "fit": "디저트 진열과 홀 응대를 직접 챙길 수 있고, 좌석 회전보다 객단가와 재방문을 보는 운영을 원하는 분에게 맞습니다.",
-        "checkpoints": [
-            ("점포 면적과 좌석 구성", "디저트 케이스와 홀 좌석이 함께 들어가야 해서 평수와 동선을 직접 확인해야 합니다. 시설·영업권에 포함되는 집기 범위와, 인수 후 좌석 배치를 바꿀 수 있는지도 함께 봅니다."),
-            ("디저트 공급과 폐기 기준", "케이크·디저트는 유통기한이 짧아 남는 수량이 그대로 손실이 됩니다. 본사 공급 주기, 진열 수량, 당일 판매 후 남은 제품을 어떻게 처리하는지 점주에게 확인합니다."),
-            ("점포 사용료와 관리비 비중", "홀 중심 매장은 면적이 넓어 점포 사용료와 관리비 비중이 커집니다. 최근 12개월 고지서로 사용료·관리비·공과금을 확인하고, 매출 대비 비중을 함께 계산합니다."),
-            ("본사 시설 기준과 리뉴얼", "본사가 요구하는 인테리어·집기 기준과 다음 리뉴얼 시점, 비용 부담 주체를 서면으로 확인합니다. 인수 직후 큰 시설 공사가 필요한지가 총비용을 바꿉니다."),
-        ],
-        "faq": (
-            "투썸플레이스 매장은 디저트 매출을 어떻게 확인하나요?",
-            "최근 12개월 포스 자료에서 음료와 디저트 매출을 나눠 달라고 요청하고, 디저트 폐기 수량과 본사 공급 단가를 함께 확인합니다. 디저트 비중이 높은 매장은 폐기 관리가 수익을 크게 가릅니다.",
-        ),
-    },
     {
         "slug": "baskinrobbins",
         "brand": "배스킨라빈스",
@@ -1335,11 +1316,22 @@ def update_index_store_links(listings: list) -> bool:
             for i, L in enumerate(listings)
         ],
     }
+    counts = {}
+    for L in listings:
+        counts[L["brand"]] = counts.get(L["brand"], 0) + 1
+    brand_html = "".join(
+        f'\n        <a href="brands/{esc(slug_for(b))}.html">{esc(b)} <b>{n}</b></a>'
+        for b, n in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
+    )
     block = (
         f'{STORE_START}\n'
         f'    <div class="store-index">\n'
-        f'      <p class="store-index-title">점포 상세 페이지 <span class="store-index-count">{len(listings)}</span>곳</p>\n'
-        f'      <ul class="store-index-list">{items_html}\n      </ul>\n'
+        f'      <p class="store-index-title">점포 상세 페이지 <span class="store-index-count">{len(listings)}</span>곳 · 브랜드별 보기</p>\n'
+        f'      <div class="store-index-brands">{brand_html}\n      </div>\n'
+        f'      <details class="store-index-all">\n'
+        f'        <summary>전체 점포 목록 <b>{len(listings)}</b>곳 펼쳐 보기</summary>\n'
+        f'        <ul class="store-index-list">{items_html}\n        </ul>\n'
+        f'      </details>\n'
         f'    </div>\n'
         f'    <script type="application/ld+json">\n'
         + json.dumps(ld, ensure_ascii=False, indent=2)
