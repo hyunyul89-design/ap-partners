@@ -24,6 +24,7 @@ AP PARTNERS · 에이피파트너 — 정적 SEO 페이지 자동 생성기
 from __future__ import annotations
 
 import argparse
+import datetime
 import html
 import json
 import re
@@ -43,6 +44,7 @@ BRANDS_DIR = SITE_DIR / "brands"
 STORES_DIR = SITE_DIR / "stores"
 SITEMAP_FILE = SITE_DIR / "sitemap.xml"
 INDEX_FILE = SITE_DIR / "index.html"
+LLMS_FILE = SITE_DIR / "llms.txt"
 
 # 브랜드 → 슬러그. 새 브랜드는 아래에 한 줄만 추가하면 됩니다.
 BRAND_SLUGS = {
@@ -703,6 +705,35 @@ def build_store_page(L: dict, brand_links: list, siblings: list) -> str:
     return html_out
 
 
+# ---------------------------------------------------------------- brand FAQ
+def brand_faqs(brand: str, items: list) -> list:
+    """공개 점포가 있는 브랜드 페이지의 질문·답변.
+
+    listings.json 에 있는 값(비용·매출 범위, 지역)만 인용하고,
+    가맹비·로열티 같은 확인되지 않은 수치는 쓰지 않습니다.
+    """
+    n = len(items)
+    costs = [L["initial_cost"]["total_manwon"] for L in items]
+    sales = [L["monthly_sales"]["avg_manwon"] for L in items]
+    districts = unique([L.get("district", "") for L in items])
+    return [
+        (f"{brand} 양도양수 비용은 얼마인가요?",
+         f"지금 공개된 {brand} 매장은 {n}곳이고, 초기 인수 비용은 {range_label(min(costs), max(costs))}입니다. "
+         f"비용은 점포 예치금과 시설·영업권으로 나뉘고, 같은 브랜드라도 평수·상권·시설 상태에 따라 달라집니다. "
+         f"매장별 구성은 각 점포 상세 페이지의 '초기 인수 비용 구성'에서 확인할 수 있습니다."),
+        (f"{brand} 매장은 어느 지역에 있나요?",
+         f"{', '.join(districts)}에서 현장 실사를 마친 {brand} 매장을 등록해 두었습니다. "
+         f"지점명과 상세 위치는 점주 보호를 위해 공개하지 않고 상담에서 안내합니다."),
+        (f"{brand} 매장의 월 매출과 예상 순수익은 어떻게 확인하나요?",
+         f"표시된 월 평균 매출 {range_label(min(sales), max(sales))}과 예상 순수익은 점주 제시 자료를 기준으로 정리한 값입니다. "
+         f"상담에서 최근 12개월 포스·카드 정산 자료와 실제 근무표를 함께 대조하고, "
+         f"항목별 지출은 사이트에서 희망 조건을 한 번 남기면 바로 확인할 수 있습니다."),
+        (f"{brand} 가맹 승계는 어떤 순서로 진행되나요?",
+         "후보 매장을 정한 뒤 본사 승계 심사와 교육 일정을 확인하고, 재계약 시점·교육 비용·시설 기준을 서면으로 받아 진행합니다. "
+         "필요한 서류와 일정은 본사 기준에 따라 다르므로, 매장을 정한 뒤 본사에 직접 확인하는 것이 정확합니다."),
+    ]
+
+
 # ---------------------------------------------------------------- cards
 def store_card(L: dict) -> str:
     return f"""
@@ -782,6 +813,8 @@ def build_brand_page(brand: str, items: list, store_links: list) -> str:
 
     canonical = f"{BASE_URL}/brands/{slug}.html"
 
+    faqs = brand_faqs(brand, items)
+
     ld = {
         "@context": "https://schema.org",
         "@type": "ItemList",
@@ -795,6 +828,28 @@ def build_brand_page(brand: str, items: list, store_links: list) -> str:
             for i, L in enumerate(items)
         ],
     }
+    ld_faq = {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+            {"@type": "Question", "name": q,
+             "acceptedAnswer": {"@type": "Answer", "text": a}}
+            for q, a in faqs
+        ],
+    }
+    ld_crumb = {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "에이피파트너", "item": BASE_URL + "/"},
+            {"@type": "ListItem", "position": 2, "name": "브랜드별 보기", "item": f"{BASE_URL}/brands/index.html"},
+            {"@type": "ListItem", "position": 3, "name": f"{brand} 양도양수", "item": canonical},
+        ],
+    }
+
+    faq_html = "".join(
+        f'<div class="sx-faq-item"><h3>{esc(q)}</h3><p>{esc(a)}</p></div>' for q, a in faqs
+    )
 
     cards = "".join(store_card(L) for L in items)
     kw_chips = "".join(f'<span class="sx-chip">{esc(k)}</span>' for k in kw_all)
@@ -814,7 +869,7 @@ def build_brand_page(brand: str, items: list, store_links: list) -> str:
         for B in GUIDE_BRANDS
     )
 
-    html_out = page_head(title, description, keywords, canonical, ld)
+    html_out = page_head(title, description, keywords, canonical, [ld, ld_faq, ld_crumb])
     html_out += crumbs([("홈", "../index.html"), ("브랜드별 보기", "index.html"), (f"{brand} 양도양수", None)])
     html_out += f"""
 <main id="main">
@@ -849,6 +904,9 @@ def build_brand_page(brand: str, items: list, store_links: list) -> str:
         <li>예상 순수익은 {esc(range_label(min(profits), max(profits)))}으로, 인력 운영 방식과 배달 비중에 따라 달라지므로 실제 근무표와 함께 봐야 합니다.</li>
         <li>본사 가맹 승계 조건(재계약 시점, 교육·예치금, 위약 조건)을 서면으로 확인합니다.</li>
       </ul>
+
+      <h2>자주 묻는 질문</h2>
+      <div class="sx-faq">{faq_html}</div>
 
       <h2>{esc(brand)} 매장 검색 키워드</h2>
       <div class="sx-kw">{kw_chips}</div>
@@ -1238,6 +1296,144 @@ def update_index_footer(brand_links: list) -> bool:
     return False
 
 
+# ---------------------------------------------------------------- index store links
+STORE_START = "<!-- SEO:STORE-LINKS:START -->"
+STORE_END = "<!-- SEO:STORE-LINKS:END -->"
+
+
+def update_index_store_links(listings: list) -> bool:
+    """메인 index.html 안에 점포 12곳의 정적 링크 목록과 ItemList 구조화 데이터를
+    다시 쑴니다(마커 사이 블록). 새 점포가 등록되면 자동으로 함께 갱신됩니다."""
+    if not INDEX_FILE.exists():
+        return False
+    source = INDEX_FILE.read_text(encoding="utf-8")
+    if STORE_START not in source or STORE_END not in source:
+        return False
+
+    items_html = "".join(
+        f'\n        <li><a href="stores/{esc(L["id"].lower())}.html">'
+        f'<b>{esc(L["code"])}</b> {esc(L["brand"])} · {esc(L["district"])}</a></li>'
+        for L in listings
+    )
+    ld = {
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        "name": "에이피파트너 현장 실사 점포",
+        "url": BASE_URL + "/",
+        "numberOfItems": len(listings),
+        "itemListElement": [
+            {"@type": "ListItem", "position": i + 1,
+             "name": f"No. {L['code']} {L['brand']} {L['area']}",
+             "url": f"{BASE_URL}/stores/{L['id'].lower()}.html"}
+            for i, L in enumerate(listings)
+        ],
+    }
+    block = (
+        f'{STORE_START}\n'
+        f'    <div class="store-index">\n'
+        f'      <p class="store-index-title">점포 상세 페이지 <span class="store-index-count">{len(listings)}</span>곳</p>\n'
+        f'      <ul class="store-index-list">{items_html}\n      </ul>\n'
+        f'    </div>\n'
+        f'    <script type="application/ld+json">\n'
+        + json.dumps(ld, ensure_ascii=False, indent=2)
+        + f'\n    </script>\n'
+        f'    {STORE_END}'
+    )
+    new_source = re.sub(
+        re.escape(STORE_START) + r".*?" + re.escape(STORE_END), lambda _m: block,
+        source, count=1, flags=re.S
+    )
+    if new_source != source:
+        INDEX_FILE.write_text(new_source, encoding="utf-8")
+        return True
+    return False
+
+
+# ---------------------------------------------------------------- llms.txt
+def build_llms_txt(groups: dict, listings: list, updated_at: str) -> str:
+    """AI 검색·요약 도구가 읽기 좋은 사이트 안내(llms.txt).
+
+    공개된 값(비용 구성·월 매출·예상 순수익·지역·규모)만 쑬고,
+    항목별 지출과 지점명·상세 위치는 쓰지 않습니다.
+    """
+    total = len(listings)
+    out = [
+        "# 에이피파트너 (AP PARTNERS)",
+        "",
+        "> 프랜차이즈 양도양수·창업을 전문으로 하는 김현율 팀장(에이피파트너)의 사이트입니다. "
+        f"현장 실사를 마친 공개 점포 {total}곳의 초기 인수 비용·월 매출·예상 순수익과, "
+        f"브랜드 {len(GUIDE_BRANDS) + len(groups)}개의 인수 전 확인 항목을 정리했습니다.",
+        "",
+        "에이피파트너는 카페·디저트·치킨·패스트푸드 프랜차이즈 매장의 양도양수(점포 인수)를 "
+        "중개하고 상담하는 1인 컨설팅 사무소입니다. 지점명과 상세 위치는 점주 보호를 위해 "
+        "공개하지 않고 상담에서 안내하며, 게시된 수치는 점주 제시 자료를 기준으로 정리한 값입니다. "
+        "확인되지 않은 가맹비·로열티·매출 수치는 게시하지 않습니다.",
+        "",
+        f"- 사이트: {BASE_URL}/",
+        f"- 담당: {MANAGER} · 전화 {PHONE} · 카카오톡 {KAKAO} · 등록 {REGISTER_NO}",
+        f"- 최종 갱신: {updated_at}",
+        "",
+        "## 사이트 지도",
+        "",
+        f"- [홈]({BASE_URL}/): 점포 카드 · 조건 입력 후 상세 지출 확인 · 상담 접수",
+        f"- [브랜드별 보기]({BASE_URL}/brands/index.html): 브랜드 {len(GUIDE_BRANDS) + len(groups)}개 색인",
+        f"- [전체 점포 색인]({BASE_URL}/stores/index.html): 공개 점포 {total}곳 목록",
+        f"- [사이트맵]({BASE_URL}/sitemap.xml)",
+        "",
+        f"## 현재 공개 점포 {total}곳",
+        "",
+        "모든 금액은 만 원 단위이며 점주 제시 자료를 기준으로 정리한 값입니다. "
+        "항목별 지출(재료비·인건비·매장 고정비·기타잡비)은 사이트에서 희망 조건을 남기면 확인할 수 있고, "
+        "이 문서에는 싣지 않습니다.",
+        "",
+    ]
+    for L in listings:
+        costs = " + ".join(f"{item['label']} {item['value']}" for item in L["initial_cost"].get("items", []))
+        out += [
+            f"### No. {L['code']} · {L['brand']} · {L['area']}",
+            "",
+            f"- 업종: {L['category']}" + (f" ({L['brand_note']})" if L.get("brand_note") else ""),
+            f"- 규모: {L.get('store_spec', '-')}",
+            f"- 초기 인수 비용: {L['initial_cost']['label']}" + (f" ({costs})" if costs else ""),
+            f"- 월 평균 매출: {L['monthly_sales']['label'].replace('월 평균 ', '')}",
+            f"- 예상 순수익: {L['profit']['label']} (점주 제시 자료 기준)",
+            f"- 상세 페이지: {BASE_URL}/stores/{L['id'].lower()}.html",
+            "",
+        ]
+
+    out += [f"## 브랜드별 양도양수 가이드 {len(GUIDE_BRANDS)}개", "",
+            "공개 점포가 아직 없는 브랜드는 매물을 만들어 올리지 않고, 인수 전 실사 체크포인트와 "
+            "신규 입고 우선 알림만 안내합니다. 각 페이지에 질문·답변(FAQ)과 구조화 데이터가 있습니다.", ""]
+    for B in GUIDE_BRANDS:
+        out.append(f"- [{B['brand']}]({BASE_URL}/brands/{B['slug']}.html) — {B['category']} · {B['note']}")
+    out += [""]
+
+    out += [f"## 공개 점포가 있는 브랜드 {len(groups)}개", ""]
+    for brand, items in groups.items():
+        costs = [L["initial_cost"]["total_manwon"] for L in items]
+        out.append(
+            f"- [{brand}]({BASE_URL}/brands/{slug_for(brand)}.html) — {items[0]['category']} · "
+            f"{len(items)}곳 · 초기 인수 비용 {range_label(min(costs), max(costs))}"
+        )
+    out += [
+        "",
+        "## 상담",
+        "",
+        f"- 전화: {PHONE}",
+        f"- 카카오톡: {KAKAO}",
+        f"- 조건 상담 접수: {BASE_URL}/#concierge",
+        f"- 진행 절차: 조건 상담 → 후보 압축 → 현장 실사·포스 자료 대조 → 본사 가맹 승계·계약",
+        "",
+        "## 인용할 때",
+        "",
+        "- 금액과 수익은 점주 제시 자료 기준이며, 인력 운영과 배달 비중에 따라 실제 수익은 달라질 수 있습니다.",
+        "- 지점명·상세 위치·항목별 지출은 공개하지 않습니다. 상담에서 안내합니다.",
+        "- 가맹비·교육비·로열티 등 본사 비용은 매장과 시점에 따라 다르므로 본사 확인이 필요합니다.",
+        "",
+    ]
+    return "\n".join(out)
+
+
 # ---------------------------------------------------------------- main
 def main() -> int:
     parser = argparse.ArgumentParser()
@@ -1250,6 +1446,9 @@ def main() -> int:
     guide_links = [(B["brand"], B["slug"]) for B in GUIDE_BRANDS]
     brand_links = store_links + guide_links
     updated_at = json.loads(DATA_FILE.read_text(encoding="utf-8")).get("updated_at", "")
+    # 페이지를 다시 만든 날을 사이트맵·llms.txt 갱신일로 표기합니다(한국 시간).
+    KST = datetime.timezone(datetime.timedelta(hours=9))
+    today = datetime.datetime.now(KST).date().isoformat()
 
     missing = [b for b in groups if b not in BRAND_SLUGS]
     outputs = {}
@@ -1263,7 +1462,8 @@ def main() -> int:
     for items in groups.values():
         for L in items:
             outputs[STORES_DIR / f"{L['id'].lower()}.html"] = build_store_page(L, brand_links, items)
-    outputs[SITEMAP_FILE] = build_sitemap(groups, updated_at)
+    outputs[SITEMAP_FILE] = build_sitemap(groups, max(updated_at, today))
+    outputs[LLMS_FILE] = build_llms_txt(groups, listings, today)
 
     if args.check:
         stale = [str(p) for p, body in outputs.items() if not p.exists() or p.read_text(encoding="utf-8") != body]
@@ -1276,6 +1476,8 @@ def main() -> int:
         path.write_text(body, encoding="utf-8")
     if update_index_footer(brand_links):
         print("index.html 푸터 브랜드 링크 갱신")
+    if update_index_store_links(listings):
+        print("index.html 점포 상세 링크 갱신")
     if missing:
         print("⚠ 슬러그 매핑이 없는 브랜드(대체 슬러그 사용): " + ", ".join(missing))
     print(f"생성 완료 — 점포 {len(listings)}곳 · 브랜드 {len(groups)}개 · 파일 {len(outputs) + 1}개")

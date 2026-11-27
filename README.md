@@ -283,6 +283,18 @@ python3 site/scripts/build_seo_pages.py --check  # 최신 상태인지 검사만
 - 새 매물을 `listings.json`에 추가한 뒤 생성기를 한 번 돌리고 배포하면 브랜드·점포 페이지와 sitemap이 함께 갱신됩니다. 현재 sitemap은 33개 URL(메인 + 브랜드 색인 + 브랜드 6 + 가이드 12 + 점포 색인 + 점포 12)입니다.
 - 검증: `python3 scripts/seo_site_check.py`(금지어·링크·sitemap), `python3 scripts/brand_guide_check.py`(가이드 12개 모바일 390px·PC 화면, FAQPage JSON-LD, CTA).
 
+## AI 검색·정적 링크 보강 (2026-11-27 추가)
+
+검색엔진과 AI 검색(ChatGPT·Perplexity·Claude 등)이 사이트 구조와 점포 12곳을 읽기 쉽게 정리했습니다.
+
+- **메인 점포 정적 링크** — `index.html`의 `<!-- SEO:STORE-LINKS:START -->` ~ `END` 사이에 점포 12곳의 `<a href="stores/ap-00x.html">` 목록(칩 형태)과 `ItemList` JSON-LD를 생성기가 다시 씁니다. 목록 카드가 자바스크립트로 그려지기 전에도 검색엔진이 점포 상세 페이지로 바로 이동할 수 있습니다. 푸터 브랜드 링크와 같은 방식(마커)입니다.
+- **메인 구조화 데이터** — head에 `Organization`(이름·전화·대표·채널 `sameAs`)과 `WebSite` JSON-LD를 직접 넣었습니다.
+- **브랜드 페이지 FAQ** — 점포가 있는 브랜드 6개(`mega-coffee` 등)에도 질문·답변 4개와 `FAQPage` JSON-LD를 넣었습니다. 답변은 `listings.json`의 비용 구간·지역만 인용하고, 가맹비·로열티 같은 확인되지 않은 수치는 쓰지 않습니다(`brand_faqs()`). 이제 18개 브랜드 페이지 모두 `FAQPage` + `BreadcrumbList`(+ 점포가 있으면 `ItemList`)를 가집니다.
+- **`robots.txt`** — `User-agent: *` 전체 허용을 유지하면서 `GPTBot`·`OAI-SearchBot`·`ChatGPT-User`·`ClaudeBot`·`Claude-SearchBot`·`Claude-Web`·`anthropic-ai`·`PerplexityBot`·`Perplexity-User`·`Google-Extended`·`Applebot`·`Applebot-Extended`·`Googlebot`·`Yeti`·`Daum`·`Bingbot` 그룹을 `Allow: /`(관리자 페이지만 제외)로 명시했습니다. `Sitemap` 줄과 `llms.txt` 위치 주석 포함.
+- **`llms.txt`** — `https://apchangup.com/llms.txt`. 사이트 소개, 지도, 공개 점포 12곳 요약(비용 구성·월 매출·예상 순수익), 브랜드 가이드 12개 링크, 상담 안내, 인용 시 주의를 마크다운으로 담았습니다. `build_seo_pages.py`가 `listings.json`에서 자동 생성하며, 항목별 지출·지점명·상세 위치는 넣지 않습니다.
+- **캐시**: `sw.js` `SW_VERSION` `v1.1.15`.
+- 검증: 생성기 `--check`, `seo_site_check.py`(금지어·비공개 지점명·지번·링크·sitemap·JSON-LD), 라이브 URL 200 확인.
+
 ## 화면 구성 (v14, 2026-11-26 '내 조건 매장 찾기' 개편)
 
 AI 매칭 섹션 이름을 `AP 매칭 컨시어지`에서 **`내 조건 매장 찾기`**로 바꾸고, 첫 화면 상단에서 1탭으로 이동하는 바로가기를 PC·모바일 양쪽에 넣었습니다. 그전에는 모바일에서 상단 네비(`AI 추천`)가 숨겨져 AI 매칭으로 가는 길이 아래로 스크롤하는 것뿐이었습니다.

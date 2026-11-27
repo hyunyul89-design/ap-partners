@@ -1,4 +1,74 @@
+# 에이피파트너 · AP PARTNERS · https://apchangup.com
+# 검색엔진과 AI 검색 크롤러 모두 수집을 허용합니다. 관리자 화면만 제외합니다.
+# AI용 사이트 안내: https://apchangup.com/llms.txt
+
 User-agent: *
+Allow: /
+Disallow: /admin.html
+
+# ---- 주요 AI 검색·요약 크롤러 (명시 허용) ----
+User-agent: GPTBot
+Allow: /
+Disallow: /admin.html
+
+User-agent: OAI-SearchBot
+Allow: /
+Disallow: /admin.html
+
+User-agent: ChatGPT-User
+Allow: /
+Disallow: /admin.html
+
+User-agent: ClaudeBot
+Allow: /
+Disallow: /admin.html
+
+User-agent: Claude-Web
+Allow: /
+Disallow: /admin.html
+
+User-agent: Claude-SearchBot
+Allow: /
+Disallow: /admin.html
+
+User-agent: anthropic-ai
+Allow: /
+Disallow: /admin.html
+
+User-agent: PerplexityBot
+Allow: /
+Disallow: /admin.html
+
+User-agent: Perplexity-User
+Allow: /
+Disallow: /admin.html
+
+User-agent: Google-Extended
+Allow: /
+Disallow: /admin.html
+
+User-agent: Applebot
+Allow: /
+Disallow: /admin.html
+
+User-agent: Applebot-Extended
+Allow: /
+Disallow: /admin.html
+
+# ---- 검색엔진 ----
+User-agent: Googlebot
+Allow: /
+Disallow: /admin.html
+
+User-agent: Yeti
+Allow: /
+Disallow: /admin.html
+
+User-agent: Daum
+Allow: /
+Disallow: /admin.html
+
+User-agent: Bingbot
 Allow: /
 Disallow: /admin.html
 
