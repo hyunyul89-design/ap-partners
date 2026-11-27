@@ -1,7 +1,7 @@
 {
   "updated_at": "2026-11-28",
-  "version": "2.1-real-67",
-  "notice": "아래 67곳은 김현율 팀장이 현장 실사를 마치고 등록한 점포입니다. 지점명과 상세 위치는 점주 보호를 위해 공개하지 않으며, 표시된 수치는 점주 제시 자료를 기준으로 정리한 값입니다.",
+  "version": "2.1-real-64",
+  "notice": "아래 64곳은 김현율 팀장이 현장 실사를 마치고 등록한 점포입니다. 지점명과 상세 위치는 점주 보호를 위해 공개하지 않으며, 표시된 수치는 점주 제시 자료를 기준으로 정리한 값입니다.",
   "listings": [
     {
       "id": "ap-001",
@@ -2486,162 +2486,6 @@
       "id": "ap-036",
       "code": "AP-036",
       "status": "live",
-      "region": "경기",
-      "district": "시흥시",
-      "area": "경기 시흥시 상권",
-      "area_note": "테이크아웃 중심 매장",
-      "category": "카페",
-      "brand": "메가커피",
-      "brand_note": "저가 커피 프랜차이즈",
-      "store_spec": "1층 · 20평 (66.12㎡)",
-      "store_floor": "1층",
-      "store_pyeong": 20,
-      "initial_cost": {
-        "total_manwon": 33000,
-        "label": "3억 3,000만 원",
-        "items": [
-          {
-            "label": "점포 예치금",
-            "value": "5,000만 원"
-          },
-          {
-            "label": "시설·영업권",
-            "value": "2억 8,000만 원"
-          }
-        ]
-      },
-      "monthly_sales": {
-        "avg_manwon": 4793,
-        "label": "월 평균 4,793만 원"
-      },
-      "profit": {
-        "label": "월 약 1,000만 원",
-        "avg_manwon": 1000,
-        "note": "점주 제시 자료 기준"
-      },
-      "expenses": [],
-      "points": [
-        "1층 20평 매장",
-        "월 매출 4,793만 원 · 월 순수익 약 1,000만 원(점주 제시 자료 기준)",
-        "최근 월별 매출 추이와 시설 상태는 상담 시 상세히 안내합니다"
-      ],
-      "check_note": "표시 수치는 점주 제시 자료 기준입니다. 최근 월별 매출 추이와 인력 운영표, 시설 상태를 실사에서 함께 확인하세요.",
-      "keywords": [
-        "커피",
-        "테이크아웃",
-        "프랜차이즈",
-        "시흥시"
-      ],
-      "visible": true
-    },
-    {
-      "id": "ap-037",
-      "code": "AP-037",
-      "status": "live",
-      "region": "경기",
-      "district": "고양시 일산서구",
-      "area": "경기 고양시 일산서구 상권",
-      "area_note": "테이크아웃 중심 매장",
-      "category": "카페",
-      "brand": "메가커피",
-      "brand_note": "저가 커피 프랜차이즈",
-      "store_spec": "1층 · 24평 (79.34㎡)",
-      "store_floor": "1층",
-      "store_pyeong": 24,
-      "initial_cost": {
-        "total_manwon": 35500,
-        "label": "3억 5,500만 원",
-        "items": [
-          {
-            "label": "점포 예치금",
-            "value": "3,500만 원"
-          },
-          {
-            "label": "시설·영업권",
-            "value": "3억 2,000만 원"
-          }
-        ]
-      },
-      "monthly_sales": {
-        "avg_manwon": 4730,
-        "label": "월 평균 4,730만 원"
-      },
-      "profit": {
-        "label": "월 약 1,340만 원",
-        "avg_manwon": 1340,
-        "note": "점주 제시 자료 기준"
-      },
-      "expenses": [],
-      "points": [
-        "1층 24평 매장",
-        "월 매출 4,730만 원 · 월 순수익 약 1,340만 원(점주 제시 자료 기준)",
-        "최근 월별 매출 추이와 시설 상태는 상담 시 상세히 안내합니다"
-      ],
-      "check_note": "표시 수치는 점주 제시 자료 기준입니다. 최근 월별 매출 추이와 인력 운영표, 시설 상태를 실사에서 함께 확인하세요.",
-      "keywords": [
-        "커피",
-        "테이크아웃",
-        "프랜차이즈",
-        "고양시 일산서구"
-      ],
-      "visible": true
-    },
-    {
-      "id": "ap-038",
-      "code": "AP-038",
-      "status": "live",
-      "region": "서울",
-      "district": "마포구",
-      "area": "서울 마포구 상권",
-      "area_note": "테이크아웃 중심 매장",
-      "category": "카페",
-      "brand": "메가커피",
-      "brand_note": "저가 커피 프랜차이즈",
-      "store_spec": "1층 · 13평 (42.98㎡)",
-      "store_floor": "1층",
-      "store_pyeong": 13,
-      "initial_cost": {
-        "total_manwon": 39000,
-        "label": "3억 9,000만 원",
-        "items": [
-          {
-            "label": "점포 예치금",
-            "value": "1억 원"
-          },
-          {
-            "label": "시설·영업권",
-            "value": "2억 9,000만 원"
-          }
-        ]
-      },
-      "monthly_sales": {
-        "avg_manwon": 4700,
-        "label": "월 평균 4,700만 원"
-      },
-      "profit": {
-        "label": "월 약 1,666만 원",
-        "avg_manwon": 1666,
-        "note": "점주 제시 자료 기준"
-      },
-      "expenses": [],
-      "points": [
-        "1층 13평 매장",
-        "월 매출 4,700만 원 · 월 순수익 약 1,666만 원(점주 제시 자료 기준)",
-        "최근 월별 매출 추이와 시설 상태는 상담 시 상세히 안내합니다"
-      ],
-      "check_note": "표시 수치는 점주 제시 자료 기준입니다. 최근 월별 매출 추이와 인력 운영표, 시설 상태를 실사에서 함께 확인하세요.",
-      "keywords": [
-        "커피",
-        "테이크아웃",
-        "프랜차이즈",
-        "마포구"
-      ],
-      "visible": true
-    },
-    {
-      "id": "ap-039",
-      "code": "AP-039",
-      "status": "live",
       "region": "서울",
       "district": "노원구",
       "area": "서울 노원구 상권",
@@ -2691,8 +2535,8 @@
       "visible": true
     },
     {
-      "id": "ap-040",
-      "code": "AP-040",
+      "id": "ap-037",
+      "code": "AP-037",
       "status": "live",
       "region": "충남",
       "district": "천안시",
@@ -2743,8 +2587,8 @@
       "visible": true
     },
     {
-      "id": "ap-041",
-      "code": "AP-041",
+      "id": "ap-038",
+      "code": "AP-038",
       "status": "live",
       "region": "서울",
       "district": "중구",
@@ -2795,8 +2639,8 @@
       "visible": true
     },
     {
-      "id": "ap-042",
-      "code": "AP-042",
+      "id": "ap-039",
+      "code": "AP-039",
       "status": "live",
       "region": "경기",
       "district": "용인시 수지구",
@@ -2847,8 +2691,8 @@
       "visible": true
     },
     {
-      "id": "ap-043",
-      "code": "AP-043",
+      "id": "ap-040",
+      "code": "AP-040",
       "status": "live",
       "region": "부산",
       "district": "강서구",
@@ -2899,8 +2743,8 @@
       "visible": true
     },
     {
-      "id": "ap-044",
-      "code": "AP-044",
+      "id": "ap-041",
+      "code": "AP-041",
       "status": "live",
       "region": "인천",
       "district": "미추홀구",
@@ -2951,8 +2795,8 @@
       "visible": true
     },
     {
-      "id": "ap-045",
-      "code": "AP-045",
+      "id": "ap-042",
+      "code": "AP-042",
       "status": "live",
       "region": "경기",
       "district": "안양시 만안구",
@@ -3003,8 +2847,8 @@
       "visible": true
     },
     {
-      "id": "ap-046",
-      "code": "AP-046",
+      "id": "ap-043",
+      "code": "AP-043",
       "status": "live",
       "region": "경기",
       "district": "김포시",
@@ -3055,8 +2899,8 @@
       "visible": true
     },
     {
-      "id": "ap-047",
-      "code": "AP-047",
+      "id": "ap-044",
+      "code": "AP-044",
       "status": "live",
       "region": "인천",
       "district": "남동구",
@@ -3107,8 +2951,8 @@
       "visible": true
     },
     {
-      "id": "ap-048",
-      "code": "AP-048",
+      "id": "ap-045",
+      "code": "AP-045",
       "status": "live",
       "region": "경기",
       "district": "성남시 중원구",
@@ -3159,8 +3003,8 @@
       "visible": true
     },
     {
-      "id": "ap-049",
-      "code": "AP-049",
+      "id": "ap-046",
+      "code": "AP-046",
       "status": "live",
       "region": "서울",
       "district": "강남구",
@@ -3211,8 +3055,8 @@
       "visible": true
     },
     {
-      "id": "ap-050",
-      "code": "AP-050",
+      "id": "ap-047",
+      "code": "AP-047",
       "status": "live",
       "region": "서울",
       "district": "광진구",
@@ -3263,8 +3107,8 @@
       "visible": true
     },
     {
-      "id": "ap-051",
-      "code": "AP-051",
+      "id": "ap-048",
+      "code": "AP-048",
       "status": "live",
       "region": "서울",
       "district": "서초구",
@@ -3315,8 +3159,8 @@
       "visible": true
     },
     {
-      "id": "ap-052",
-      "code": "AP-052",
+      "id": "ap-049",
+      "code": "AP-049",
       "status": "live",
       "region": "서울",
       "district": "강서구",
@@ -3367,8 +3211,8 @@
       "visible": true
     },
     {
-      "id": "ap-053",
-      "code": "AP-053",
+      "id": "ap-050",
+      "code": "AP-050",
       "status": "live",
       "region": "서울",
       "district": "광진구",
@@ -3419,8 +3263,8 @@
       "visible": true
     },
     {
-      "id": "ap-054",
-      "code": "AP-054",
+      "id": "ap-051",
+      "code": "AP-051",
       "status": "live",
       "region": "경기",
       "district": "고양시 덕양구",
@@ -3471,8 +3315,8 @@
       "visible": true
     },
     {
-      "id": "ap-055",
-      "code": "AP-055",
+      "id": "ap-052",
+      "code": "AP-052",
       "status": "live",
       "region": "경기",
       "district": "남양주시",
@@ -3523,8 +3367,8 @@
       "visible": true
     },
     {
-      "id": "ap-056",
-      "code": "AP-056",
+      "id": "ap-053",
+      "code": "AP-053",
       "status": "live",
       "region": "서울",
       "district": "성동구",
@@ -3575,8 +3419,8 @@
       "visible": true
     },
     {
-      "id": "ap-057",
-      "code": "AP-057",
+      "id": "ap-054",
+      "code": "AP-054",
       "status": "live",
       "region": "경기",
       "district": "고양시 일산서구",
@@ -3627,8 +3471,8 @@
       "visible": true
     },
     {
-      "id": "ap-058",
-      "code": "AP-058",
+      "id": "ap-055",
+      "code": "AP-055",
       "status": "live",
       "region": "서울",
       "district": "동작구",
@@ -3679,8 +3523,8 @@
       "visible": true
     },
     {
-      "id": "ap-059",
-      "code": "AP-059",
+      "id": "ap-056",
+      "code": "AP-056",
       "status": "live",
       "region": "경기",
       "district": "용인시 기흥구",
@@ -3731,8 +3575,8 @@
       "visible": true
     },
     {
-      "id": "ap-060",
-      "code": "AP-060",
+      "id": "ap-057",
+      "code": "AP-057",
       "status": "live",
       "region": "서울",
       "district": "서대문구",
@@ -3783,8 +3627,8 @@
       "visible": true
     },
     {
-      "id": "ap-061",
-      "code": "AP-061",
+      "id": "ap-058",
+      "code": "AP-058",
       "status": "live",
       "region": "경기",
       "district": "고양시 덕양구",
@@ -3835,8 +3679,8 @@
       "visible": true
     },
     {
-      "id": "ap-062",
-      "code": "AP-062",
+      "id": "ap-059",
+      "code": "AP-059",
       "status": "live",
       "region": "서울",
       "district": "성북구",
@@ -3887,8 +3731,8 @@
       "visible": true
     },
     {
-      "id": "ap-063",
-      "code": "AP-063",
+      "id": "ap-060",
+      "code": "AP-060",
       "status": "live",
       "region": "서울",
       "district": "광진구",
@@ -3939,8 +3783,8 @@
       "visible": true
     },
     {
-      "id": "ap-064",
-      "code": "AP-064",
+      "id": "ap-061",
+      "code": "AP-061",
       "status": "live",
       "region": "경기",
       "district": "광주시",
@@ -3991,8 +3835,8 @@
       "visible": true
     },
     {
-      "id": "ap-065",
-      "code": "AP-065",
+      "id": "ap-062",
+      "code": "AP-062",
       "status": "live",
       "region": "서울",
       "district": "서대문구",
@@ -4043,8 +3887,8 @@
       "visible": true
     },
     {
-      "id": "ap-066",
-      "code": "AP-066",
+      "id": "ap-063",
+      "code": "AP-063",
       "status": "live",
       "region": "광주",
       "district": "북구",
@@ -4095,8 +3939,8 @@
       "visible": true
     },
     {
-      "id": "ap-067",
-      "code": "AP-067",
+      "id": "ap-064",
+      "code": "AP-064",
       "status": "live",
       "region": "경기",
       "district": "성남시 분당구",
