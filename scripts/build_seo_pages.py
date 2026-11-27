@@ -24,7 +24,6 @@ AP PARTNERS · 에이피파트너 — 정적 SEO 페이지 자동 생성기
 from __future__ import annotations
 
 import argparse
-import datetime
 import html
 import json
 import re
@@ -32,6 +31,10 @@ import sys
 from pathlib import Path
 
 BASE_URL = "https://apchangup.com"
+
+# 페이지 구조(생성기·마크업)를 바꾼 날. sitemap lastmod·llms.txt 갱신일에 쓰고,
+# 내용을 바꾸면 이 값을 직접 올립니다(매 실행일로 자동 변경하지 않아 --check 가 흔들리지 않습니다).
+PAGE_UPDATED = "2026-11-27"
 PHONE = "010-2885-5553"
 PHONE_TEL = "tel:010-2885-5553"
 KAKAO = "hyunyul89"
@@ -1446,9 +1449,8 @@ def main() -> int:
     guide_links = [(B["brand"], B["slug"]) for B in GUIDE_BRANDS]
     brand_links = store_links + guide_links
     updated_at = json.loads(DATA_FILE.read_text(encoding="utf-8")).get("updated_at", "")
-    # 페이지를 다시 만든 날을 사이트맵·llms.txt 갱신일로 표기합니다(한국 시간).
-    KST = datetime.timezone(datetime.timedelta(hours=9))
-    today = datetime.datetime.now(KST).date().isoformat()
+    # 사이트맵·llms.txt 갱신일 = 등록 데이터 갱신일과 페이지 구조 변경일 중 최근 값.
+    today = max(updated_at, PAGE_UPDATED)
 
     missing = [b for b in groups if b not in BRAND_SLUGS]
     outputs = {}
