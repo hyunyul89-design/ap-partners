@@ -27,24 +27,15 @@
   };
 
   /* ---------------- 관리자 전용 비공개 지점명 ----------------
-     지점명은 손님 화면(index.html · app.js · data/listings.json)에 절대 넣지 않습니다.
-     기본 12곳은 아래 seed 로만 두고, 등록·수정한 지점명은 이 브라우저의
-     관리자 전용 저장소(apAdminBranches)에만 보관합니다. */
+     지점명은 손님 화면(index.html · app.js · data/listings.json)에 절대 넣지 않고,
+     공개 소스(this admin.js)에도 하드코딩하지 않습니다.
+     관리자 로그인 직후 Apps Script(getBranches)가 비공개 Drive 폴더의
+     ap-admin-branches.json 을 읽어 주고, 받은 값만 이 브라우저의 관리자 전용
+     저장소(apAdminBranches · apAdminBranchInfo)에 보관합니다.
+     apAdminBranchInfo 에는 changupdv 원가·매물번호가 들어가며 카드에 '창업물건 참고'로만 보입니다. */
   var BRANCH_KEY = 'apAdminBranches';
-  var BRANCH_SEED = {
-    'AP-001': '상명대점',
-    'AP-002': '위례점',
-    'AP-003': '신림푸르지오점',
-    'AP-004': '강서가양점',
-    'AP-005': '반포점',
-    'AP-006': '강동고덕역점',
-    'AP-007': '인천신기사거리점',
-    'AP-008': '일산문화광장점',
-    'AP-009': '둔산타임월드점',
-    'AP-010': '명일역점',
-    'AP-011': '성정점',
-    'AP-012': '평택성동초교점'
-  };
+  var BRANCH_INFO_KEY = 'apAdminBranchInfo';
+  var BRANCH_SYNC_KEY = 'apAdminBranchSync';
   var DEFAULT_CONSULTANT_ID = 'hyunyul89';
   var CATALOG_KEY = 'apPartnerCatalog';
   var LEAD_ALL_KEY = 'apPartnerLeads';
@@ -306,11 +297,65 @@
     var code = codeOf(L);
     if (!code) return '';
     var map = readBranches();
-    if (Object.prototype.hasOwnProperty.call(map, code)) return String(map[code] || '');
-    return BRANCH_SEED[code] || '';
+    return Object.prototype.hasOwnProperty.call(map, code) ? String(map[code] || '') : '';
   }
 
-  /* 빈 값으로 저장하면 seed 지점명도 감춥니다(지점명을 지우고 싶을 때). */
+  /* ---------------- 비공개 지점명·원가 동기화 (Apps Script getBranches) ----------------
+     로그인 직후 한 번 받아 위 저장소에만 채웁니다. 값은 공개 저장소 어디에도 남지 않습니다. */
+  function readBranchInfo() {
+    var raw = safeParse(readStore(BRANCH_INFO_KEY));
+    return (raw && typeof raw === 'object' && !(raw instanceof Array)) ? raw : {};
+  }
+
+  function branchInfoOf(code) {
+    if (!code) return null;
+    var map = readBranchInfo();
+    return Object.prototype.hasOwnProperty.call(map, code) ? map[code] : null;
+  }
+
+  function applyBranchData(list, updated) {
+    if (!list || !list.length) return 0;
+    var names = readBranches();
+    var info = readBranchInfo();
+    var n = 0;
+    list.forEach(function (it) {
+      var code = String((it && it.code) || '').toUpperCase();
+      if (!/^AP-\d{3,4}$/.test(code)) return;
+      var branch = String((it && it.branch) || '').trim();
+      if (branch) names[code] = branch;
+      info[code] = {
+        lnd_seq: String((it && it.lnd_seq) || ''),
+        orig_premium: (it && it.orig_premium != null) ? Number(it.orig_premium) : null,
+        up_premium: (it && it.up_premium != null) ? Number(it.up_premium) : null
+      };
+      n++;
+    });
+    writeStore(BRANCH_KEY, JSON.stringify(names));
+    writeStore(BRANCH_INFO_KEY, JSON.stringify(info));
+    writeStore(BRANCH_SYNC_KEY, JSON.stringify({ at: new Date().toISOString(), updated: updated || '', count: n }));
+    return n;
+  }
+
+  function syncAdminBranches() {
+    if (!cardConfig().endpoint) return Promise.resolve({ ok: false, reason: 'no-endpoint' });
+    return cardGet('getBranches', '').then(function (r) {
+      if (r && r.ok && r.data && r.data.branches && r.data.branches.length) {
+        return { ok: true, count: applyBranchData(r.data.branches, r.updated), updated: r.updated || '' };
+      }
+      return { ok: false, reason: (r && r.reason) || 'bad_response' };
+    }).catch(function (err) {
+      return { ok: false, reason: 'network', message: String((err && err.message) || err) };
+    });
+  }
+
+  function branchSyncLabel() {
+    var s = safeParse(readStore(BRANCH_SYNC_KEY));
+    if (!s || !s.at) return '비공개 지점명·원가를 아직 받지 않았습니다.';
+    return '비공개 지점명·원가 ' + (s.count || 0) + '건 동기화(' + kst(s.at, true) + ') — 이 화면에만 표시됩니다.';
+  }
+
+  /* 빈 값으로 저장하면 그 매장의 지점명 배지를 감춥니다(지점명을 지우고 싶을 때).
+     다음 로그인 때 Drive 매핑에 값이 있으면 다시 채워집니다. */
   function setBranch(code, name) {
     if (!code) return;
     var map = readBranches();
@@ -319,7 +364,7 @@
   }
 
   /* 지점명 비교용 정규화 — 모든 공백을 지우고 대소문자를 무시합니다.
-     '상명대점'과 '상명대 점'은 같은 지점명으로 봅니다. */
+     '○○대점'과 '○○대 점'은 같은 지점명으로 봅니다. */
   function normBranch(name) {
     return String(name == null ? '' : name).replace(/\s+/g, '').toLowerCase();
   }
@@ -644,6 +689,28 @@
       renderLeads();
       renderSell();
       if (state.deepCode) focusStoreByCode(state.deepCode);
+      syncBranchBadges();
+    });
+  }
+
+  /* 로그인 직후 비공개 지점명·원가를 한 번 받아 카드 배지를 채웁니다.
+     받지 못해도 이전에 받아 둔 값이 있으면 그대로 보입니다. */
+  function syncBranchBadges() {
+    var note = $('#branchSyncNote');
+    if (note) { note.hidden = false; note.textContent = '비공개 지점명·원가를 확인하는 중…'; }
+    syncAdminBranches().then(function (res) {
+      if (res && res.ok) {
+        renderStores();
+        if (note) {
+          note.hidden = false;
+          note.textContent = branchSyncLabel() + ' (파일 ' + (res.updated ? kst(res.updated, true) : '-') + ' 기준)';
+        }
+        return;
+      }
+      if (note) {
+        note.hidden = false;
+        note.textContent = branchSyncLabel() + ' 이번 로그인에서는 받지 못했습니다(' + ((res && res.reason) || 'error') + ').';
+      }
     });
   }
 
@@ -2444,6 +2511,13 @@
     var by = (L.registered_by || L.updated_by)
       ? '등록 ' + (L.registered_by || '-') + (L.updated_by && L.updated_by !== L.registered_by ? ' · 수정 ' + L.updated_by : '')
       : '';
+    /* changupdv 원가·매물번호 — 관리자 로그인 때 받은 비공개 값(손님 화면에는 없음). */
+    var info = branchInfoOf(code);
+    var costBits = [];
+    if (info && info.lnd_seq) costBits.push('매물번호 ' + esc(info.lnd_seq));
+    if (info && info.orig_premium) costBits.push('원가 ' + wonLabel(info.orig_premium));
+    if (info && info.up_premium && info.up_premium !== info.orig_premium) costBits.push('게시 ' + wonLabel(info.up_premium));
+    var costLine = costBits.length ? '창업물건 참고 · ' + costBits.join(' · ') : '';
     return '' +
       '<article class="store-card' + (closed ? ' is-closed' : '') + '" data-code="' + esc(code) + '" data-id="' + esc(L.id) + '" data-consultant="' + esc(owner.id) + '">' +
         '<div class="store-card-head">' +
@@ -2464,6 +2538,7 @@
           '<div><span>담당 컨설턴트</span><b class="store-owner">' + esc(consultantLabel(owner.name)) + '</b></div>' +
         '</dl>' +
         (by ? '<p class="store-by">' + esc(by) + '</p>' : '') +
+        (costLine ? '<p class="store-source" title="관리자 전용 참고값 — 손님 화면에는 보이지 않습니다">' + costLine + '</p>' : '') +
         '<div class="store-card-foot">' +
           '<select class="store-status" data-status aria-label="' + esc((L.brand || '') + ' 노출 상태') + '">' +
             '<option value="live"' + (closed ? '' : ' selected') + '>노출 중</option>' +
@@ -3433,6 +3508,18 @@
     setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
   }
 
+  /* 매장 DB 화면의 '지점명·원가 새로고침' — Drive 매핑 파일을 다시 받아 배지를 갱신합니다. */
+  function initBranchSync() {
+    var btn = $('#btnBranchSync');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      btn.disabled = true;
+      syncBranchBadges();
+      setTimeout(function () { btn.disabled = false; }, 1200);
+      toast('비공개 지점명·원가를 다시 받아옵니다.');
+    });
+  }
+
   /* ---------------- boot ---------------- */
   document.addEventListener('DOMContentLoaded', function () {
     state.deepCode = parseDeepCode();
@@ -3440,6 +3527,7 @@
     initTabs();
     initForm();
     initBulk();
+    initBranchSync();
     initStoreFilters();
     initLeadFilters();
     initSellActions();

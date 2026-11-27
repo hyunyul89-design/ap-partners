@@ -1892,6 +1892,15 @@ body.compare-on .toast { bottom: 100px; }
 }
 .store-figures b.store-owner { color: #6E5B32; font-weight: 700; }
 .store-by { font-size: 10.5px; color: #9AA1AE; letter-spacing: -0.01em; word-break: keep-all; }
+.store-source {
+  font-size: 11px; font-weight: 600; color: #7A5A18; letter-spacing: -0.01em;
+  background: #FCF8EE; border: 1px dashed #E7D6AE; border-radius: 7px;
+  padding: 4px 8px; word-break: keep-all; font-variant-numeric: tabular-nums;
+}
+.admin-note-branch {
+  font-size: 11.5px; color: #6E5B32; background: #FCF8EE;
+  border: 1px dashed #E7D6AE; border-radius: 8px; padding: 7px 10px;
+}
 .store-card-foot {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
   margin-top: auto; padding-top: 11px; border-top: 1px solid var(--line-soft); flex-wrap: wrap;
