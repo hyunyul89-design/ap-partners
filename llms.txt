@@ -1265,7 +1265,7 @@
 
 - 업종: 음식점 (본아이에프의 한식 반상 프랜차이즈)
 - 규모: 지하1층 · 42평 (138.84㎡)
-- 초기 인수 비용: 2억 7,000만 원 (점포 예치금 1억 원 + 시설·영업권 1억 7,000만 원)
+- 초기 인수 비용: 2억 5,000만 원 (점포 예치금 1억 원 + 시설·영업권 1억 5,000만 원)
 - 월 평균 매출: 7,005만 원
 - 예상 순수익: 월 약 1,051만 원 (점주 제시 자료 기준)
 - 상세 페이지: https://apchangup.com/stores/ap-139.html
@@ -1302,7 +1302,7 @@
 - [BBQ치킨](https://apchangup.com/brands/bbq.html) — 치킨 · 1곳 · 초기 인수 비용 6,500만 원
 - [뚜레쥬르](https://apchangup.com/brands/tous-les-jours.html) — 디저트 · 1곳 · 초기 인수 비용 9,000만 원
 - [백억커피](https://apchangup.com/brands/baekuk-coffee.html) — 카페 · 1곳 · 초기 인수 비용 5,000만 원
-- [본우리반상](https://apchangup.com/brands/bonwooribansang.html) — 음식점 · 1곳 · 초기 인수 비용 2억 7,000만 원
+- [본우리반상](https://apchangup.com/brands/bonwooribansang.html) — 음식점 · 1곳 · 초기 인수 비용 2억 5,000만 원
 - [우지커피](https://apchangup.com/brands/wooji-coffee.html) — 카페 · 1곳 · 초기 인수 비용 2억 8,000만 원
 - [이삭토스트](https://apchangup.com/brands/isaac-toast.html) — 패스트푸드 · 1곳 · 초기 인수 비용 1억 5,000만 원
 ## 브랜드 비교 3개

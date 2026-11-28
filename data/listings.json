@@ -7855,8 +7855,8 @@
       "store_floor": "지하1층",
       "store_pyeong": 42,
       "initial_cost": {
-        "total_manwon": 27000,
-        "label": "2억 7,000만 원",
+        "total_manwon": 25000,
+        "label": "2억 5,000만 원",
         "items": [
           {
             "label": "점포 예치금",
@@ -7864,7 +7864,7 @@
           },
           {
             "label": "시설·영업권",
-            "value": "1억 7,000만 원"
+            "value": "1억 5,000만 원"
           }
         ]
       },
