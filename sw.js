@@ -3,20 +3,27 @@
    배포 위치: https://apchangup.com/sw.js
    스코프    : /  (이 파일이 있는 폴더가 그대로 스코프가 됩니다)
 
-   캐시 정책
-   - 정적 자산(styles.css · app.js · 아이콘 등): 캐시 우선 + 뒤에서 조용히 네트워크 갱신
-     (stale-while-revalidate) → 두 번째 방문부터 즉시 뜨고, 다음 방문에 최신 파일이 반영됩니다.
-   - data/listings.json: 네트워크 우선(network-first) → 매물은 항상 최신을 가져오고,
-     오프라인일 때만 마지막으로 받아 둔 목록을 보여 줍니다.
-   - 페이지 이동(HTML): 네트워크 우선 → 오프라인일 때 캐시된 페이지로 대응합니다.
-   - 그 밖의 요청(상담 접수 POST, 구글 시트, 외부 도메인)은 가로채지 않고 브라우저에 그대로 넘깁니다.
+   캐시 정책 (v1.1.27 — 모바일 구버전 CSS 사고 후 전면 수정)
+   - HTML(index.html · 점포/브랜드 페이지) : 네트워크 우선 → 오프라인일 때 캐시
+   - CSS · JS · data/listings.json         : 네트워크 우선 → 오프라인일 때 캐시
+     (예전에는 CSS/JS 를 캐시 우선으로 두어, 새 index.html + 옛 styles.css 가
+      섞여 나오는 사고가 있었습니다. 이제 항상 네트워크의 최신 파일을 씁니다.)
+   - 이미지 · 아이콘 · 폰트               : 캐시 우선 (거의 바뀌지 않고, ?v= 로 갱신)
+   - 그 밖의 요청(상담 접수 POST, 구글 시트, 외부 도메인)은 가로채지 않습니다.
+
+   갱신 방식
+   - 새 버전이 설치되면 곧바로 skipWaiting() 으로 대기 없이 활성화하고,
+     activate 에서 이전 ap- 캐시를 모두 지운 뒤 clients.claim() 으로
+     열려 있는 화면까지 즉시 넘겨받습니다.
    ========================================================================== */
 
-var SW_VERSION = 'v1.1.26';
+var SW_VERSION = 'v1.1.27';
+var CACHE_PREFIX = 'ap-';
 var STATIC_CACHE = 'ap-static-' + SW_VERSION;
 var DATA_CACHE = 'ap-data-' + SW_VERSION;
 
-/* 앱을 처음 열 때 미리 받아 두는 파일 (sw.js 기준 상대 경로 = /) */
+/* 앱을 처음 열 때 미리 받아 두는 파일 (sw.js 기준 상대 경로 = /).
+   전부 network-first 로 다시 확인하므로, 설치는 '오프라인 첫 화면'용 안전판입니다. */
 var PRECACHE_URLS = [
   './',
   './index.html',
@@ -39,16 +46,17 @@ self.addEventListener('install', function (event) {
   event.waitUntil(
     Promise.all([
       caches.open(STATIC_CACHE).then(function (cache) {
-        /* 한 파일이 없거나 실패해도 설치는 끝나도록 개별로 담습니다. */
+        /* cache:'reload' 로 브라우저 HTTP 캐시를 건너뛰고 서버의 최신 파일을 담습니다.
+           한 파일이 실패해도 설치는 끝나도록 개별로 처리합니다. */
         return Promise.all(PRECACHE_URLS.map(function (url) {
           return cache.add(new Request(url, { cache: 'reload' })).catch(function () { /* 개별 실패는 무시 */ });
         }));
       }),
-      /* 매물 목록은 네트워크 우선이지만, 오프라인일 때 보여 줄 마지막 사본을 설치 때도 담아 둡니다. */
       caches.open(DATA_CACHE).then(function (cache) {
         return cache.add(new Request(DATA_URL, { cache: 'reload' })).catch(function () { /* 무시 */ });
       })
     ]).then(function () {
+      /* 새 버전은 대기하지 않고 바로 활성화합니다. */
       return self.skipWaiting();
     })
   );
@@ -58,7 +66,8 @@ self.addEventListener('activate', function (event) {
   event.waitUntil(
     caches.keys().then(function (keys) {
       return Promise.all(keys.map(function (key) {
-        if (key.indexOf('ap-') === 0 && key !== STATIC_CACHE && key !== DATA_CACHE) {
+        /* ap- 로 시작하는 이전 버전 캐시는 전부 삭제 (ap-static-구버전, ap-data-구버전) */
+        if (key.indexOf(CACHE_PREFIX) === 0 && key !== STATIC_CACHE && key !== DATA_CACHE) {
           return caches.delete(key);
         }
         return null;
@@ -92,30 +101,37 @@ function isHtmlRequest(request, url) {
   return url.pathname.charAt(url.pathname.length - 1) === '/';
 }
 
-/* 네트워크 우선: 성공하면 캐시에 갱신본을 남기고, 실패하면 캐시로 대응 */
+function offlineResponse() {
+  return new Response('오프라인 상태입니다. 연결 후 다시 시도해 주세요.', {
+    status: 503,
+    statusText: 'Offline',
+    headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+  });
+}
+
+/* 네트워크 우선: 성공하면 캐시에 갱신본을 남기고, 실패하면 캐시로 대응.
+   ?v= 가 붙은 요청도 오프라인에서 찾을 수 있도록 캐시 조회는 ignoreSearch 로 합니다. */
 function networkFirst(request, cacheName, fallbackUrl) {
   return caches.open(cacheName).then(function (cache) {
     return fetch(request).then(function (response) {
-      if (response && response.ok) cache.put(request, response.clone());
+      if (response && (response.ok || response.type === 'opaque')) cache.put(request, response.clone());
       return response;
     }).catch(function () {
       return cache.match(request, { ignoreSearch: true }).then(function (cached) {
         if (cached) return cached;
-        if (fallbackUrl) return caches.match(fallbackUrl);
-        return new Response('오프라인 상태입니다. 연결 후 다시 시도해 주세요.', {
-          status: 503,
-          statusText: 'Offline',
-          headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+        if (fallbackUrl) return caches.match(fallbackUrl, { ignoreSearch: true }).then(function (fallback) {
+          return fallback || offlineResponse();
         });
+        return offlineResponse();
       });
     });
   });
 }
 
-/* 캐시 우선 + 백그라운드 갱신 (stale-while-revalidate) */
+/* 캐시 우선 + 백그라운드 갱신 (이미지·아이콘·폰트 전용) */
 function cacheFirst(request, cacheName) {
   return caches.open(cacheName).then(function (cache) {
-    return cache.match(request, { ignoreSearch: false }).then(function (cached) {
+    return cache.match(request, { ignoreSearch: true }).then(function (cached) {
       var network = fetch(request).then(function (response) {
         if (response && (response.ok || response.type === 'opaque')) {
           cache.put(request, response.clone());
@@ -142,17 +158,26 @@ self.addEventListener('fetch', function (event) {
   /* 외부 도메인(구글 시트 웹훅 등)과 스코프 밖 주소는 그대로 통과시킵니다. */
   if (!isSameOrigin(url) || !inScope(url)) return;
 
+  /* 매물 목록: 항상 네트워크 우선 */
   if (isDataRequest(url)) {
     event.respondWith(networkFirst(request, DATA_CACHE, null));
     return;
   }
 
+  /* 문서(HTML): 네트워크 우선, 오프라인이면 캐시된 index.html */
   if (isHtmlRequest(request, url)) {
     event.respondWith(networkFirst(request, STATIC_CACHE, './index.html'));
     return;
   }
 
-  if (/\.(?:css|js|png|jpe?g|gif|svg|webp|ico|woff2?|ttf|otf|webmanifest)$/i.test(url.pathname)) {
+  /* 화면을 좌우하는 코드/스타일: 반드시 네트워크 우선 (구버전 CSS 사고 방지) */
+  if (/\.(?:css|js|json|webmanifest|xml|txt)$/i.test(url.pathname)) {
+    event.respondWith(networkFirst(request, STATIC_CACHE, null));
+    return;
+  }
+
+  /* 이미지·아이콘·폰트: 캐시 우선 (?v= 로 갱신) */
+  if (/\.(?:png|jpe?g|gif|svg|webp|avif|ico|woff2?|ttf|otf)$/i.test(url.pathname)) {
     event.respondWith(cacheFirst(request, STATIC_CACHE));
     return;
   }

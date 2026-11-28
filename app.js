@@ -1509,10 +1509,10 @@
 
   /* ---------------- 4항목 손님 DB (lead gate) ---------------- */
   function lockIcon() {
-    return '<svg viewBox="0 0 24 24" aria-hidden="true" class="lock-ico"><rect x="4.5" y="10.5" width="15" height="10" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8.2 10.5V8a3.8 3.8 0 0 1 7.6 0v2.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+    return '<svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" class="lock-ico"><rect x="4.5" y="10.5" width="15" height="10" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8.2 10.5V8a3.8 3.8 0 0 1 7.6 0v2.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
   }
   function checkIcon() {
-    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 12.5 5 5L20 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    return '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="m4 12.5 5 5L20 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   }
 
   function safeParse(raw) {
@@ -2198,7 +2198,7 @@
     return '<button type="button" class="compare-btn' + (on ? ' is-on' : '') + (compact ? ' compact' : '') + '"' +
       ' data-compare="' + esc(L.id) + '" aria-pressed="' + (on ? 'true' : 'false') + '"' +
       ' aria-label="' + esc(L.area + ' ' + L.brand) + (on ? ' 비교에서 빼기' : ' 비교에 담기') + '">' +
-      '<svg viewBox="0 0 24 24" aria-hidden="true" class="ico"><path d="M4 7h6M4 17h6M17 4v16M13 4h4M13 20h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>' +
+      '<svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true" class="ico"><path d="M4 7h6M4 17h6M17 4v16M13 4h4M13 20h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>' +
       '<span>' + (on ? '담김' : '비교 담기') + '</span>' +
       '</button>';
   }
@@ -2242,7 +2242,7 @@
         if (!L) return '';
         return '<span class="compare-chip">' + esc(codeOf(L)) + ' · ' + esc(L.district || L.area) + ' · ' + esc(L.brand) +
           '<button type="button" data-compare-remove="' + esc(id) + '" aria-label="' + esc(L.brand) + ' 비교에서 빼기">' +
-          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>' +
+          '<svg width="9" height="9" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>' +
           '</button></span>';
       }).join('');
     }
@@ -2697,7 +2697,7 @@
           '</div>' +
           '<div class="card-footer">' +
             '<span class="card-more">상세 보기 ' +
-              '<svg viewBox="0 0 24 24" aria-hidden="true" class="ico"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+              '<svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" class="ico"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
             '</span>' +
             compareButtonHTML(L) +
           '</div>' +
@@ -2976,7 +2976,7 @@
       '<div class="modal-content">' +
         '<div class="receipt">' +
           '<div class="receipt-icon" aria-hidden="true">' +
-            '<svg viewBox="0 0 24 24"><path d="m4 12.5 5 5L20 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+            '<svg width="22" height="22" viewBox="0 0 24 24"><path d="m4 12.5 5 5L20 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
           '</div>' +
           '<h4>확인했습니다, ' + esc(data.name) + '님</h4>' +
           '<p class="no">No. ' + esc(codeOf(L)) + ' · ' + esc(L.area) + ' · ' + esc(L.brand) + '</p>' +

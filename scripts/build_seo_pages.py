@@ -36,6 +36,9 @@ BASE_URL = "https://apchangup.com"
 # 페이지 구조(생성기·마크업)를 바꾼 날. sitemap lastmod·llms.txt 갱신일에 쓰고,
 # 내용을 바꾸면 이 값을 직접 올립니다(매 실행일로 자동 변경하지 않아 --check 가 흔들리지 않습니다).
 PAGE_UPDATED = "2026-11-28"
+# 정적 자산(styles.css·seo.css) 버전 쿼리. CSS 를 고치면 index.html 의 ?v= 와 함께 올립니다.
+# (모바일 PWA 가 옛 styles.css 를 물고 있지 않도록 브라우저 HTTP 캐시까지 무효화)
+ASSET_VERSION = "2026112827"
 PHONE = "010-2885-5553"
 PHONE_TEL = "tel:010-2885-5553"
 KAKAO = "hyunyul89"
@@ -539,8 +542,8 @@ def page_head(title: str, description: str, keywords: str, canonical: str,
 <meta name="twitter:description" content="{esc(description)}" />
 <meta name="twitter:image" content="{BASE_URL}/assets/og-cover.png" />
 <link rel="icon" href="{FAVICON}" />
-<link rel="stylesheet" href="../styles.css" />
-<link rel="stylesheet" href="../seo.css" />
+<link rel="stylesheet" href="../styles.css?v={ASSET_VERSION}" />
+<link rel="stylesheet" href="../seo.css?v={ASSET_VERSION}" />
 {ld}</head>
 <body>
 <a class="skip-link" href="#main">본문으로 바로가기</a>
