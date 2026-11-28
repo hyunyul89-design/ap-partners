@@ -3335,6 +3335,8 @@
           if (res) res.textContent = '웹훅은 응답하지만 물건카드 기능(doGet)이 아직 배포되지 않았습니다. Apps Script에 [2] 블록을 붙이고 새 버전으로 배포해 주세요.';
         } else if (b.reason === 'no_doget' || b.reason === 'auth') {
           if (res) res.textContent = cardReasonText(b) + ' (지금 응답: ' + b.reason + ')';
+        } else if (b.reason === 'no-secret') {
+          if (res) res.textContent = cardReasonText(b);
         } else if (b.reason === 'network') {
           if (res) res.textContent = '응답을 읽지 못했습니다. 위 [응답 미리 보기 ↗]를 누르면 브라우저 새 창에서 실제 응답을 볼 수 있습니다.';
         } else {
