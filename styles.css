@@ -691,6 +691,12 @@ body.modal-open { overflow: hidden; }
 }
 .check-note b { color: var(--ink-2); font-weight: 600; }
 
+.risk-list { gap: 12px; }
+.risk-list li { padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+.risk-list li::before { top: 19px; left: 18px; }
+.risk-list li { padding-left: 34px; }
+.risk-list li b { color: var(--navy); font-weight: 700; }
+
 .privacy-box {
   margin-top: 26px; padding: 16px 18px; border-radius: 8px;
   background: #FBF8F1; border: 1px solid #EEE2C8;

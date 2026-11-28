@@ -1295,6 +1295,14 @@
 - [백억커피](https://apchangup.com/brands/baekuk-coffee.html) — 카페 · 1곳 · 초기 인수 비용 5,000만 원
 - [우지커피](https://apchangup.com/brands/wooji-coffee.html) — 카페 · 1곳 · 초기 인수 비용 2억 8,000만 원
 - [이삭토스트](https://apchangup.com/brands/isaac-toast.html) — 패스트푸드 · 1곳 · 초기 인수 비용 1억 5,000만 원
+## 브랜드 비교 3개
+
+공개 점포가 4곳 이상인 브랜드 쌍을 점포 수·초기 인수 비용·월 매출·예상 순수익 범위로 비교합니다. 범위는 각 브랜드 공개 점포의 가장 낮은 값과 가장 높은 값이며, 브랜드 전체 평균이 아닙니다.
+
+- [메가커피 vs 컴포즈커피](https://apchangup.com/brands/compare-mega-coffee-vs-compose-coffee.html) — 공개 30곳 vs 21곳 · 초기 인수 비용 1억 8,000만 원 ~ 6억 9,000만 원 / 1억 5,000만 원 ~ 6억 원 · 예상 월 순수익 800만 원 ~ 2,595만 원 / 700만 원 ~ 1,772만 원
+- [투썸플레이스 vs 이디야커피](https://apchangup.com/brands/compare-twosome-vs-ediya-coffee.html) — 공개 9곳 vs 7곳 · 초기 인수 비용 1억 6,000만 원 ~ 4억 4,450만 원 / 5,000만 원 ~ 2억 9,000만 원 · 예상 월 순수익 320만 원 ~ 2,464만 원 / 150만 원 ~ 1,590만 원
+- [본죽 vs 서브웨이](https://apchangup.com/brands/compare-bonjuk-vs-subway.html) — 공개 8곳 vs 4곳 · 초기 인수 비용 9,000만 원 ~ 3억 2,200만 원 / 3억 2,500만 원 ~ 5억 2,000만 원 · 예상 월 순수익 800만 원 ~ 2,050만 원 / 1,120만 원 ~ 3,712만 원
+
 
 ## 상담
 

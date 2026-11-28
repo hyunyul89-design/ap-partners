@@ -96,6 +96,64 @@
 }
 a.sx-chip:hover { border-color: var(--gold); color: var(--gold-deep); background: #fff; }
 
+/* ---------- 산정 기준 ---------- */
+.sx-basis { display: grid; gap: 10px; margin-top: 14px; }
+.sx-basis li {
+  padding: 13px 16px; border: 1px solid var(--line-soft); border-radius: 10px;
+  background: var(--bg); font-size: 13px; line-height: 1.72; color: var(--ink-2);
+  word-break: keep-all;
+}
+.sx-basis li b {
+  display: block; margin-bottom: 5px; font-size: 12.5px; font-weight: 700;
+  color: var(--navy); letter-spacing: -0.01em;
+}
+
+/* ---------- 계약 전 리스크 체크리스트 ---------- */
+.sx-risk {
+  display: grid; gap: 10px; margin-top: 14px; padding: 0; list-style: none;
+  counter-reset: sx-risk;
+}
+.sx-risk li {
+  position: relative; padding: 14px 16px 14px 50px; border: 1px solid var(--line);
+  border-radius: 10px; background: #fff; counter-increment: sx-risk;
+}
+.sx-risk li::before {
+  content: "0" counter(sx-risk); position: absolute; left: 15px; top: 14px;
+  min-width: 24px; height: 24px; padding: 0 4px; border-radius: 999px;
+  background: var(--navy); color: #fff; font-size: 11px; font-weight: 700;
+  display: inline-flex; align-items: center; justify-content: center; letter-spacing: .02em;
+}
+.sx-risk li b {
+  display: block; font-size: 14px; font-weight: 700; color: var(--navy); letter-spacing: -0.01em;
+}
+.sx-risk li span {
+  display: block; margin-top: 6px; font-size: 13px; line-height: 1.74; color: var(--ink-2);
+  word-break: keep-all;
+}
+
+/* ---------- 브랜드 비교표 ---------- */
+.sx-compare-wrap {
+  margin-top: 16px; border: 1px solid var(--line); border-radius: 12px;
+  overflow-x: auto; background: #fff;
+}
+.sx-compare { width: 100%; border-collapse: collapse; min-width: 540px; }
+.sx-compare caption {
+  padding: 13px 16px; text-align: left; font-size: 12px; color: var(--muted);
+  border-bottom: 1px solid var(--line-soft);
+}
+.sx-compare th, .sx-compare td {
+  padding: 13px 16px; border-bottom: 1px solid var(--line-soft); font-size: 13.5px;
+  text-align: left; vertical-align: top; word-break: keep-all;
+}
+.sx-compare thead th {
+  background: var(--bg); font-size: 12.5px; font-weight: 700; color: var(--ink-2);
+  letter-spacing: .02em;
+}
+.sx-compare thead th:first-child { width: 26%; }
+.sx-compare tbody th { font-weight: 600; font-size: 13px; color: var(--ink-2); }
+.sx-compare td { font-weight: 600; color: var(--navy); }
+.sx-compare tr:last-child th, .sx-compare tr:last-child td { border-bottom: 0; }
+
 /* ---------- lock box ---------- */
 .sx-lock {
   margin-top: 32px; padding: 24px 24px 22px; border: 1px solid var(--line);

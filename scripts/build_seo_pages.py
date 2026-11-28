@@ -28,6 +28,7 @@ import html
 import json
 import re
 import sys
+from datetime import date
 from pathlib import Path
 
 BASE_URL = "https://apchangup.com"
@@ -301,6 +302,77 @@ GUIDE_BRANDS = [
 
 GUIDE_BY_SLUG = {B["slug"]: B for B in GUIDE_BRANDS}
 
+# ---------------------------------------------------------------- 브랜드 비교
+# 양쪽 모두 공개 점포가 4곳 이상이라 매물 수·비용·매출·순수익 범위를 나란히 놓을 수 있는 쌍.
+# (한쪽 점포가 1~2곳뿐이면 범위가 사실상 한 매장의 값이라 비교 페이지를 만들지 않습니다.)
+COMPARE_PAIRS = [
+    ("메가커피", "컴포즈커피"),
+    ("투썸플레이스", "이디야커피"),
+    ("본죽", "서브웨이"),
+]
+
+# ---------------------------------------------------------------- 계약 전 리스크 체크리스트
+# 점포 상세·브랜드 가이드·브랜드 비교 페이지에 같은 4항목을 씁니다.
+# 특정 매장의 상태를 단정하지 않고, 계약 전에 직접 확인할 방법만 안내합니다.
+RISK_CHECKS = [
+    ("포스·카드 매출 직접 대조",
+     "점주가 정리한 매출 요약이 아니라 포스 결제 내역과 카드사 정산 내역을 같은 기간으로 맞춰 직접 대조합니다. "
+     "취소·환불, 배달앱 정산, 현금 매출이 각각 어떻게 잡혀 있는지도 함께 봅니다."),
+    ("순수익 계산에서 빠진 비용 확인",
+     "예상 순수익에 들어간 비용과 빠진 비용을 나눠 봅니다. 점포 사용료·관리비·공과금, 인건비(점주 본인 몫 포함 여부), "
+     "재료비, 배달 수수료, 본사 로열티·가맹비가 어디까지 반영됐는지 항목별로 확인합니다."),
+    ("점포 예치금·점포 사용료 기준 시점",
+     "점포 예치금과 점포 사용료가 어느 시점 금액인지, 인수 뒤 인상되거나 재계약 때 조건이 바뀌는지 확인합니다. "
+     "계약서·관리비 고지서·공과금 고지서를 같은 달 자료로 맞춰 봅니다."),
+    ("계약 조건·실제 운영 범위 미확인 항목 점검",
+     "시설·영업권에 포함되는 집기와 시설 목록, 본사 승계 조건, 직원 승계와 근무 조건, 영업 허가 형태, "
+     "잔여 계약 기간처럼 아직 확인하지 못한 항목을 목록으로 적고 계약 전에 하나씩 확인합니다."),
+]
+
+
+def risk_checklist_html(heading: str, intro: str = "") -> str:
+    items = "".join(
+        f"<li><b>{esc(head)}</b><span>{esc(body)}</span></li>" for head, body in RISK_CHECKS
+    )
+    lead = f'<p class="sx-para">{esc(intro)}</p>' if intro else ""
+    return (
+        f"<h2>{esc(heading)}</h2>\n"
+        f"      {lead}\n"
+        f'      <ol class="sx-risk">{items}</ol>'
+    )
+
+
+def profit_basis_html(as_of: str, scope: str = "store") -> str:
+    """예상 순수익·매출 수치의 산정 기준 안내.
+
+    확인된 범위만 적습니다 — 포스·카드 대조는 상담·실사에서 하고,
+    점주 제시 자료에 없는 비용(로열티·가맹비 등)은 반영되지 않았을 수 있다는 사실만 밝힙니다.
+    """
+    rows = [
+        ("매출 확인 방식",
+         "월 평균 매출은 점주가 제시한 자료를 기준으로 정리했습니다. "
+         "포스 결제 내역·카드사 정산 내역과 실제 근무표 대조는 상담과 현장 실사에서 함께 합니다."),
+        ("포함·제외 비용",
+         "예상 순수익은 점주가 제시한 월 매출에서 점주가 제시한 경비를 뺀 값입니다. "
+         "재료비·인건비·매장 고정비·기타잡비의 항목별 금액과 비율은 사이트에서 희망 조건을 한 번 남기면 확인할 수 있고, "
+         "본사 로열티·가맹비·교육비나 점포 예치금처럼 점주 자료에 들어 있지 않은 비용은 반영되지 않았을 수 있습니다."),
+    ]
+    if scope == "brand":
+        rows.append(("범위 읽는 법",
+                     "브랜드 페이지의 금액 범위는 공개된 매장 가운데 가장 낮은 값과 가장 높은 값입니다. "
+                     "브랜드 전체 평균이 아니며, 매장마다 평수·상권·시설 상태에 따라 달라집니다."))
+    elif scope == "compare":
+        rows.append(("범위 읽는 법",
+                     "두 브랜드의 금액 범위는 각 브랜드 공개 점포 가운데 가장 낮은 값과 가장 높은 값입니다. "
+                     "브랜드 전체 평균이 아니고, 공개 점포 수가 서로 달라 범위의 폭도 다르게 보일 수 있습니다."))
+    rows.append(("기준 시점",
+                 f"수치는 목록 갱신일 {as_of}에 정리한 값입니다. 그 뒤 매출·비용·영업 조건은 달라질 수 있으므로 "
+                 "계약 전에 최신 자료로 다시 확인합니다."))
+    items = "".join(
+        f"<li><b>{esc(head)}</b><span>{esc(body)}</span></li>" for head, body in rows
+    )
+    return f'<ul class="sx-basis">{items}</ul>'
+
 # 지출(비공개) 성격이 드러나는 표현 — 점포 페이지 '특징'에서 제외
 EXPENSE_TOKENS = [
     "인건비", "지출", "수수료", "재료비", "고정비", "잡비", "로열티", "관리비",
@@ -570,7 +642,7 @@ def contact_card(title: str, code: str | None) -> str:
 
 
 # ---------------------------------------------------------------- store page
-def build_store_page(L: dict, brand_links: list, siblings: list) -> str:
+def build_store_page(L: dict, brand_links: list, siblings: list, as_of: str) -> str:
     code = L["code"]
     brand = L["brand"]
     area = L["area"]
@@ -670,12 +742,17 @@ def build_store_page(L: dict, brand_links: list, siblings: list) -> str:
       </dl>
       <p class="sx-note">표시 금액은 점주 제시 자료를 기준으로 정리한 값입니다. 협의 과정에서 달라질 수 있고, 프랜차이즈 본사 비용(교육비·가맹비 등)은 매장에 따라 별도일 수 있습니다.</p>
 
+      <h2>매출·순수익 산정 기준</h2>
+      {profit_basis_html(as_of, 'store')}
+
       <h2>매장 특징</h2>
       <ul class="sx-list">{points_html}</ul>
       <div class="sx-kw">{kw_chips}</div>
 
       <h2>상권과 규모</h2>
       <p class="sx-para">{esc(area)} · {esc(L.get('area_note', ''))}</p>
+
+      {risk_checklist_html('계약 전 리스크 체크리스트', '아래 네 가지는 계약서에 서명하기 전에 직접 확인해야 할 항목입니다. 확인한 자료는 날짜와 함께 남겨 두면 나중에 조건이 달라졌을 때 근거가 됩니다.')}
 
       <div class="sx-lock">
         <p class="sx-lock-badge">2단계 잠금</p>
@@ -781,8 +858,26 @@ def guide_card(B: dict) -> str:
         </a>"""
 
 
+def compare_card(a: str, items_a: list, b: str, items_b: list) -> str:
+    ma, mb = compare_metrics(items_a), compare_metrics(items_b)
+    return f"""
+        <a class="sx-brand-card" href="../brands/{esc(compare_slug(a, b))}.html">
+          <div class="sx-brand-tags">
+            <span class="sx-store-code">브랜드 비교</span>
+            <span class="sx-badge sx-badge-open">{ma['n'] + mb['n']}곳 비교</span>
+          </div>
+          <h3>{esc(a)} vs {esc(b)}</h3>
+          <p>공개 점포 {ma['n']}곳 vs {mb['n']}곳</p>
+          <dl>
+            <div><dt>{esc(a)} 인수 비용</dt><dd>{esc(ma['cost'])}</dd></div>
+            <div><dt>{esc(b)} 인수 비용</dt><dd>{esc(mb['cost'])}</dd></div>
+          </dl>
+          <span class="sx-store-more">비교표 보기 →</span>
+        </a>"""
+
+
 # ---------------------------------------------------------------- brand page
-def build_brand_page(brand: str, items: list, store_links: list) -> str:
+def build_brand_page(brand: str, items: list, store_links: list, pairs: list, as_of: str) -> str:
     slug = slug_for(brand)
     n = len(items)
     costs = [L["initial_cost"]["total_manwon"] for L in items]
@@ -797,7 +892,7 @@ def build_brand_page(brand: str, items: list, store_links: list) -> str:
     title = f"{brand} 양도양수 창업 · 실사 매장 {n}곳 비용·매출 비교 | 에이피파트너"
     description = (
         f"{brand}{('(' + note + ')') if note else ''} 양도양수·창업 매장 {n}곳을 실사 수치로 비교합니다. "
-        f"{', '.join(regions)} · 초기 인수 비용 {fmt_manwon(min(costs))}~{fmt_manwon(max(costs))}, "
+        f"{', '.join(regions)} · 초기 인수 비용 {range_label(min(costs), max(costs))}, "
         f"월 매출·예상 순수익 공개. 상세 지출은 상담에서 안내합니다."
     )
     keywords = ",".join(unique(
@@ -864,6 +959,11 @@ def build_brand_page(brand: str, items: list, store_links: list) -> str:
         f'<a class="sx-chip" href="../brands/{esc(B["slug"])}.html">{esc(B["brand"])} 가이드</a>'
         for B in GUIDE_BRANDS
     )
+    compare_html = "".join(
+        f'<a class="sx-chip" href="../brands/{esc(compare_slug(x, y))}.html">{esc(x)} vs {esc(y)} 비교</a>'
+        for x, y in pairs if brand in (x, y)
+    )
+    compare_block = f'<p class="sx-more">브랜드 비교: {compare_html}</p>' if compare_html else ""
 
     html_out = page_head(title, description, keywords, canonical, [ld, ld_faq, ld_crumb])
     html_out += crumbs([("홈", "../index.html"), ("브랜드별 보기", "index.html"), (f"{brand} 양도양수", None)])
@@ -893,6 +993,9 @@ def build_brand_page(brand: str, items: list, store_links: list) -> str:
       <h2>{esc(brand)} 매장 {n}곳 한눈에</h2>
       <div class="sx-card-grid">{cards}</div>
 
+      <h2>매출·순수익 산정 기준</h2>
+      {profit_basis_html(as_of, 'brand')}
+
       <h2>{esc(brand)} 양도양수 창업, 무엇을 확인할까</h2>
       <ul class="sx-list">
         <li>초기 인수 비용이 <b>점포 예치금</b>과 <b>시설·영업권</b>으로 어떻게 나뉘는지 먼저 확인합니다. 같은 총액이라도 계약 기간과 시설 상태에 따라 부담이 달라집니다.</li>
@@ -909,6 +1012,7 @@ def build_brand_page(brand: str, items: list, store_links: list) -> str:
 
       <h2>다른 브랜드 매장</h2>
       <div class="sx-kw">{other_html}</div>
+      {compare_block}
 
       <h2>공개 점포가 없는 브랜드 가이드</h2>
       <p class="sx-para">아래 브랜드는 지금 공개된 점포가 없어, 인수 전 실사 체크포인트와 비공개 입고 우선 알림만 안내합니다.</p>
@@ -997,6 +1101,10 @@ def build_guide_page(B: dict, store_links: list, guide_links: list) -> str:
         f'<div class="sx-faq-item"><h3>{esc(q)}</h3><p>{esc(a)}</p></div>' for q, a in faqs
     )
     kw_chips = "".join(f'<span class="sx-chip">{esc(k)}</span>' for k in guide_keywords(B))
+    risk_html = risk_checklist_html(
+        '계약 전 리스크 체크리스트',
+        '가맹 계약을 승계하기 전에 이 네 가지는 직접 확인하세요. 본사가 안내하는 조건과 별개로, 점포에서 확인해야 할 항목입니다.',
+    )
 
     other_store = "".join(
         f'<a class="sx-chip" href="../brands/{esc(s)}.html">{esc(b)} 양도양수</a>'
@@ -1066,6 +1174,8 @@ def build_guide_page(B: dict, store_links: list, guide_links: list) -> str:
         <li><b>본사 승계·계약</b> — 가맹 승계 조건과 <b>시설·영업권</b>·<b>점포 예치금</b> 항목을 서면으로 확인한 뒤 계약합니다.</li>
       </ul>
 
+      {risk_html}
+
       <h2>자주 묻는 질문</h2>
       <div class="sx-faq">{faq_html}</div>
 
@@ -1103,19 +1213,194 @@ def build_guide_page(B: dict, store_links: list, guide_links: list) -> str:
     return html_out
 
 
+# ---------------------------------------------------------------- compare page
+def compare_slug(a: str, b: str) -> str:
+    return f"compare-{slug_for(a)}-vs-{slug_for(b)}"
+
+
+def compare_pairs(groups: dict) -> list:
+    """양쪽 모두 공개 점포가 4곳 이상인 쌍만 비교 페이지로 만듭니다."""
+    return [
+        (a, b) for a, b in COMPARE_PAIRS
+        if len(groups.get(a, [])) >= 4 and len(groups.get(b, [])) >= 4
+    ]
+
+
+def compare_metrics(items: list) -> dict:
+    costs = [L["initial_cost"]["total_manwon"] for L in items]
+    sales = [L["monthly_sales"]["avg_manwon"] for L in items]
+    profits = [L["profit"]["avg_manwon"] for L in items]
+    return {
+        "n": len(items),
+        "cost": range_label(min(costs), max(costs)),
+        "sales": range_label(min(sales), max(sales)),
+        "profit": range_label(min(profits), max(profits)),
+        "category": items[0]["category"],
+        "regions": unique([L["region"] for L in items]),
+    }
+
+
+def compare_faqs(a: str, ma: dict, b: str, mb: dict) -> list:
+    return [
+        (f"{a}와 {b}의 초기 인수 비용은 얼마나 차이 나나요?",
+         f"공개된 점포 기준으로 {a} {ma['n']}곳은 {ma['cost']}, {b} {mb['n']}곳은 {mb['cost']}입니다. "
+         f"이 범위는 매장마다 평수·상권·시설 상태가 달라 생긴 차이라, 낮은 금액 하나만 보고 고르기보다 "
+         f"같은 예산 안에서 매출과 예상 순수익을 함께 놓고 비교하는 편이 좋습니다."),
+        (f"{a}와 {b}의 매출·순수익은 어떻게 비교하나요?",
+         f"{a} 공개 점포의 월 평균 매출은 {ma['sales']}, {b}는 {mb['sales']}이고, "
+         f"예상 월 순수익 범위는 {a} {ma['profit']}, {b} {mb['profit']}입니다. "
+         f"두 브랜드 모두 점주 제시 자료를 기준으로 정리한 값이므로, 실제 비교는 포스·카드 정산 자료 대조와 "
+         f"인력 운영표 확인으로 하는 것이 정확합니다."),
+        ("공개 점포 수가 다르면 비교가 의미가 있나요?",
+         f"점포 수가 다르면 금액 범위의 폭도 다르게 보입니다({a} {ma['n']}곳, {b} {mb['n']}곳). "
+         f"이 페이지는 각 브랜드 공개 점포 전체의 가장 낮은 값과 가장 높은 값을 나란히 둔 것이고, 브랜드 전체 평균이 아닙니다. "
+         f"실제 후보를 고를 때는 같은 지역·같은 예산의 점포끼리 비교하는 편이 더 정확합니다."),
+    ]
+
+
+def build_compare_page(a: str, items_a: list, b: str, items_b: list,
+                       store_links: list, as_of: str, other_pairs: list = ()) -> str:
+    slug = compare_slug(a, b)
+    canonical = f"{BASE_URL}/brands/{slug}.html"
+    ma, mb = compare_metrics(items_a), compare_metrics(items_b)
+    faqs = compare_faqs(a, ma, b, mb)
+
+    title = f"{a} vs {b} 양도양수 비교 · 점포 수·인수 비용·매출·순수익 | 에이피파트너"
+    description = (
+        f"{a} {ma['n']}곳와 {b} {mb['n']}곳의 공개 점포를 같은 기준으로 비교했습니다. "
+        f"초기 인수 비용 {ma['cost']}({a}) / {mb['cost']}({b}), 월 매출·예상 순수익 범위와 산정 기준, "
+        f"계약 전 확인할 4가지를 한 페이지에 정리했습니다."
+    )
+    keywords = ",".join(unique([
+        f"{a} {b} 비교", f"{a} {b} 창업", f"{a} 양도양수", f"{b} 양도양수",
+        f"{a} 인수 비용", f"{b} 인수 비용", f"{a} {b} 순수익",
+        f"{ma['category']} 창업 비교",
+    ]))
+
+    rows = "".join(
+        f'<tr><th scope="row">{esc(label)}</th><td>{esc(va)}</td><td>{esc(vb)}</td></tr>'
+        for label, va, vb in [
+            ("공개 점포 수", f"{ma['n']}곳", f"{mb['n']}곳"),
+            ("초기 인수 비용 범위", ma['cost'], mb['cost']),
+            ("월 평균 매출 범위", ma['sales'], mb['sales']),
+            ("예상 월 순수익 범위", ma['profit'], mb['profit']),
+        ]
+    )
+
+    faq_html = "".join(
+        f'<div class="sx-faq-item"><h3>{esc(q)}</h3><p>{esc(ans)}</p></div>' for q, ans in faqs
+    )
+
+    ld_faq = {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+            {"@type": "Question", "name": q,
+             "acceptedAnswer": {"@type": "Answer", "text": ans}}
+            for q, ans in faqs
+        ],
+    }
+    ld_crumb = {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "에이피파트너", "item": BASE_URL + "/"},
+            {"@type": "ListItem", "position": 2, "name": "브랜드별 보기", "item": f"{BASE_URL}/brands/index.html"},
+            {"@type": "ListItem", "position": 3, "name": f"{a} vs {b} 비교", "item": canonical},
+        ],
+    }
+
+    other_compare = "".join(
+        f'<a class="sx-chip" href="../brands/{esc(compare_slug(x, y))}.html">{esc(x)} vs {esc(y)}</a>'
+        for x, y in other_pairs if (x, y) != (a, b)
+    )
+
+    html_out = page_head(title, description, keywords, canonical, [ld_faq, ld_crumb])
+    html_out += crumbs([
+        ("홈", "../index.html"),
+        ("브랜드별 보기", "index.html"),
+        (f"{a} vs {b}", None),
+    ])
+    html_out += f"""
+<main id="main">
+  <section class="sx-hero">
+    <div class="wrap">
+      <p class="eyebrow light"><span class="eyebrow-line"></span>BRAND COMPARE</p>
+      <h1>{esc(a)} vs {esc(b)}<br /><em>양도양수 비교</em></h1>
+      <p class="sx-lead">{esc(a)}와 {esc(b)}는 공개된 점포가 모두 4곳 이상이라, 같은 기준으로 나란히 놓고 볼 수 있습니다. 점포 수·초기 인수 비용·월 매출·예상 월 순수익을 원본 데이터 그대로 비교하고, 아래에 산정 기준과 계약 전 확인 항목을 덧붙였습니다.</p>
+      <div class="sx-tags">
+        <span>{esc(ma['category'])}</span>
+        <span>{esc(', '.join(ma['regions']))} · {esc(', '.join(mb['regions']))}</span>
+        <span>공개 {ma['n'] + mb['n']}곳</span>
+        <span>기준일 {esc(as_of)}</span>
+      </div>
+      <div class="sx-facts">
+        <div class="sx-fact"><span>{esc(a)} 공개 점포</span><b class="gold">{ma['n']}곳</b></div>
+        <div class="sx-fact"><span>{esc(b)} 공개 점포</span><b class="gold">{mb['n']}곳</b></div>
+        <div class="sx-fact"><span>비교 항목</span><b>비용·매출·순수익</b></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap sx-body">
+    <div class="sx-main">
+      <h2>{esc(a)} · {esc(b)} 한눈에 비교</h2>
+      <div class="sx-compare-wrap">
+        <table class="sx-compare">
+          <caption>공개 점포 기준 · 금액은 점주 제시 자료 기준</caption>
+          <thead>
+            <tr><th scope="col">비교 항목</th><th scope="col">{esc(a)}</th><th scope="col">{esc(b)}</th></tr>
+          </thead>
+          <tbody>{rows}</tbody>
+        </table>
+      </div>
+
+      <h2>산정 전제</h2>
+      {profit_basis_html(as_of, 'compare')}
+
+      {risk_checklist_html('계약 전 리스크 체크리스트', '비교표에서 고른 뒤에도 계약 전에 이 네 가지는 직접 확인하세요.')}
+
+      <h2>브랜드별 매장 보기</h2>
+      <p class="sx-para">{esc(a)}와 {esc(b)} 매장 전체 목록과 매장별 상세 페이지는 각 브랜드 페이지에서 볼 수 있습니다. 지점명과 상세 위치는 점주 보호를 위해 공개하지 않습니다.</p>
+      <div class="sx-kw">
+        <a class="sx-chip" href="../brands/{esc(slug_for(a))}.html">{esc(a)} 매장 {ma['n']}곳</a>
+        <a class="sx-chip" href="../brands/{esc(slug_for(b))}.html">{esc(b)} 매장 {mb['n']}곳</a>
+        <a class="sx-chip" href="../stores/index.html">전체 점포 색인</a>
+      </div>
+
+      <h2>자주 묻는 질문</h2>
+      <div class="sx-faq">{faq_html}</div>
+
+      <h2>다른 브랜드 비교</h2>
+      <div class="sx-kw">{other_compare or '<span class="sx-chip">준비 중</span>'}</div>
+      <p class="sx-more"><a href="index.html">브랜드별 보기 전체 →</a> · <a href="../stores/index.html">전체 점포 색인 →</a></p>
+    </div>
+
+    <aside class="sx-side">
+      {contact_card(f'{a} · {b} 상담', None)}
+    </aside>
+  </div>
+</main>
+"""
+    html_out += page_foot(store_links)
+    return html_out
+
+
 # ---------------------------------------------------------------- index pages
 def build_brand_index(brand_links: list, groups: dict) -> str:
     guide_links = [(B["brand"], B["slug"]) for B in GUIDE_BRANDS]
     total_pages = len(groups) + len(GUIDE_BRANDS)
     total_stores = sum(len(v) for v in groups.values())
+    pairs = compare_pairs(groups)
+    top3 = list(groups)[:3]
     title = (
-        "브랜드별 보기 · 투썸·배스킨라빈스·이디야·BHC 등 18개 브랜드 "
-        "양도양수 창업 가이드 | 에이피파트너"
+        f"브랜드별 보기 · {'·'.join(top3)} 등 {total_pages}개 브랜드 양도양수 창업 가이드 | 에이피파트너"
     )
+    guide_names = ", ".join(B["brand"] for B in GUIDE_BRANDS)
     description = (
-        "프랜차이즈 양도양수 창업 브랜드별 페이지입니다. 메가커피·컴포즈커피·우지커피·백억커피·교촌치킨·"
-        "맘스터치 실사 매장과 함께, 투썸플레이스·배스킨라빈스·텐퍼센트·역전할머니맥주·빽다방·이디야커피·"
-        "더벤티·바나프레소·공차·BHC치킨·BBQ치킨·서브웨이는 인수 전 실사 체크포인트와 비공개 매물 우선 알림을 안내합니다."
+        f"프랜차이즈 양도양수 창업 브랜드별 페이지입니다. 현장 실사를 마친 {total_stores}곳을 "
+        f"{len(groups)}개 브랜드로 나누어 초기 인수 비용·월 매출·예상 순수익을 비교합니다. "
+        f"공개 점포가 없는 {guide_names} {len(GUIDE_BRANDS)}개 브랜드는 실사 체크포인트와 우선 알림을 안내합니다."
     )
     keywords = ",".join(unique(
         [f"{b} 양도양수" for b in groups] + [f"{b} 창업" for b in groups]
@@ -1126,6 +1411,13 @@ def build_brand_index(brand_links: list, groups: dict) -> str:
     canonical = f"{BASE_URL}/brands/index.html"
     cards = "".join(brand_card(b, items) for b, items in groups.items())
     guide_cards = "".join(guide_card(B) for B in GUIDE_BRANDS)
+    compare_cards = "".join(compare_card(x, groups[x], y, groups[y]) for x, y in pairs)
+    compare_section = (
+        f'      <h2>브랜드 비교 <span class="sx-count">{len(pairs)}개</span></h2>\n'
+        f'      <p class="sx-para">공개 점포가 4곳 이상인 브랜드 쌍은 점포 수·초기 인수 비용·월 매출·예상 순수익을 한 표에 나란히 놓았습니다. 범위와 산정 전제를 함께 보세요.</p>\n'
+        f'      <div class="sx-brand-grid">{compare_cards}</div>'
+        if pairs else ""
+    )
     ld = {
         "@context": "https://schema.org",
         "@type": "ItemList",
@@ -1161,6 +1453,8 @@ def build_brand_index(brand_links: list, groups: dict) -> str:
       <h2>가이드 · 비공개 우선 알림 브랜드 <span class="sx-count">{len(GUIDE_BRANDS)}개</span></h2>
       <p class="sx-para">아래 브랜드는 지금 공개된 점포가 0곳입니다. 대신 브랜드별로 인수 전에 확인할 실사 항목을 정리했고, 조건을 남기면 비공개로 들어오는 점포를 먼저 알려 드립니다.</p>
       <div class="sx-brand-grid">{guide_cards}</div>
+
+{compare_section}
       <p class="sx-more"><a href="../stores/index.html">전체 점포 색인 →</a></p>
     </div>
     <aside class="sx-side">
@@ -1235,27 +1529,46 @@ def build_store_index(groups: dict, brand_links: list) -> str:
 
 
 # ---------------------------------------------------------------- sitemap
-def build_sitemap(groups: dict, updated_at: str) -> str:
+def sitemap_urls(groups: dict) -> list:
     urls = [f"{BASE_URL}/"]
     urls.append(f"{BASE_URL}/brands/index.html")
     for brand in groups:
         urls.append(f"{BASE_URL}/brands/{slug_for(brand)}.html")
     for B in GUIDE_BRANDS:
         urls.append(f"{BASE_URL}/brands/{B['slug']}.html")
+    for a, b in compare_pairs(groups):
+        urls.append(f"{BASE_URL}/brands/{compare_slug(a, b)}.html")
     urls.append(f"{BASE_URL}/stores/index.html")
     for items in groups.values():
         for L in items:
             urls.append(f"{BASE_URL}/stores/{L['id'].lower()}.html")
+    return urls
+
+
+def load_sitemap_lastmods() -> dict:
+    """지금 배포된 sitemap.xml 의 URL별 lastmod. 실제로 바뀐 페이지만 날짜를 올리기 위해 읽습니다."""
+    if not SITEMAP_FILE.exists():
+        return {}
+    text = SITEMAP_FILE.read_text(encoding="utf-8")
+    return {
+        loc.strip(): last.strip()
+        for loc, last in re.findall(r"<loc>(.*?)</loc>\s*<lastmod>(.*?)</lastmod>", text, re.S)
+    }
+
+
+def build_sitemap(groups: dict, lastmod_by_url: dict, fallback_date: str) -> str:
+    urls = sitemap_urls(groups)
 
     lines = ['<?xml version="1.0" encoding="UTF-8"?>',
              '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
     for url in urls:
         priority = "1.0" if url == f"{BASE_URL}/" else ("0.8" if "/brands/" in url else "0.7")
         changefreq = "weekly"
+        lastmod = lastmod_by_url.get(url) or fallback_date
         lines += [
             "  <url>",
             f"    <loc>{esc(url)}</loc>",
-            f"    <lastmod>{esc(updated_at)}</lastmod>",
+            f"    <lastmod>{esc(lastmod)}</lastmod>",
             f"    <changefreq>{changefreq}</changefreq>",
             f"    <priority>{priority}</priority>",
             "  </url>",
@@ -1427,6 +1740,17 @@ def build_llms_txt(groups: dict, listings: list, updated_at: str) -> str:
             f"- [{brand}]({BASE_URL}/brands/{slug_for(brand)}.html) — {items[0]['category']} · "
             f"{len(items)}곳 · 초기 인수 비용 {range_label(min(costs), max(costs))}"
         )
+    out += [f"## 브랜드 비교 {len(compare_pairs(groups))}개", "",
+            "공개 점포가 4곳 이상인 브랜드 쌍을 점포 수·초기 인수 비용·월 매출·예상 순수익 범위로 비교합니다. "
+            "범위는 각 브랜드 공개 점포의 가장 낮은 값과 가장 높은 값이며, 브랜드 전체 평균이 아닙니다.", ""]
+    for x, y in compare_pairs(groups):
+        mx, my = compare_metrics(groups[x]), compare_metrics(groups[y])
+        out.append(
+            f"- [{x} vs {y}]({BASE_URL}/brands/{compare_slug(x, y)}.html) — 공개 {mx['n']}곳 vs {my['n']}곳 · "
+            f"초기 인수 비용 {mx['cost']} / {my['cost']} · 예상 월 순수익 {mx['profit']} / {my['profit']}"
+        )
+    out += [""]
+
     out += [
         "",
         "## 상담",
@@ -1460,6 +1784,7 @@ def main() -> int:
     store_links = [(b, slug_for(b)) for b in groups]
     guide_links = [(B["brand"], B["slug"]) for B in GUIDE_BRANDS]
     brand_links = store_links + guide_links
+    pairs = compare_pairs(groups)
     updated_at = json.loads(DATA_FILE.read_text(encoding="utf-8")).get("updated_at", "")
     # 사이트맵·llms.txt 갱신일 = 등록 데이터 갱신일과 페이지 구조 변경일 중 최근 값.
     today = max(updated_at, PAGE_UPDATED)
@@ -1468,16 +1793,35 @@ def main() -> int:
     outputs = {}
 
     for brand, items in groups.items():
-        outputs[BRANDS_DIR / f"{slug_for(brand)}.html"] = build_brand_page(brand, items, store_links)
+        outputs[BRANDS_DIR / f"{slug_for(brand)}.html"] = build_brand_page(
+            brand, items, store_links, pairs, today)
     for B in GUIDE_BRANDS:
         outputs[BRANDS_DIR / f"{B['slug']}.html"] = build_guide_page(B, store_links, GUIDE_BRANDS)
     outputs[BRANDS_DIR / "index.html"] = build_brand_index(brand_links, groups)
+    for a, b in pairs:
+        outputs[BRANDS_DIR / f"{compare_slug(a, b)}.html"] = build_compare_page(
+            a, groups[a], b, groups[b], store_links, today, pairs)
     outputs[STORES_DIR / "index.html"] = build_store_index(groups, brand_links)
     for items in groups.values():
         for L in items:
-            outputs[STORES_DIR / f"{L['id'].lower()}.html"] = build_store_page(L, brand_links, items)
-    outputs[SITEMAP_FILE] = build_sitemap(groups, max(updated_at, today))
+            outputs[STORES_DIR / f"{L['id'].lower()}.html"] = build_store_page(
+                L, brand_links, items, today)
+
+    # sitemap lastmod: 배포된 페이지와 새로 만든 본문을 비교해, 실제로 달라진 URL만 실행일로 올리고
+    # 나머지는 지금 sitemap.xml 에 있던 lastmod 를 그대로 유지합니다.
+    existing_lastmods = load_sitemap_lastmods()
+    run_date = date.today().isoformat()
+    lastmod_by_url = {}
+    for path, body in outputs.items():
+        url = f"{BASE_URL}/{path.parent.name}/{path.name}"
+        unchanged = path.exists() and path.read_text(encoding="utf-8") == body
+        lastmod_by_url[url] = existing_lastmods.get(url, today) if unchanged else run_date
+    index_url = f"{BASE_URL}/"
+    # 메인 index.html 은 이 생성기가 푸터·점포 목록 블록만 고쳐 쓰므로, 등록 데이터 갱신일을 따릅니다.
+    lastmod_by_url[index_url] = max(existing_lastmods.get(index_url, ""), today)
+
     outputs[LLMS_FILE] = build_llms_txt(groups, listings, today)
+    outputs[SITEMAP_FILE] = build_sitemap(groups, lastmod_by_url, today)
 
     if args.check:
         stale = [str(p) for p, body in outputs.items() if not p.exists() or p.read_text(encoding="utf-8") != body]
