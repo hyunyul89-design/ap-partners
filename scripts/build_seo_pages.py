@@ -1629,6 +1629,16 @@ def build_compare_page(a: str, items_a: list, b: str, items_b: list,
         for x, y in other_pairs if (x, y) != (a, b)
     )
 
+    compare_lead = (
+        f"{a}와 {b}는 공개된 점포가 모두 4곳 이상이라, 같은 기준으로 나란히 놓고 볼 수 있습니다. "
+        if min(ma['n'], mb['n']) >= 4 else
+        f"{a} {ma['n']}곳와 {b} {mb['n']}곳을 같은 기준으로 나란히 놓았습니다. "
+    )
+    compare_lead += (
+        "점포 수·초기 인수 비용·월 매출·예상 월 순수익·회수 기간을 원본 데이터 그대로 비교하고, "
+        "아래에 산정 기준과 계약 전 확인 항목을 덧붙였습니다."
+    )
+
     html_out = page_head(title, description, keywords, canonical, [ld_faq, ld_crumb])
     html_out += crumbs([
         ("홈", "../index.html"),
@@ -1641,7 +1651,7 @@ def build_compare_page(a: str, items_a: list, b: str, items_b: list,
     <div class="wrap">
       <p class="eyebrow light"><span class="eyebrow-line"></span>BRAND COMPARE</p>
       <h1>{esc(a)} vs {esc(b)}<br /><em>양도양수 비교</em></h1>
-      <p class="sx-lead">{esc(a)}와 {esc(b)}는 공개된 점포가 모두 4곳 이상이라, 같은 기준으로 나란히 놓고 볼 수 있습니다. 점포 수·초기 인수 비용·월 매출·예상 월 순수익을 원본 데이터 그대로 비교하고, 아래에 산정 기준과 계약 전 확인 항목을 덧붙였습니다.</p>
+      <p class="sx-lead">{esc(compare_lead)}</p>
       <div class="sx-tags">
         <span>{esc(ma['category'])}</span>
         <span>{esc(', '.join(ma['regions']))} · {esc(', '.join(mb['regions']))}</span>
@@ -1730,7 +1740,7 @@ def build_brand_index(brand_links: list, groups: dict) -> str:
     compare_cards = "".join(compare_card(x, groups[x], y, groups[y]) for x, y in pairs)
     compare_section = (
         f'      <h2>브랜드 비교 <span class="sx-count">{len(pairs)}개</span></h2>\n'
-        f'      <p class="sx-para">공개 점포가 4곳 이상인 브랜드 쌍은 점포 수·초기 인수 비용·월 매출·예상 순수익을 한 표에 나란히 놓았습니다. 범위와 산정 전제를 함께 보세요.</p>\n'
+        f'      <p class="sx-para">공개 점포가 4곳 이상인 브랜드 쌍은 점포 수·초기 인수 비용·월 매출·예상 순수익·회수 기간을 한 표에 나란히 놓았습니다. 점포가 2곳뿐인 브랜드는 그 사실을 페이지에 밝혔습니다. 범위와 산정 전제를 함께 보세요.</p>\n'
         f'      <div class="sx-brand-grid">{compare_cards}</div>'
         if pairs else ""
     )
