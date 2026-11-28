@@ -362,7 +362,7 @@ python3 site/scripts/build_seo_pages.py --check  # 최신 상태인지 검사만
 - **메인 푸터 브랜드 링크** — `index.html`의 `<!-- SEO:BRAND-LINKS:START -->` ~ `END` 사이를 생성기가 다시 채웁니다. 마커를 지우면 자동 갱신이 멈춥니다.
 - **지출은 페이지에 쓰지 않습니다.** 인건비·재료비·고정비·수수료가 담긴 `points` 문장은 생성기가 걸러냅니다(`EXPENSE_TOKENS`). 지점명·지번·역명도 생성하지 않습니다.
 - 새 매물을 `listings.json`에 추가한 뒤 생성기를 한 번 돌리고 배포하면 브랜드·점포 페이지와 sitemap이 함께 갱신됩니다. 현재 sitemap은 33개 URL(메인 + 브랜드 색인 + 브랜드 6 + 가이드 12 + 점포 색인 + 점포 12)입니다.
-- 검증: `python3 scripts/seo_site_check.py`(금지어·링크·sitemap), `python3 scripts/brand_guide_check.py`(가이드 12개 모바일 390px·PC 화면, FAQPage JSON-LD, CTA).
+- 검증: `python3 scripts/seo_site_check.py`(금지어·링크·sitemap), `python3 scripts/brand_guide_check.py`(가이드 12개 모바일 390px·PC 화면, FAQPage JSON-LD, CTA). 비공개 지점명 검사는 `admin.js`가 아니라 비공개 문서 `documents/ap-admin-branches.json`(139종, `--branches`로 경로 지정)을 기준으로 하며, 기준 파일이 없으면 검사를 통과시키지 않습니다.
 
 ## AI 검색·정적 링크 보강 (2026-11-27 추가)
 
