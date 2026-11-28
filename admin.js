@@ -4016,6 +4016,9 @@
     wlRenderLeads();
     wlRenderPickOptions();
     wlRenderListingResult();
+    /* 매장 카드의 `손님 N` 버튼이 늦게 도착한 대기 손님 목록을 반영하도록, 매장 DB를 보고 있을 때만 다시 그립니다. */
+    var storesTab = $('#tabStores');
+    if (state.listings.length && storesTab && storesTab.getAttribute('aria-selected') === 'true') renderStores();
     var count = $('#tabWaitlistCount');
     if (count) count.textContent = String(state.wl.customers.length);
   }

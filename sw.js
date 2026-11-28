@@ -17,7 +17,7 @@
      열려 있는 화면까지 즉시 넘겨받습니다.
    ========================================================================== */
 
-var SW_VERSION = 'v1.1.28';
+var SW_VERSION = 'v1.1.29';
 var CACHE_PREFIX = 'ap-';
 var STATIC_CACHE = 'ap-static-' + SW_VERSION;
 var DATA_CACHE = 'ap-data-' + SW_VERSION;
