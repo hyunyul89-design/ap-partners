@@ -1345,7 +1345,8 @@ def guide_faqs(B: dict) -> list:
     ]
 
 
-def build_guide_page(B: dict, store_links: list, guide_links: list) -> str:
+def build_guide_page(B: dict, store_links: list, guide_links: list, as_of: str = "",
+                     total: int = 0) -> str:
     brand = B["brand"]
     slug = B["slug"]
     category = B["category"]
@@ -1418,6 +1419,7 @@ def build_guide_page(B: dict, store_links: list, guide_links: list) -> str:
         <span>비공개 · 우선 알림</span>
         <span>실사 체크포인트</span>
       </div>
+      {trust_strip_html(total, as_of)}
       <div class="sx-facts">
         <div class="sx-fact"><span>공개 점포</span><b class="gold">0곳</b></div>
         <div class="sx-fact"><span>알림 방식</span><b>비공개 입고 우선 알림</b></div>
@@ -2181,7 +2183,8 @@ def main() -> int:
         outputs[BRANDS_DIR / f"{slug_for(brand)}.html"] = build_brand_page(
             brand, items, store_links, pairs, today, len(listings))
     for B in GUIDE_BRANDS:
-        outputs[BRANDS_DIR / f"{B['slug']}.html"] = build_guide_page(B, store_links, GUIDE_BRANDS)
+        outputs[BRANDS_DIR / f"{B['slug']}.html"] = build_guide_page(
+            B, store_links, GUIDE_BRANDS, today, len(listings))
     outputs[BRANDS_DIR / "index.html"] = build_brand_index(brand_links, groups)
     for a, b in pairs:
         outputs[BRANDS_DIR / f"{compare_slug(a, b)}.html"] = build_compare_page(
