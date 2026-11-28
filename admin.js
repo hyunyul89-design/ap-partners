@@ -688,6 +688,7 @@
       renderStores();
       renderLeads();
       renderSell();
+      wlLoad(false);
       if (state.deepCode) focusStoreByCode(state.deepCode);
       syncBranchBadges();
     });
@@ -1142,6 +1143,8 @@
     $('#tabStoreCount').textContent = String(state.listings.length);
     $('#tabLeadCount').textContent = String(state.leads.length);
     $('#tabSellCount').textContent = String(state.sell.length);
+    var wlCount = $('#tabWaitlistCount');
+    if (wlCount) wlCount.textContent = String(state.wl.customers.length);
     var note = $('#catalogNote');
     if (note) note.hidden = state.managed;
   }
@@ -1150,6 +1153,7 @@
   var TABS = [
     { tab: '#tabStores', panel: '#panelStores' },
     { tab: '#tabLeads', panel: '#panelLeads' },
+    { tab: '#tabWaitlist', panel: '#panelWaitlist' },
     { tab: '#tabSell', panel: '#panelSell' },
     { tab: '#tabAccounts', panel: '#panelAccounts', masterOnly: true },
     { tab: '#tabNotify', panel: '#panelNotify' }
@@ -1169,7 +1173,7 @@
       panelEl.hidden = !on;
     });
     state.tabIndex = index;
-    if (index === 3) renderAccounts();
+    if (index === 4) renderAccounts();
     /* 매장 DB로 돌아올 때마다 담당 컨설턴트·필터 선택지를 최신 계정 기준으로 다시 그립니다. */
     if (index === 0) renderStores();
   }
@@ -1616,6 +1620,8 @@
     } else {
       toast(existing ? '매장을 수정했습니다. 사이트 목록에 반영됩니다.' : '새 매장을 등록했습니다. 사이트 목록에 반영됩니다.');
     }
+    /* 새 매물·수정 매물이 대기 손님 조건에 맞는지 바로 확인합니다. */
+    try { wlAfterStoreSave(listing); } catch (e) { /* 매칭 표시 실패가 저장을 막지 않게 */ }
 
     /* 폼에서 고른 물건카드는 매장 저장이 끝난 뒤 고유번호(AP-000)로 비공개 Drive에 올립니다. */
     if (formCard && formCard.dataUrl && code) {
@@ -2550,6 +2556,9 @@
             '<option value="closed"' + (closed ? ' selected' : '') + '>거래완료 · 비노출</option>' +
           '</select>' +
           '<div class="row-actions">' +
+            (state.wl.loaded && state.wl.customers.length
+              ? '<button type="button" class="card wl-mini" data-wl-match="' + esc(L.id) + '" aria-label="' + esc((L.brand || '') + ' 대기 손님 매칭') + '">손님 ' + (state.wl.counts[L.id] || 0) + '</button>'
+              : '') +
             '<button type="button" class="card" data-card="' + esc(L.id) + '" aria-label="' + esc((L.brand || '') + ' 물건카드 보기·첨부') + '">물건카드</button>' +
             '<button type="button" class="gold" data-edit="' + esc(L.id) + '">수정</button>' +
             '<button type="button" class="danger" data-del="' + esc(L.id) + '">삭제</button>' +
@@ -2572,6 +2581,9 @@
   }
 
   function bindStoreCardActions(wrap) {
+    $all('[data-wl-match]', wrap).forEach(function (b) {
+      b.addEventListener('click', function () { wlOpenForListing(b.getAttribute('data-wl-match')); });
+    });
     $all('[data-card]', wrap).forEach(function (b) {
       b.addEventListener('click', function () {
         var L = findListing(b.getAttribute('data-card'));
@@ -3525,6 +3537,828 @@
     });
   }
 
+  /* ======================================================================
+     대기 손님 조건 DB · 자동 매칭 (2026-11-28)
+     - 손님 이름·연락처·메모와 조건은 공개 저장소에 두지 않고
+       비공개 Google Drive(ap-waitlist-customers.json)에만 저장합니다.
+       이 화면은 Apps Script getWaitlistAll / saveWaitlist 로만 읽고 씁니다.
+     - 사이트 접수(4항목 게이트·AI 매칭·상세 상담·비교)는 doPost에서
+       비공개 Drive(ap-waitlist-leads.json)에 자동 저장되고, 여기 '사이트 접수함'에 뜹니다.
+     - 매칭은 손님 조건 ↔ 매물(지역·업종·브랜드·총 인수 비용·월 순수익)을
+       같은 점수 함수로 계산해 양방향으로 씁니다.
+     ====================================================================== */
+  var WL_CACHE_KEY = 'apWaitlistCache';
+  var WL_PENDING_KEY = 'apWaitlistPending';
+  var WL_STATUSES = ['대기중', '상담중', '보류', '계약완료'];
+
+  state.wl = {
+    customers: [],
+    leads: [],
+    loaded: false,
+    busy: false,
+    filter: 'all',
+    selected: '',
+    editing: '',
+    fromLead: '',
+    pickCode: '',
+    counts: {},
+    lastSync: '',
+    pending: 0
+  };
+
+  function wlNum(v) {
+    var n = Number(String(v == null ? '' : v).replace(/[^0-9.\-]/g, ''));
+    return isNaN(n) ? 0 : n;
+  }
+  function wlCost(L) { return Number((L && L.initial_cost && L.initial_cost.total_manwon) || 0); }
+  function wlProfit(L) {
+    if (!L || !L.profit) return 0;
+    if (L.profit.avg_manwon != null) return Number(L.profit.avg_manwon) || 0;
+    var m = String(L.profit.label || '').replace(/[^0-9]/g, '');
+    return m ? Number(m) : 0;
+  }
+  function wlList(v) {
+    if (v instanceof Array) return v.map(function (x) { return String(x || '').trim(); }).filter(Boolean);
+    return String(v || '').split(/[,/·]/).map(function (x) { return x.trim(); }).filter(Boolean);
+  }
+  function wlNorm(v) { return String(v == null ? '' : v).replace(/\s+/g, '').toLowerCase(); }
+
+  function wlNote(msg, kind) {
+    var el = $('#wlSyncNote');
+    if (!el) return;
+    el.hidden = false;
+    el.textContent = msg;
+    el.className = 'admin-notice wl-note' + (kind ? ' is-' + kind : '');
+  }
+
+  /* ---- 손님 조건 ↔ 매물 점수 ----
+     하드 조건(지역·업종·예산·수익)이 어긋나면 null(제외), 맞으면 점수를 쌓습니다.
+     선호 브랜드는 점수만 더하고 제외하지 않습니다. */
+  function wlRegionMatch(want, L) {
+    var toks = String(want || '').split(/[\s,·/]+/).filter(Boolean);
+    if (!toks.length) return false;
+    var hay = [L.region, L.district, L.area, L.area_note].join(' ');
+    return toks.every(function (t) {
+      if (hay.indexOf(t) !== -1) return true;
+      var short = t.replace(/(특별시|광역시|시|도|구|군)$/, '');
+      return short && short !== t && hay.indexOf(short) !== -1;
+    });
+  }
+  function wlCatMatch(want, L) {
+    var a = wlNorm(want), b = wlNorm(L.category);
+    if (!a || !b) return false;
+    return a === b || a.indexOf(b) !== -1 || b.indexOf(a) !== -1;
+  }
+  function wlBrandMatch(want, L) {
+    var a = wlNorm(want), b = wlNorm(L.brand);
+    if (!a || !b) return false;
+    return a === b || a.indexOf(b) !== -1 || b.indexOf(a) !== -1;
+  }
+
+  function wlScore(c, L) {
+    var cost = wlCost(L), profit = wlProfit(L);
+    var regions = (c.regions || []).filter(Boolean);
+    var cats = (c.categories || []).filter(Boolean);
+    var brands = (c.brands || []).filter(Boolean);
+    var reasons = [], warns = [], score = 0, max = 0;
+
+    if (regions.length) {
+      var hit = null;
+      for (var i = 0; i < regions.length; i++) { if (wlRegionMatch(regions[i], L)) { hit = regions[i]; break; } }
+      if (!hit) return null;
+      max += 30; score += 30; reasons.push('지역 ' + hit);
+    }
+    if (cats.length) {
+      var catHit = null;
+      for (var j = 0; j < cats.length; j++) { if (wlCatMatch(cats[j], L)) { catHit = cats[j]; break; } }
+      if (!catHit) return null;
+      max += 25; score += 25; reasons.push('업종 ' + catHit);
+    }
+    if (brands.length) {
+      max += 15;
+      var brandHit = null;
+      for (var k = 0; k < brands.length; k++) { if (wlBrandMatch(brands[k], L)) { brandHit = brands[k]; break; } }
+      if (brandHit) { score += 15; reasons.push('선호 브랜드 ' + brandHit); }
+      else warns.push('선호 브랜드 아님(' + brands.join(' · ') + ')');
+    }
+    var bmax = wlNum(c.budget_max_manwon);
+    var bmin = wlNum(c.budget_min_manwon);
+    if (bmax) {
+      max += 20;
+      if (cost <= bmax) { score += 20; reasons.push('예산 내 ' + wonLabel(cost)); }
+      else if (cost <= Math.round(bmax * 1.05)) {
+        score += 8;
+        warns.push('예산 5% 초과 · ' + wonLabel(cost) + ' / 최대 ' + wonLabel(bmax));
+      } else return null;
+    }
+    if (bmin) {
+      max += 5;
+      if (cost >= bmin) { score += 5; reasons.push('예산 ' + wonLabel(bmin) + ' 이상'); }
+      else return null;
+    }
+    var pmin = wlNum(c.profit_min_manwon);
+    if (pmin) {
+      max += 20;
+      if (profit >= pmin) { score += 20; reasons.push('월 순수익 ' + comma(profit) + '만 원'); }
+      else if (profit >= pmin * 0.9) { score += 8; warns.push('희망 수익 10% 미달 · ' + comma(profit) + '만 원 / ' + comma(pmin) + '만 원'); }
+      else return null;
+    }
+    if (!max) return { pct: 35, score: 0, max: 0, reasons: [], warns: ['조건 미입력 — 지역·업종·예산을 채우면 정확해집니다'] };
+    return { pct: Math.round(score / max * 100), score: score, max: max, reasons: reasons, warns: warns };
+  }
+
+  function wlActive(c) { return ['대기중', '상담중', ''].indexOf(String(c.status || '').trim()) !== -1; }
+
+  function wlMatchListings(c) {
+    var out = [];
+    state.listings.forEach(function (L) {
+      if (!L || L.visible === false || L.status === 'closed') return;
+      var m = wlScore(c, L);
+      if (!m) return;
+      out.push({ listing: L, match: m });
+    });
+    out.sort(function (a, b) {
+      if (b.match.pct !== a.match.pct) return b.match.pct - a.match.pct;
+      return wlProfit(b.listing) - wlProfit(a.listing);
+    });
+    return out;
+  }
+
+  function wlMatchCustomers(L) {
+    var out = [];
+    state.wl.customers.forEach(function (c) {
+      if (!wlActive(c)) return;
+      var m = wlScore(c, L);
+      if (!m) return;
+      out.push({ customer: c, match: m });
+    });
+    out.sort(function (a, b) {
+      if (b.match.pct !== a.match.pct) return b.match.pct - a.match.pct;
+      return String(a.customer.name || '').localeCompare(String(b.customer.name || ''), 'ko');
+    });
+    return out;
+  }
+
+  function wlMatchCount(L) {
+    var n = 0;
+    state.wl.customers.forEach(function (c) {
+      if (!wlActive(c)) return;
+      if (wlScore(c, L)) n++;
+    });
+    return n;
+  }
+
+  function wlRefreshStoreCounts() {
+    var map = {};
+    state.listings.forEach(function (L) { map[L.id] = wlMatchCount(L); });
+    state.wl.counts = map;
+  }
+
+  /* ---- 저장소(비공개 Drive) ---- */
+  function wlCache() {
+    writeStore(WL_CACHE_KEY, JSON.stringify({
+      at: new Date().toISOString(),
+      customers: state.wl.customers,
+      leads: state.wl.leads
+    }));
+  }
+
+  function wlPost(obj) {
+    var cfg = cardConfig();
+    if (!cfg.endpoint) return Promise.resolve({ ok: false, reason: 'no-endpoint' });
+    var payload = obj || {};
+    payload.key = cfg.secret;
+    return fetch(cfg.endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    }).then(function (res) {
+      return res.text().then(function (t) {
+        var j = safeParse(t);
+        if (j && typeof j === 'object') return j;
+        return { ok: false, reason: res.ok ? 'bad_response' : ('HTTP ' + res.status) };
+      });
+    }).catch(function (err) {
+      return { ok: false, reason: 'network', message: String((err && err.message) || err) };
+    });
+  }
+
+  function wlPendingList() {
+    var q = safeParse(readStore(WL_PENDING_KEY));
+    return (q instanceof Array) ? q : [];
+  }
+  function wlPendingAdd(op) {
+    var q = wlPendingList();
+    /* 같은 손님을 다시 저장하면 마지막 것만 남깁니다. */
+    if (op.customer && op.customer.id) {
+      q = q.filter(function (x) { return !(x.customer && x.customer.id === op.customer.id); });
+    }
+    if (op.delete_id) q = q.filter(function (x) { return x.delete_id !== op.delete_id; });
+    q.push(op);
+    writeStore(WL_PENDING_KEY, JSON.stringify(q));
+    state.wl.pending = q.length;
+  }
+  function wlPendingClear() {
+    removeStore(WL_PENDING_KEY);
+    state.wl.pending = 0;
+  }
+  function wlFlush() {
+    var q = wlPendingList();
+    if (!q.length) return Promise.resolve({ ok: true, sent: 0 });
+    var sent = 0;
+    function step(i) {
+      if (i >= q.length) return Promise.resolve({ ok: true, sent: sent });
+      return wlPost(q[i]).then(function (r) {
+        if (r && r.ok) { sent++; return step(i + 1); }
+        return Promise.resolve({ ok: false, sent: sent, reason: (r && r.reason) || 'error' });
+      });
+    }
+    return step(0).then(function (res) {
+      if (res.ok) wlPendingClear();
+      else {
+        /* 보낸 것까지는 큐에서 빼 둡니다. */
+        writeStore(WL_PENDING_KEY, JSON.stringify(q.slice(res.sent || 0)));
+        state.wl.pending = q.length - (res.sent || 0);
+      }
+      return res;
+    });
+  }
+
+  function wlLoad(force) {
+    var cache = safeParse(readStore(WL_CACHE_KEY));
+    if (cache && cache.customers instanceof Array) {
+      state.wl.customers = cache.customers;
+      state.wl.leads = cache.leads instanceof Array ? cache.leads : [];
+      state.wl.loaded = true;
+      state.wl.lastSync = cache.at || '';
+      wlRefresh();
+    }
+    state.wl.busy = true;
+    wlNote('비공개 Drive에서 대기 손님·접수를 받아오는 중…');
+    return cardGet('getWaitlistAll', '').then(function (r) {
+      state.wl.busy = false;
+      if (r && r.ok) {
+        state.wl.customers = (r.customers && r.customers.customers) || [];
+        state.wl.leads = (r.leads && r.leads.leads) || [];
+        state.wl.loaded = true;
+        state.wl.lastSync = new Date().toISOString();
+        wlCache();
+        wlNote('비공개 Drive 동기화 완료 — 대기 손님 ' + state.wl.customers.length + '명 · 사이트 접수 ' + state.wl.leads.length + '건 (' + kst(state.wl.lastSync, true) + ')');
+        wlRefresh();
+        wlFlush();
+        return { ok: true };
+      }
+      var reason = (r && r.reason) || 'error';
+      wlNote(cache
+        ? '이 기기에 저장된 목록을 보여 줍니다. Drive 동기화는 실패했습니다(' + reason + ').'
+        : 'Drive에서 대기 손님 목록을 받지 못했습니다(' + reason + '). [알림 설정 → 물건카드 연동]의 주소·키를 확인해 주세요.', 'warn');
+      return { ok: false, reason: reason };
+    });
+  }
+
+  /* ---- 손님 저장·삭제 (화면 먼저 반영 → Drive 저장, 실패하면 대기열에 남김) ---- */
+  function wlSaveCustomer(data) {
+    var now = new Date().toISOString();
+    var c = {
+      id: data.id || '',
+      name: String(data.name || '').trim(),
+      phone: String(data.phone || '').trim(),
+      regions: wlList(data.regions),
+      categories: wlList(data.categories),
+      brands: wlList(data.brands),
+      budget_max_manwon: data.budget_max_manwon === '' || data.budget_max_manwon == null ? null : wlNum(data.budget_max_manwon),
+      budget_min_manwon: data.budget_min_manwon == null ? null : wlNum(data.budget_min_manwon),
+      profit_min_manwon: data.profit_min_manwon === '' || data.profit_min_manwon == null ? null : wlNum(data.profit_min_manwon),
+      status: data.status || '대기중',
+      memo: String(data.memo || '').trim(),
+      lead_id: data.lead_id || '',
+      source: data.source || 'manual',
+      created_at: data.created_at || now,
+      created_by: data.created_by || authorLabel(),
+      updated_at: now
+    };
+    var idx = -1;
+    for (var i = 0; i < state.wl.customers.length; i++) {
+      if (state.wl.customers[i] && state.wl.customers[i].id === c.id) { idx = i; break; }
+    }
+    if (idx >= 0) state.wl.customers[idx] = c;
+    else state.wl.customers.unshift(c);
+    state.wl.selected = c.id;
+    wlCache();
+    wlRefresh();
+    wlPendingAdd({ action: 'saveWaitlist', customer: c });
+    return wlFlush().then(function (res) {
+      if (!res.ok) {
+        toast('이 기기에는 저장했습니다. Drive 저장은 나중에 다시 시도합니다.');
+        wlNote('Drive 저장이 지연되고 있습니다(' + (res.reason || 'network') + '). [Drive에서 새로고침]을 누르면 다시 보냅니다.', 'warn');
+        return { ok: false, local: true, customer: c };
+      }
+      toast(c.id ? '손님 조건을 수정했습니다.' : '대기 손님을 등록했습니다.');
+      return { ok: true, customer: c };
+    });
+  }
+
+  function wlDeleteCustomer(id) {
+    var c = wlFind(id);
+    if (!c) return;
+    if (!window.confirm('"' + (c.name || c.phone || '손님') + '" 대기 손님을 삭제할까요?\n비공개 Drive에서도 지워집니다.')) return;
+    state.wl.customers = state.wl.customers.filter(function (x) { return !x || x.id !== id; });
+    if (state.wl.selected === id) state.wl.selected = '';
+    wlCache();
+    wlRefresh();
+    wlPendingAdd({ action: 'saveWaitlist', delete_id: id });
+    wlFlush().then(function (res) {
+      if (!res.ok) toast('이 기기에서 지웠습니다. Drive 삭제는 나중에 다시 시도합니다.');
+      else toast('대기 손님을 삭제했습니다.');
+    });
+  }
+
+  function wlSetStatus(id, status) {
+    var c = wlFind(id);
+    if (!c) return;
+    c.status = status;
+    c.updated_at = new Date().toISOString();
+    wlCache();
+    wlRender();
+    wlPendingAdd({ action: 'saveWaitlist', customer: c });
+    wlFlush().then(function (res) {
+      if (res.ok) toast('상태를 "' + status + '"(으)로 바꿨습니다.');
+      else toast('이 기기에만 반영했습니다. Drive 저장은 다시 시도합니다.');
+    });
+  }
+
+  function wlFind(id) {
+    for (var i = 0; i < state.wl.customers.length; i++) {
+      if (state.wl.customers[i] && state.wl.customers[i].id === id) return state.wl.customers[i];
+    }
+    return null;
+  }
+  function wlFindLead(id) {
+    for (var i = 0; i < state.wl.leads.length; i++) {
+      if (state.wl.leads[i] && state.wl.leads[i].lead_id === id) return state.wl.leads[i];
+    }
+    return null;
+  }
+  function wlFindListingByCode(code) {
+    var t = String(code || '').toUpperCase().replace(/\s+/g, '');
+    for (var i = 0; i < state.listings.length; i++) {
+      if (String(codeOf(state.listings[i])).toUpperCase() === t) return state.listings[i];
+    }
+    return null;
+  }
+
+  /* ---- 손님 등록·수정 폼 ---- */
+  function wlOpenForm(c, prefill) {
+    var f = $('#wlForm');
+    if (!f) return;
+    var data = c || prefill || {};
+    state.wl.editing = c ? c.id : '';
+    state.wl.fromLead = data.lead_id || (prefill && prefill.lead_id) || '';
+    $('#wlFormTitle').textContent = c ? '손님 조건 수정' : (state.wl.fromLead ? '사이트 접수 → 대기 손님 등록' : '새 대기 손님');
+    $('#wlName').value = data.name || '';
+    $('#wlPhone').value = data.phone || '';
+    $('#wlRegions').value = (data.regions instanceof Array ? data.regions : wlList(data.regions)).join(', ');
+    $('#wlCategories').value = (data.categories instanceof Array ? data.categories : wlList(data.categories)).join(', ');
+    $('#wlBrands').value = (data.brands instanceof Array ? data.brands : wlList(data.brands)).join(', ');
+    $('#wlBudget').value = data.budget_max_manwon ? String(data.budget_max_manwon) : '';
+    $('#wlProfit').value = data.profit_min_manwon ? String(data.profit_min_manwon) : '';
+    $('#wlStatus').value = WL_STATUSES.indexOf(data.status) !== -1 ? data.status : '대기중';
+    $('#wlMemo').value = data.memo || '';
+    var msg = $('#wlFormMsg');
+    if (msg) { msg.textContent = ''; msg.hidden = true; }
+    f.hidden = false;
+    f.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function wlCloseForm() {
+    var f = $('#wlForm');
+    if (f) f.hidden = true;
+    state.wl.editing = '';
+    state.wl.fromLead = '';
+  }
+
+  function onChangeWlForm(e) {
+    e.preventDefault();
+    var name = val('#wlName');
+    var phone = val('#wlPhone');
+    var regions = val('#wlRegions');
+    var msg = $('#wlFormMsg');
+    if (!name) name = '이름 미정';
+    if (!phone && !regions) {
+      if (msg) { msg.textContent = '연락처나 희망 지역 중 하나는 넣어 주세요.'; msg.hidden = false; }
+      return;
+    }
+    var existing = state.wl.editing ? wlFind(state.wl.editing) : null;
+    var data = {
+      id: state.wl.editing || '',
+      name: name,
+      phone: phone,
+      regions: regions,
+      categories: val('#wlCategories'),
+      brands: val('#wlBrands'),
+      budget_max_manwon: val('#wlBudget'),
+      profit_min_manwon: val('#wlProfit'),
+      status: val('#wlStatus'),
+      memo: val('#wlMemo'),
+      lead_id: state.wl.fromLead || (existing && existing.lead_id) || '',
+      source: state.wl.fromLead ? 'site' : ((existing && existing.source) || 'manual'),
+      created_at: existing ? existing.created_at : '',
+      created_by: existing ? existing.created_by : ''
+    };
+    var leadId = state.wl.fromLead;
+    /* 화면은 바로 닫고, 비공개 Drive 저장은 뒤에서 이어집니다(실패하면 대기열에 남겨 다시 보냅니다). */
+    var saving = wlSaveCustomer(data);
+    wlCloseForm();
+    saving.then(function (res) {
+      /* 사이트 접수에서 등록했으면 그 접수에 '등록됨' 표시를 남깁니다. */
+      if (leadId && res && res.customer) wlMarkLeadConverted(leadId, res.customer.id);
+    });
+  }
+
+  function wlMarkLeadConverted(leadId, customerId) {
+    var L = wlFindLead(leadId);
+    if (!L) return;
+    L.converted_customer_id = customerId || 'linked';
+    wlCache();
+    wlRenderLeads();
+    wlPost({ action: 'saveLeads', lead: { lead_id: leadId, converted_customer_id: L.converted_customer_id } });
+  }
+
+  function wlConvertLead(leadId) {
+    var L = wlFindLead(leadId);
+    if (!L) return;
+    var budget = L.budget_max_manwon || '';
+    var memo = [];
+    if (L.budget) memo.push('사이트 희망 예산: ' + L.budget);
+    if (L.message) memo.push(L.message);
+    if (L.when) memo.push('희망 시기: ' + L.when);
+    if (L.stores && L.stores.length) memo.push('관심 점포: ' + L.stores.join(' / '));
+    wlOpenForm(null, {
+      name: L.name || '사이트 접수',
+      phone: L.phone || '',
+      regions: (L.region_list || []).join(', ') || L.region || '',
+      categories: (L.category_list || []).join(', '),
+      brands: L.brand_text || '',
+      budget_max_manwon: budget,
+      profit_min_manwon: '',
+      status: '대기중',
+      memo: memo.join('\n'),
+      lead_id: leadId
+    });
+    if (!$('#wlName').value || $('#wlName').value === '사이트 접수') $('#wlName').value = '';
+    $('#wlName').focus();
+  }
+
+  /* ---- 렌더 ---- */
+  function wlRefresh() {
+    wlRefreshStoreCounts();
+    wlRender();
+    wlRenderLeads();
+    wlRenderPickOptions();
+    wlRenderListingResult();
+    var count = $('#tabWaitlistCount');
+    if (count) count.textContent = String(state.wl.customers.length);
+  }
+
+  function wlStatusClass(s) {
+    if (s === '계약완료') return 'done';
+    if (s === '상담중') return 'busy';
+    if (s === '보류') return 'hold';
+    return 'wait';
+  }
+
+  function wlRender() {
+    var wrap = $('#wlCards');
+    if (!wrap) return;
+    var counts = { all: state.wl.customers.length, '대기중': 0, '상담중': 0, '보류': 0, '계약완료': 0 };
+    state.wl.customers.forEach(function (c) {
+      var s = WL_STATUSES.indexOf(c.status) !== -1 ? c.status : '대기중';
+      counts[s] = (counts[s] || 0) + 1;
+    });
+    $all('#wlFilters .chip').forEach(function (chip) {
+      var key = chip.getAttribute('data-wl-filter');
+      chip.setAttribute('aria-pressed', state.wl.filter === key ? 'true' : 'false');
+      var b = chip.querySelector('b');
+      if (b) b.textContent = String(counts[key] || 0);
+    });
+    var list = state.wl.customers.filter(function (c) {
+      if (state.wl.filter === 'all') return true;
+      return (WL_STATUSES.indexOf(c.status) !== -1 ? c.status : '대기중') === state.wl.filter;
+    });
+    var empty = $('#wlEmpty');
+    if (!state.wl.customers.length) {
+      wrap.innerHTML = '';
+      if (empty) empty.hidden = false;
+    } else {
+      if (empty) empty.hidden = list.length > 0;
+      wrap.innerHTML = list.map(wlCardHTML).join('');
+      $all('[data-wl-select]', wrap).forEach(function (el) {
+        el.addEventListener('click', function () { wlSelect(el.getAttribute('data-wl-select')); });
+      });
+    }
+    wlRenderDetail();
+  }
+
+  function wlCardHTML(c) {
+    var st = WL_STATUSES.indexOf(c.status) !== -1 ? c.status : '대기중';
+    var matches = wlMatchListings(c).length;
+    var conds = [];
+    if ((c.regions || []).length) conds.push(c.regions.join(' · '));
+    if ((c.categories || []).length) conds.push(c.categories.join(' · '));
+    if ((c.brands || []).length) conds.push(c.brands.join(' · '));
+    var money = [];
+    if (c.budget_max_manwon) money.push('예산 ' + wonLabel(c.budget_max_manwon) + ' 이하');
+    if (c.profit_min_manwon) money.push('순익 ' + wonLabel(c.profit_min_manwon) + ' 이상');
+    return '' +
+      '<article class="wl-card' + (state.wl.selected === c.id ? ' is-on' : '') + '" data-wl-select="' + esc(c.id) + '" tabindex="0">' +
+        '<div class="wl-card-head"><b>' + esc(c.name || '이름 미정') + '</b>' +
+          '<span class="wl-status is-' + wlStatusClass(st) + '">' + esc(st) + '</span></div>' +
+        '<div class="wl-card-phone">' + esc(c.phone || '연락처 미입력') + '</div>' +
+        '<div class="wl-card-conds">' + esc(conds.join(' · ') || '조건 미입력') + '</div>' +
+        (money.length ? '<div class="wl-card-money">' + esc(money.join(' · ')) + '</div>' : '') +
+        '<div class="wl-card-foot"><span>맞는 매물 <b>' + matches + '</b>곳</span>' +
+          (c.lead_id ? '<span class="wl-from">사이트 접수에서 등록</span>' : '') + '</div>' +
+      '</article>';
+  }
+
+  function wlSelect(id) {
+    state.wl.selected = (state.wl.selected === id) ? '' : id;
+    wlRender();
+  }
+
+  function wlRenderDetail() {
+    var box = $('#wlDetail');
+    if (!box) return;
+    var c = state.wl.selected ? wlFind(state.wl.selected) : null;
+    if (!c) {
+      box.innerHTML = '<div class="wl-detail-empty"><b>손님을 선택해 주세요</b><p>왼쪽에서 손님을 누르면 조건에 맞는 매물이 순위대로 나옵니다.</p></div>';
+      return;
+    }
+    var matches = wlMatchListings(c);
+    var st = WL_STATUSES.indexOf(c.status) !== -1 ? c.status : '대기중';
+    var head = '' +
+      '<div class="wl-detail-head">' +
+        '<div><h3>' + esc(c.name || '이름 미정') + ' <span class="wl-status is-' + wlStatusClass(st) + '">' + esc(st) + '</span></h3>' +
+          '<p>' + esc(c.phone || '연락처 미입력') + ' · 예산 ' + (c.budget_max_manwon ? wonLabel(c.budget_max_manwon) + ' 이하' : '미입력') +
+          ' · 희망 순익 ' + (c.profit_min_manwon ? wonLabel(c.profit_min_manwon) + ' 이상' : '미입력') + '</p></div>' +
+        '<div class="wl-detail-actions">' +
+          '<select class="wl-status-select" data-wl-status="' + esc(c.id) + '" aria-label="상태 변경">' +
+            WL_STATUSES.map(function (s) { return '<option value="' + esc(s) + '"' + (s === st ? ' selected' : '') + '>' + esc(s) + '</option>'; }).join('') +
+          '</select>' +
+          '<button type="button" class="btn btn-quiet" data-wl-edit="' + esc(c.id) + '">수정</button>' +
+          '<button type="button" class="btn btn-quiet is-danger" data-wl-del="' + esc(c.id) + '">삭제</button>' +
+        '</div>' +
+      '</div>' +
+      ((c.regions || []).length || (c.categories || []).length || (c.brands || []).length
+        ? '<div class="wl-detail-conds">' +
+            [(c.regions || []).length ? '<span><i>지역</i>' + esc(c.regions.join(' · ')) + '</span>' : '',
+             (c.categories || []).length ? '<span><i>업종</i>' + esc(c.categories.join(' · ')) + '</span>' : '',
+             (c.brands || []).length ? '<span><i>브랜드</i>' + esc(c.brands.join(' · ')) + '</span>' : ''].join('') +
+          '</div>' : '') +
+      (c.memo ? '<p class="wl-detail-memo">' + esc(c.memo).replace(/\n/g, '<br />') + '</p>' : '');
+
+    var listHTML;
+    if (!matches.length) {
+      listHTML = '<div class="wl-detail-empty"><b>조건에 맞는 매물이 지금은 없습니다</b><p>지역·업종·예산을 조금 넓히면 후보가 늘어납니다. 새 매물이 등록되면 이 손님이 자동으로 다시 매칭됩니다.</p></div>';
+    } else {
+      listHTML = '<ol class="wl-match-list">' + matches.slice(0, 15).map(function (m, i) {
+        var L = m.listing;
+        var code = codeOf(L);
+        var branch = branchOf(L);
+        return '' +
+          '<li class="wl-match">' +
+            '<div class="wl-match-rank">' + (i + 1) + '</div>' +
+            '<div class="wl-match-body">' +
+              '<div class="wl-match-top"><b>' + esc(L.brand || '-') + '</b>' +
+                '<span class="wl-match-code">' + esc(code) + '</span>' +
+                (branch ? '<span class="branch-badge">[' + esc(branch) + ']</span>' : '') +
+                '<span class="wl-score">' + m.match.pct + '%</span></div>' +
+              '<div class="wl-match-sub">' + esc([L.area, L.category, L.store_spec].filter(Boolean).join(' · ')) + '</div>' +
+              '<div class="wl-match-figures">' +
+                '<span>총 인수 <b>' + wonLabel(wlCost(L)) + '</b></span>' +
+                '<span>월 매출 <b>' + wonLabel((L.monthly_sales && L.monthly_sales.avg_manwon) || 0) + '</b></span>' +
+                '<span>월 순익 <b>' + wonLabel(wlProfit(L)) + '</b></span>' +
+              '</div>' +
+              '<div class="wl-why">' +
+                m.match.reasons.map(function (r) { return '<span class="wl-ok">✓ ' + esc(r) + '</span>'; }).join('') +
+                m.match.warns.map(function (r) { return '<span class="wl-warn">! ' + esc(r) + '</span>'; }).join('') +
+              '</div>' +
+            '</div>' +
+          '</li>';
+      }).join('') + '</ol>' +
+      (matches.length > 15 ? '<p class="wl-more">상위 15곳만 표시했습니다. 전체 ' + matches.length + '곳이 조건에 맞습니다.</p>' : '');
+    }
+    box.innerHTML = head + '<div class="wl-detail-sub"><h4>조건에 맞는 매물 ' + matches.length + '곳</h4></div>' + listHTML;
+
+    var sel = $('[data-wl-status]', box);
+    if (sel) sel.addEventListener('change', function () { wlSetStatus(c.id, sel.value); });
+    var edit = $('[data-wl-edit]', box);
+    if (edit) edit.addEventListener('click', function () { wlOpenForm(c); });
+    var del = $('[data-wl-del]', box);
+    if (del) del.addEventListener('click', function () { wlDeleteCustomer(c.id); });
+  }
+
+  function wlSourceLabel(s) {
+    return s === 'detail' ? '상세 보기'
+      : s === 'store_detail' ? '상세 상담'
+      : s === 'matching' ? 'AI 매칭'
+      : s === 'compare' ? '비교 상담'
+      : s === 'selftest' ? '자체 점검'
+      : '사이트';
+  }
+
+  function wlRenderLeads() {
+    var box = $('#wlLeads');
+    if (!box) return;
+    var list = state.wl.leads.slice().sort(function (a, b) {
+      return String(b.submitted_at || '').localeCompare(String(a.submitted_at || ''));
+    });
+    if (!list.length) {
+      box.innerHTML = '<div class="wl-detail-empty"><b>아직 사이트 접수가 없습니다</b><p>사이트의 4항목 게이트·AI 매칭·상세 상담으로 접수가 들어오면 텔레그램 알림과 함께 이곳에 자동으로 쌓입니다.</p></div>';
+      return;
+    }
+    box.innerHTML = '<div class="wl-lead-list">' + list.map(function (L) {
+      var done = !!L.converted_customer_id;
+      return '' +
+        '<article class="wl-lead' + (done ? ' is-done' : '') + '">' +
+          '<div class="wl-lead-top"><b>' + esc(wlSourceLabel(L.source)) + '</b>' +
+            '<span>' + esc(kst(L.submitted_at, true)) + '</span>' +
+            (done ? '<span class="wl-from">대기 손님으로 등록됨</span>' : '<span class="wl-new">신규</span>') +
+          '</div>' +
+          '<div class="wl-lead-mid">' +
+            '<span>' + esc([(L.category_list || []).join(' · '), L.brand_text].filter(Boolean).join(' · ') || '업종 미기재') + '</span>' +
+            '<span>' + esc((L.region_list || []).join(' · ') || L.region || '지역 미기재') + '</span>' +
+            '<span>' + esc(L.budget || '예산 미기재') + '</span>' +
+            '<span class="wl-lead-phone">' + esc(L.phone || '연락처 없음') + '</span>' +
+          '</div>' +
+          (L.stores && L.stores.length ? '<div class="wl-lead-stores">관심 점포: ' + esc(L.stores.join(' / ')) + '</div>' : '') +
+          (L.message ? '<div class="wl-lead-msg">' + esc(L.message) + '</div>' : '') +
+          '<div class="wl-lead-actions">' +
+            (done ? '' : '<button type="button" class="btn btn-gold btn-sm" data-wl-convert="' + esc(L.lead_id) + '">대기 손님으로 등록</button>') +
+            '<button type="button" class="btn btn-quiet btn-sm" data-wl-lead-del="' + esc(L.lead_id) + '">접수 삭제</button>' +
+          '</div>' +
+        '</article>';
+    }).join('') + '</div>';
+
+    $all('[data-wl-convert]', box).forEach(function (b) {
+      b.addEventListener('click', function () { wlConvertLead(b.getAttribute('data-wl-convert')); });
+    });
+    $all('[data-wl-lead-del]', box).forEach(function (b) {
+      b.addEventListener('click', function () {
+        var id = b.getAttribute('data-wl-lead-del');
+        if (!window.confirm('이 접수를 삭제할까요? 비공개 Drive 접수 원본에서도 지워집니다.')) return;
+        state.wl.leads = state.wl.leads.filter(function (x) { return !x || x.lead_id !== id; });
+        wlCache();
+        wlRenderLeads();
+        wlPost({ action: 'deleteLead', lead_id: id }).then(function (r) {
+          toast(r && r.ok ? '접수를 삭제했습니다.' : '이 화면에서 지웠습니다. Drive 삭제는 다시 시도해 주세요.');
+        });
+      });
+    });
+  }
+
+  function wlRenderPickOptions() {
+    var sel = $('#wlPickListing');
+    if (!sel) return;
+    var current = sel.value || state.wl.pickCode;
+    var opts = ['<option value="">매물을 고르세요 (번호·브랜드·지역으로 찾기)</option>'];
+    state.listings.forEach(function (L) {
+      if (!L || L.visible === false || L.status === 'closed') return;
+      var code = codeOf(L);
+      opts.push('<option value="' + esc(code) + '">' + esc(code + ' · ' + (L.brand || '') + ' · ' + (L.area || '')) + '</option>');
+    });
+    sel.innerHTML = opts.join('');
+    if (current) sel.value = current;
+  }
+
+  function wlRenderListingResult() {
+    var box = $('#wlListingResult');
+    if (!box) return;
+    var code = state.wl.pickCode;
+    if (!code) {
+      box.innerHTML = '';
+      return;
+    }
+    var L = wlFindListingByCode(code);
+    if (!L) {
+      box.innerHTML = '<div class="wl-detail-empty"><b>' + esc(code) + ' 매물을 찾지 못했습니다</b><p>매장 DB에 있는 번호인지 확인해 주세요.</p></div>';
+      return;
+    }
+    var list = wlMatchCustomers(L);
+    var head = '' +
+      '<div class="wl-listing-head">' +
+        '<div><b>' + esc(L.brand || '-') + '</b> <span class="wl-match-code">' + esc(codeOf(L)) + '</span>' +
+          '<p>' + esc([L.area, L.category, L.store_spec].filter(Boolean).join(' · ')) + '</p></div>' +
+        '<div class="wl-listing-figs">총 인수 <b>' + wonLabel(wlCost(L)) + '</b> · 월 순익 <b>' + wonLabel(wlProfit(L)) + '</b></div>' +
+      '</div>';
+    if (!list.length) {
+      box.innerHTML = head + '<div class="wl-detail-empty"><b>이 매물에 맞는 대기 손님이 없습니다</b><p>손님 조건(지역·업종·예산)을 확인하거나, 이 매물을 새 손님에게 소개해 보세요.</p></div>';
+      return;
+    }
+    box.innerHTML = head + '<div class="wl-cust-match">' + list.map(function (m) {
+      var c = m.customer;
+      return '' +
+        '<div class="wl-cust-row" data-wl-select="' + esc(c.id) + '">' +
+          '<div class="wl-cust-main"><b>' + esc(c.name || '이름 미정') + '</b>' +
+            '<span>' + esc([(c.regions || []).join('·'), (c.categories || []).join('·'), c.phone].filter(Boolean).join(' · ')) + '</span></div>' +
+          '<div class="wl-cust-why">' +
+            m.match.reasons.map(function (r) { return '<span class="wl-ok">✓ ' + esc(r) + '</span>'; }).join('') +
+            m.match.warns.map(function (r) { return '<span class="wl-warn">! ' + esc(r) + '</span>'; }).join('') +
+          '</div>' +
+          '<div class="wl-score">' + m.match.pct + '%</div>' +
+        '</div>';
+    }).join('') + '</div>';
+    $all('[data-wl-select]', box).forEach(function (el) {
+      el.addEventListener('click', function () {
+        state.wl.selected = el.getAttribute('data-wl-select');
+        wlRender();
+        var detail = $('#wlDetail');
+        if (detail) detail.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    });
+  }
+
+  function wlCsv() {
+    if (!state.wl.customers.length) { toast('내려받을 대기 손님이 없습니다.'); return; }
+    var head = ['이름', '연락처', '희망 지역', '희망 업종', '선호 브랜드', '최대 예산(만원)', '최소 월 순익(만원)', '상태', '맞는 매물 수', '메모', '등록일'];
+    var rows = state.wl.customers.map(function (c) {
+      return [
+        c.name || '', c.phone || '', (c.regions || []).join(' / '), (c.categories || []).join(' / '),
+        (c.brands || []).join(' / '), c.budget_max_manwon || '', c.profit_min_manwon || '',
+        c.status || '', wlMatchListings(c).length, c.memo || '', kst(c.created_at)
+      ].map(csvCell).join(',');
+    });
+    saveCsv('ap-waitlist-' + todayStamp() + '.csv', head, rows);
+    toast(state.wl.customers.length + '명을 CSV로 내려받았습니다.');
+  }
+
+  /* 새 매물을 저장하면 그 자리에서 맞는 대기 손님을 알려 줍니다. */
+  function wlAfterStoreSave(L) {
+    if (!L || !state.wl.loaded) return;
+    var n = wlMatchCount(L);
+    var code = codeOf(L);
+    if (n > 0) {
+      toast('이 매물에 맞는 대기 손님 ' + n + '명이 있습니다. [대기 손님·매칭]에서 확인하세요.');
+      state.wl.pickCode = code;
+      var sel = $('#wlPickListing');
+      if (sel) sel.value = code;
+      wlRenderListingResult();
+    } else if (state.wl.customers.length) {
+      toast('저장했습니다. 지금 조건으로는 맞는 대기 손님이 없습니다.');
+    }
+  }
+
+  /* 매장 카드의 '대기 손님 N' 버튼 → 대기 손님 탭의 매물→손님 결과로 이동 */
+  function wlOpenForListing(id) {
+    var L = findListing(id);
+    if (!L) return;
+    var code = codeOf(L);
+    state.wl.pickCode = code;
+    selectTab(2);
+    wlRenderPickOptions();
+    var sel = $('#wlPickListing');
+    if (sel) sel.value = code;
+    wlRenderListingResult();
+    var box = $('#wlListingResult');
+    if (box) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function initWaitlist() {
+    var btnSync = $('#btnWlSync');
+    if (btnSync) btnSync.addEventListener('click', function () {
+      btnSync.disabled = true;
+      wlLoad(true).then(function () { btnSync.disabled = false; });
+    });
+    var btnNew = $('#btnWlNew');
+    if (btnNew) btnNew.addEventListener('click', function () { wlOpenForm(null); });
+    var btnCsv = $('#btnWlCsv');
+    if (btnCsv) btnCsv.addEventListener('click', wlCsv);
+    var form = $('#wlForm');
+    if (form) form.addEventListener('submit', onChangeWlForm);
+    var cancel = $('#wlFormCancel');
+    if (cancel) cancel.addEventListener('click', wlCloseForm);
+    var close = $('#wlFormClose');
+    if (close) close.addEventListener('click', wlCloseForm);
+    $all('#wlFilters .chip').forEach(function (chip) {
+      chip.addEventListener('click', function () {
+        state.wl.filter = chip.getAttribute('data-wl-filter') || 'all';
+        wlRender();
+      });
+    });
+    var pick = $('#wlPickListing');
+    if (pick) pick.addEventListener('change', function () {
+      state.wl.pickCode = pick.value;
+      wlRenderListingResult();
+    });
+    var btnMatch = $('#btnWlMatchListing');
+    if (btnMatch) btnMatch.addEventListener('click', function () {
+      var sel = $('#wlPickListing');
+      if (!sel || !sel.value) { toast('먼저 매물을 골라 주세요.'); return; }
+      state.wl.pickCode = sel.value;
+      wlRenderListingResult();
+    });
+  }
+
   /* ---------------- boot ---------------- */
   document.addEventListener('DOMContentLoaded', function () {
     state.deepCode = parseDeepCode();
@@ -3535,6 +4369,7 @@
     initBranchSync();
     initStoreFilters();
     initLeadFilters();
+    initWaitlist();
     initSellActions();
     initTelegram();
     initCardModal();

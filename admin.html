@@ -15,7 +15,7 @@
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="application-name" content="AP파트너 관리자" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%230F1E36'/%3E%3Ctext x='32' y='43' font-family='Helvetica,Arial' font-size='30' font-weight='700' fill='%23fff' text-anchor='middle'%3EAP%3C/text%3E%3Cpath d='M10 40 L54 26' stroke='%23C8A45D' stroke-width='4'/%3E%3C/svg%3E" />
-<link rel="stylesheet" href="styles.css?v=2026112827" />
+<link rel="stylesheet" href="styles.css?v=2026112828" />
 </head>
 <body class="admin-body">
 
@@ -96,6 +96,9 @@
         </button>
         <button class="admin-tab" type="button" role="tab" id="tabLeads" aria-controls="panelLeads" aria-selected="false">
           손님 DB <span id="tabLeadCount">0</span>
+        </button>
+        <button class="admin-tab" type="button" role="tab" id="tabWaitlist" aria-controls="panelWaitlist" aria-selected="false">
+          대기 손님·매칭 <span id="tabWaitlistCount">0</span>
         </button>
         <button class="admin-tab" type="button" role="tab" id="tabSell" aria-controls="panelSell" aria-selected="false">
           양도 의뢰 <span id="tabSellCount">0</span>
@@ -428,6 +431,95 @@
         </div>
       </section>
 
+      <!-- ---------- 대기 손님 · 자동 매칭 ---------- -->
+      <section id="panelWaitlist" role="tabpanel" aria-labelledby="tabWaitlist" hidden>
+        <div class="admin-panel-head">
+          <div>
+            <h2>대기 손님 · 자동 매칭</h2>
+            <p>손님 조건을 저장해 두면 새 매물이 들어올 때 맞는 손님을, 손님을 고르면 맞는 매물을 순위대로 뽑아 줍니다. 손님 이름·연락처·메모는 공개 사이트가 아니라 비공개 Google Drive에만 저장됩니다.</p>
+          </div>
+          <div class="wl-head-actions">
+            <button class="btn btn-quiet" type="button" id="btnWlSync">Drive에서 새로고침</button>
+            <button class="btn btn-quiet" type="button" id="btnWlCsv">CSV 다운로드</button>
+            <button class="btn btn-gold" type="button" id="btnWlNew">+ 새 손님 등록</button>
+          </div>
+        </div>
+
+        <p class="admin-notice wl-note" id="wlSyncNote">비공개 Drive 연결을 확인하는 중…</p>
+
+        <form class="wl-form" id="wlForm" hidden>
+          <div class="wl-form-head">
+            <h3 id="wlFormTitle">새 대기 손님</h3>
+            <button type="button" class="wl-form-close" id="wlFormClose" aria-label="닫기">×</button>
+          </div>
+          <div class="wl-grid">
+            <label>이름 · 별칭<input id="wlName" type="text" maxlength="40" placeholder="예: 김민수 (별칭 가능)" /></label>
+            <label>연락처<input id="wlPhone" type="tel" maxlength="20" placeholder="010-0000-0000" /></label>
+            <label class="wl-span2">희망 지역 <em>쉼표로 여러 곳</em><input id="wlRegions" type="text" placeholder="예: 서울 마포구, 서울 서대문구, 인천" /></label>
+            <label>희망 업종 <em>쉼표로 여러 개</em><input id="wlCategories" type="text" placeholder="예: 카페, 디저트" /></label>
+            <label>선호 브랜드 <em>쉼표로 여러 개</em><input id="wlBrands" type="text" placeholder="예: 메가커피, 컴포즈커피" /></label>
+            <label>최대 예산 <em>총 인수 비용 · 만 원</em><input id="wlBudget" type="number" min="0" step="100" placeholder="예: 25000 (2억 5,000만 원)" /></label>
+            <label>희망 최소 월 순수익 <em>만 원</em><input id="wlProfit" type="number" min="0" step="50" placeholder="예: 800" /></label>
+            <label>상태
+              <select id="wlStatus">
+                <option value="대기중" selected>대기중</option>
+                <option value="상담중">상담중</option>
+                <option value="보류">보류</option>
+                <option value="계약완료">계약완료</option>
+              </select>
+            </label>
+          </div>
+          <label class="wl-memo">메모<textarea id="wlMemo" rows="2" maxlength="1000" placeholder="예: 주말 매장 선호 · 3월 중 인수 희망 · 예산은 협의 가능"></textarea></label>
+          <div class="wl-form-foot">
+            <button type="submit" class="btn btn-gold">저장</button>
+            <button type="button" class="btn btn-quiet" id="wlFormCancel">취소</button>
+            <span class="wl-form-msg" id="wlFormMsg" hidden></span>
+          </div>
+        </form>
+
+        <div class="wl-layout">
+          <div class="wl-col wl-col-list">
+            <div class="lead-filters" id="wlFilters" role="group" aria-label="대기 손님 상태 필터">
+              <button class="chip" type="button" data-wl-filter="all" aria-pressed="true">전체 <b>0</b></button>
+              <button class="chip" type="button" data-wl-filter="대기중" aria-pressed="false">대기중 <b>0</b></button>
+              <button class="chip" type="button" data-wl-filter="상담중" aria-pressed="false">상담중 <b>0</b></button>
+              <button class="chip" type="button" data-wl-filter="보류" aria-pressed="false">보류 <b>0</b></button>
+              <button class="chip" type="button" data-wl-filter="계약완료" aria-pressed="false">계약완료 <b>0</b></button>
+            </div>
+            <div class="wl-cards" id="wlCards"></div>
+            <div class="admin-empty" id="wlEmpty" hidden>
+              <strong>아직 대기 손님이 없습니다</strong>
+              <p><b>+ 새 손님 등록</b>으로 조건을 저장하거나, 아래 <b>사이트 접수함</b>에서 접수를 눌러 바로 등록할 수 있습니다.</p>
+            </div>
+          </div>
+          <div class="wl-col wl-col-detail">
+            <div class="wl-detail" id="wlDetail">
+              <div class="wl-detail-empty"><b>손님을 선택해 주세요</b><p>왼쪽에서 손님을 누르면 조건에 맞는 매물이 순위대로 나옵니다.</p></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="wl-section">
+          <div class="wl-section-head">
+            <h3>매물 → 손님 <span>새 매물이 들어오면 조건에 맞는 대기 손님을 바로 뽑습니다</span></h3>
+          </div>
+          <div class="wl-pick">
+            <select id="wlPickListing" class="wl-select" aria-label="매물 선택">
+              <option value="">매물을 고르세요</option>
+            </select>
+            <button class="btn btn-navy" type="button" id="btnWlMatchListing">맞는 손님 보기</button>
+          </div>
+          <div class="wl-result" id="wlListingResult"></div>
+        </div>
+
+        <div class="wl-section">
+          <div class="wl-section-head">
+            <h3>사이트 접수함 <span>4항목 게이트 · 상세 상담 · AI 매칭으로 들어온 접수 (비공개 Drive에 자동 저장)</span></h3>
+          </div>
+          <div class="wl-leads" id="wlLeads"></div>
+        </div>
+      </section>
+
       <!-- ---------- 양도 의뢰 ---------- -->
       <section id="panelSell" role="tabpanel" aria-labelledby="tabSell" hidden>
         <div class="admin-panel-head">
@@ -705,6 +797,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="admin.js?v=2026112827"></script>
+<script src="admin.js?v=2026112828"></script>
 </body>
 </html>
