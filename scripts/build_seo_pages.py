@@ -590,6 +590,20 @@ def unique(seq):
     return out
 
 
+def josa(word: str, with_batchim: str, without: str) -> str:
+    """받침 유무에 맞는 조사를 고릅니다. josa('교촌치킨','은','는') → '은'
+
+    브랜드 이름 끝 글자가 한글이 아니면(영문·기호) 받침 없는 쪽을 씁니다.
+    """
+    if not word:
+        return without
+    ch = word[-1]
+    code = ord(ch) - 0xAC00
+    if code < 0 or code > 11171:
+        return without
+    return with_batchim if code % 28 else without
+
+
 def load_listings() -> list:
     data = json.loads(DATA_FILE.read_text(encoding="utf-8"))
     items = [
@@ -1224,7 +1238,8 @@ def build_brand_page(brand: str, items: list, store_links: list, pairs: list, as
     cards = "".join(store_card(L) for L in items)
     kw_chips = "".join(f'<span class="sx-chip">{esc(k)}</span>' for k in kw_all)
 
-    vat = f'<p class="sx-lead">{esc(brand)}는 {esc(note)}입니다. ' if note else '<p class="sx-lead">'
+    vat = (f'<p class="sx-lead">{esc(brand)}{josa(brand, "은", "는")} {esc(note)}입니다. '
+           if note else '<p class="sx-lead">')
     vat += (
         f"{esc(', '.join(regions))}에서 현장 실사를 마친 {esc(brand)} 매장 {n}곳의 초기 인수 비용·월 매출·예상 순수익을 "
         f"같은 기준으로 정리했습니다. 지점명과 상세 위치는 점주 보호를 위해 공개하지 않으며, 매장별 상세 지출은 상담에서 안내합니다.</p>"
@@ -1412,7 +1427,7 @@ def build_guide_page(B: dict, store_links: list, guide_links: list, as_of: str =
     <div class="wrap">
       <p class="eyebrow light"><span class="eyebrow-line"></span>BRAND GUIDE · {esc(brand)}</p>
       <h1>{esc(brand)} 양도양수 가이드<br /><em>{esc(category)} 창업, 인수 전 확인 포인트</em></h1>
-      <p class="sx-lead">{esc(brand)}는 {esc(B['note'])}입니다. 이 페이지는 공개된 점포가 없는 브랜드를 위해, 인수 전에 확인할 실사 항목과 비공개로 들어오는 점포를 먼저 받아보는 방법을 정리한 가이드입니다. 확인되지 않은 매출·가맹 조건 수치는 쓰지 않았습니다.</p>
+      <p class="sx-lead">{esc(brand)}{josa(brand, '은', '는')} {esc(B['note'])}입니다. 이 페이지는 공개된 점포가 없는 브랜드를 위해, 인수 전에 확인할 실사 항목과 비공개로 들어오는 점포를 먼저 받아보는 방법을 정리한 가이드입니다. 확인되지 않은 매출·가맹 조건 수치는 쓰지 않았습니다.</p>
       <div class="sx-tags">
         <span>{esc(category)}</span>
         <span>공개 점포 0곳</span>
@@ -1533,12 +1548,12 @@ def compare_metrics(items: list) -> dict:
 
 def compare_faqs(a: str, ma: dict, b: str, mb: dict) -> list:
     faqs = [
-        (f"{a}와 {b}의 초기 인수 비용은 얼마나 차이 나나요?",
+        (f"{a}{josa(a, '과', '와')} {b}의 초기 인수 비용은 얼마나 차이 나나요?",
          f"공개된 점포 기준으로 {a} {ma['n']}곳은 {ma['cost']}, {b} {mb['n']}곳은 {mb['cost']}입니다. "
          f"이 범위는 매장마다 평수·상권·시설 상태가 달라 생긴 차이라, 낮은 금액 하나만 보고 고르기보다 "
          f"같은 예산 안에서 매출과 예상 순수익을 함께 놓고 비교하는 편이 좋습니다."),
-        (f"{a}와 {b}의 매출·순수익은 어떻게 비교하나요?",
-         f"{a} 공개 점포의 월 평균 매출은 {ma['sales']}, {b}는 {mb['sales']}이고, "
+        (f"{a}{josa(a, '과', '와')} {b}의 매출·순수익은 어떻게 비교하나요?",
+         f"{a} 공개 점포의 월 평균 매출은 {ma['sales']}, {b}{josa(b, '은', '는')} {mb['sales']}이고, "
          f"예상 월 순수익 범위는 {a} {ma['profit']}, {b} {mb['profit']}입니다. "
          f"두 브랜드 모두 점주 제시 자료를 기준으로 정리한 값이므로, 실제 비교는 포스·카드 정산 자료 대조와 "
          f"인력 운영표 확인으로 하는 것이 정확합니다."),
@@ -1549,8 +1564,8 @@ def compare_faqs(a: str, ma: dict, b: str, mb: dict) -> list:
     ]
     if ma["payback"] != "–" or mb["payback"] != "–":
         faqs.append((
-            f"{a}와 {b}의 초기 인수 비용 회수 기간은 얼마나 걸리나요?",
-            f"공개 점포의 중앙값으로 계산하면 {a}는 {ma['payback']}, {b}는 {mb['payback']}입니다. "
+            f"{a}{josa(a, '과', '와')} {b}의 초기 인수 비용 회수 기간은 얼마나 걸리나요?",
+            f"공개 점포의 중앙값으로 계산하면 {a}{josa(a, '은', '는')} {ma['payback']}, {b}{josa(b, '은', '는')} {mb['payback']}입니다. "
             f"초기 인수 비용 중앙값을 예상 월 순수익 중앙값으로 나눈 값이라, 매장별 금액과 인력 운영에 따라 달라질 수 있고 "
             f"본사 로열티·가맹비는 반영되지 않았습니다. 매장 하나를 정했다면 그 매장의 비용·순수익으로 다시 계산하는 것이 정확합니다.",
         ))
@@ -1566,7 +1581,7 @@ def build_compare_page(a: str, items_a: list, b: str, items_b: list,
 
     title = f"{a} vs {b} 양도양수 비교 · 점포 수·인수 비용·매출·순수익·회수 기간 | 에이피파트너"
     description = (
-        f"{a} {ma['n']}곳와 {b} {mb['n']}곳의 공개 점포를 같은 기준으로 비교했습니다. "
+        f"{a} {ma['n']}곳과 {b} {mb['n']}곳의 공개 점포를 같은 기준으로 비교했습니다. "
         f"초기 인수 비용 {ma['cost']}({a}) / {mb['cost']}({b}), 월 매출·예상 순수익 범위와 회수 기간({ma['payback']} / {mb['payback']}), "
         f"산정 기준과 계약 전 확인할 4가지를 한 페이지에 정리했습니다."
     )
@@ -1632,9 +1647,10 @@ def build_compare_page(a: str, items_a: list, b: str, items_b: list,
     )
 
     compare_lead = (
-        f"{a}와 {b}는 공개된 점포가 모두 4곳 이상이라, 같은 기준으로 나란히 놓고 볼 수 있습니다. "
+        f"{a}{josa(a, '과', '와')} {b}{josa(b, '은', '는')} 공개된 점포가 모두 4곳 이상이라, "
+        f"같은 기준으로 나란히 놓고 볼 수 있습니다. "
         if min(ma['n'], mb['n']) >= 4 else
-        f"{a} {ma['n']}곳와 {b} {mb['n']}곳을 같은 기준으로 나란히 놓았습니다. "
+        f"{a} {ma['n']}곳과 {b} {mb['n']}곳을 같은 기준으로 나란히 놓았습니다. "
     )
     compare_lead += (
         "점포 수·초기 인수 비용·월 매출·예상 월 순수익·회수 기간을 원본 데이터 그대로 비교하고, "
@@ -1689,7 +1705,7 @@ def build_compare_page(a: str, items_a: list, b: str, items_b: list,
       {risk_checklist_html('계약 전 리스크 체크리스트', '비교표에서 고른 뒤에도 계약 전에 이 네 가지는 직접 확인하세요.')}
 
       <h2>브랜드별 매장 보기</h2>
-      <p class="sx-para">{esc(a)}와 {esc(b)} 매장 전체 목록과 매장별 상세 페이지는 각 브랜드 페이지에서 볼 수 있습니다. 지점명과 상세 위치는 점주 보호를 위해 공개하지 않습니다.</p>
+      <p class="sx-para">{esc(a)} · {esc(b)} 매장 전체 목록과 매장별 상세 페이지는 각 브랜드 페이지에서 볼 수 있습니다. 지점명과 상세 위치는 점주 보호를 위해 공개하지 않습니다.</p>
       <div class="sx-kw">
         <a class="sx-chip" href="../brands/{esc(slug_for(a))}.html">{esc(a)} 매장 {ma['n']}곳</a>
         <a class="sx-chip" href="../brands/{esc(slug_for(b))}.html">{esc(b)} 매장 {mb['n']}곳</a>
