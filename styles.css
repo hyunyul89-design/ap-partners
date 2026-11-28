@@ -2030,3 +2030,192 @@ body.compare-on .toast { bottom: 100px; }
 .footer-channels a { color: rgba(255,255,255,.55); }
 .footer-channels a:hover { color: var(--gold-soft); }
 .footer-channels a span { font-size: 10px; opacity: .55; margin-left: 2px; }
+
+/* ==========================================================================
+   2026-11-28 추가 · 빠른 조건 칩 / 지역별 현황 / 공식 채널 + 양수·양도 접수
+   ========================================================================== */
+
+/* ---------- 빠른 조건 (히어로 바로 아래) ---------- */
+.quick-finder {
+  background: #fff;
+  border-bottom: 1px solid var(--line-soft);
+  padding: 18px 0 20px;
+}
+.quick-finder-inner {
+  display: flex; align-items: center; gap: 18px 22px; flex-wrap: wrap;
+}
+.quick-finder-copy { flex: 0 0 208px; }
+.quick-finder-eyebrow {
+  font-size: 9.5px; letter-spacing: .2em; font-weight: 700; color: var(--gold-deep);
+  text-transform: uppercase; margin-bottom: 3px;
+}
+.quick-finder-title { font-size: 14.5px; font-weight: 700; color: var(--navy); letter-spacing: -.02em; }
+.quick-finder-note { font-size: 11.5px; color: var(--muted); line-height: 1.5; margin-top: 2px; word-break: keep-all; }
+.quick-chips { display: flex; flex-wrap: wrap; gap: 6px; flex: 1 1 380px; }
+.quick-chip {
+  border: 1px solid #DDE1E8; background: #fff; color: var(--ink-2);
+  font-size: 12.5px; font-weight: 500; padding: 8px 13px; border-radius: 40px;
+  cursor: pointer; white-space: nowrap; letter-spacing: -.01em;
+  transition: background .16s ease, color .16s ease, border-color .16s ease;
+}
+.quick-chip:hover { border-color: var(--navy); color: var(--navy); }
+.quick-chip[aria-pressed="true"] {
+  background: var(--navy); border-color: var(--navy); color: #fff; font-weight: 600;
+}
+.quick-chip[aria-pressed="true"]::before {
+  content: ""; display: inline-block; width: 5px; height: 5px; border-radius: 50%;
+  background: var(--gold-soft); margin-right: 6px; vertical-align: 2px;
+}
+.quick-sell-link {
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 5px;
+  background: none; border: 0; padding: 6px 0; cursor: pointer;
+  font-family: inherit; font-size: 12.5px; color: var(--muted); letter-spacing: -.01em;
+  border-bottom: 1px solid transparent; transition: color .16s ease, border-color .16s ease;
+}
+.quick-sell-link b { color: var(--gold-deep); font-weight: 700; }
+.quick-sell-link:hover { color: var(--navy); border-bottom-color: rgba(200,164,93,.6); }
+.quick-sell-link .ico { width: 13px; height: 13px; }
+
+/* ---------- 지역별 점포 현황 ---------- */
+.region-board {
+  margin: 0 0 20px; padding: 16px 18px 18px;
+  border: 1px solid var(--line); border-radius: var(--radius); background: #FCFCFD;
+}
+.region-board-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 11px; }
+.region-board-title { font-size: 13px; font-weight: 700; color: var(--navy); letter-spacing: -.02em; }
+.region-board-title::before {
+  content: ""; display: inline-block; width: 4px; height: 4px; border-radius: 50%;
+  background: var(--gold); margin-right: 7px; vertical-align: 3px;
+}
+.region-board-note { font-size: 11.5px; color: var(--muted); }
+#listingGrid { scroll-margin-top: 96px; }
+.region-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 7px; }
+.region-card {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 6px;
+  background: #fff; border: 1px solid #E1E5EB; border-radius: 8px;
+  padding: 9px 11px; cursor: pointer; font-family: inherit;
+  transition: border-color .16s ease, background .16s ease, color .16s ease, transform .16s ease;
+}
+.region-card:hover { border-color: var(--navy); transform: translateY(-1px); }
+.region-card .rc-name { font-size: 12.5px; font-weight: 600; color: var(--ink-2); letter-spacing: -.02em; }
+.region-card .rc-count { font-size: 13.5px; font-weight: 700; color: var(--navy); letter-spacing: -.03em; }
+.region-card .rc-count em { font-style: normal; font-size: 10.5px; font-weight: 500; color: var(--muted); margin-left: 1px; }
+.region-card[aria-pressed="true"] { background: var(--navy); border-color: var(--navy); }
+.region-card[aria-pressed="true"] .rc-name { color: #fff; }
+.region-card[aria-pressed="true"] .rc-count { color: var(--gold-soft); }
+.region-card[aria-pressed="true"] .rc-count em { color: rgba(255,255,255,.6); }
+
+/* ---------- 공식 채널 + 양수·양도 접수 ---------- */
+.section-apply { background: var(--bg); border-top: 1px solid var(--line-soft); }
+.section-apply h2 em.apply-accent { font-style: normal; color: var(--gold-deep); }
+.apply-layout {
+  display: grid; grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+  gap: 26px; align-items: start;
+}
+.apply-channels {
+  background: #fff; border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 24px 24px 22px; box-shadow: var(--shadow-sm);
+}
+.apply-sub { font-size: 15px; font-weight: 700; color: var(--navy); letter-spacing: -.025em; }
+.apply-channel-note { margin-top: 6px; font-size: 12.5px; color: var(--muted); line-height: 1.6; word-break: keep-all; }
+.channel-list { margin-top: 14px; }
+.channel-list li { padding: 12px 0; border-top: 1px solid var(--line-soft); }
+.channel-list li:first-child { border-top: 0; padding-top: 4px; }
+.channel-main { display: flex; align-items: flex-start; gap: 9px; }
+.channel-badge {
+  flex: none; font-size: 9.5px; font-weight: 700; letter-spacing: .04em; color: #1E7A46;
+  background: #EAF6EF; border-radius: 4px; padding: 2px 6px; margin-top: 1px;
+}
+.channel-name { font-size: 13.5px; font-weight: 700; color: var(--navy); letter-spacing: -.02em; }
+.channel-name:hover { color: var(--gold-deep); }
+.channel-desc { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+.channel-post {
+  display: flex; align-items: baseline; gap: 7px; margin: 7px 0 0 0;
+  padding: 7px 10px; border-radius: 7px; background: #F7F8FA;
+  transition: background .16s ease;
+}
+.channel-post:hover { background: #F1F3F6; }
+.channel-post-label {
+  flex: none; white-space: nowrap; font-size: 10px; font-weight: 700; color: var(--gold-deep);
+  border: 1px solid rgba(200,164,93,.5); border-radius: 3px; padding: 1px 5px;
+}
+.channel-post-title {
+  font-size: 11.5px; color: var(--ink-2); line-height: 1.5; letter-spacing: -.01em;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  word-break: keep-all;
+}
+.channel-post:hover .channel-post-title { color: var(--navy); }
+.channel-social { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--line-soft); }
+.channel-social a {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid #DDE1E8; border-radius: 40px; padding: 7px 13px;
+  font-size: 12px; font-weight: 600; color: var(--ink-2);
+  transition: border-color .16s ease, color .16s ease;
+}
+.channel-social a:hover { border-color: var(--navy); color: var(--navy); }
+.channel-social .ico { width: 14px; height: 14px; }
+
+.apply-card {
+  background: #fff; border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow-md); overflow: hidden;
+}
+.apply-tabs { display: grid; grid-template-columns: 1fr 1fr; background: #F1F3F6; }
+.apply-tab {
+  border: 0; background: transparent; cursor: pointer; font-family: inherit;
+  padding: 14px 10px; font-size: 13.5px; font-weight: 600; color: var(--muted);
+  letter-spacing: -.02em; border-bottom: 2px solid transparent;
+  transition: background .16s ease, color .16s ease;
+}
+.apply-tab:hover { color: var(--navy); }
+.apply-tab.is-active {
+  background: #fff; color: var(--navy); font-weight: 700; border-bottom-color: var(--gold);
+}
+.apply-form { padding: 20px 22px 18px; }
+.apply-panel { display: block; }
+.apply-panel[hidden] { display: none; }
+.apply-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.apply-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.apply-row .apply-field { margin-bottom: 0; }
+.apply-field > span { font-size: 11.5px; font-weight: 600; color: var(--ink-2); letter-spacing: -.01em; }
+.apply-field > span em { font-style: normal; font-weight: 500; color: var(--muted); font-size: 10.5px; margin-left: 3px; }
+.apply-field > span b { color: var(--gold-deep); }
+.apply-field input, .apply-field select, .apply-field textarea {
+  width: 100%; border: 1px solid #DCE0E7; border-radius: 7px;
+  padding: 10px 12px; font-family: inherit; font-size: 13.5px; color: var(--ink);
+  background: #fff; transition: border-color .16s ease, box-shadow .16s ease;
+}
+.apply-field textarea { resize: vertical; min-height: 58px; line-height: 1.55; }
+.apply-field select { appearance: none; -webkit-appearance: none; background-image: linear-gradient(45deg, transparent 50%, #8A93A3 50%), linear-gradient(135deg, #8A93A3 50%, transparent 50%); background-position: calc(100% - 15px) 50%, calc(100% - 10px) 50%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; padding-right: 30px; }
+.apply-field input::placeholder, .apply-field textarea::placeholder { color: #9AA1AE; }
+.apply-field input:focus, .apply-field select:focus, .apply-field textarea:focus {
+  outline: none; border-color: var(--navy); box-shadow: 0 0 0 3px rgba(15,30,54,.05);
+}
+.apply-consent { margin-top: 0; }
+.apply-consent b { color: var(--gold-deep); font-weight: 700; }
+.apply-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.apply-actions .btn-gold { flex: 1 1 200px; }
+.apply-actions .btn-quiet { flex: 0 0 auto; }
+.apply-foot { margin-top: 10px; font-size: 11px; color: #9AA1AE; line-height: 1.5; }
+.apply-done { padding: 22px 24px 24px; }
+.apply-done .form-actions { margin-top: 14px; }
+
+@media (max-width: 1080px) {
+  .apply-layout { grid-template-columns: 1fr; }
+}
+@media (max-width: 820px) {
+  .quick-finder { padding: 14px 0 16px; }
+  .quick-finder-inner { gap: 10px; }
+  .quick-finder-copy { flex: 1 1 100%; }
+  .quick-finder-note { display: none; }
+  .quick-chips { flex: 1 1 100%; flex-wrap: wrap; }
+  .quick-chip { padding: 7px 12px; font-size: 12px; }
+  .quick-sell-link { flex: 1 1 100%; justify-content: flex-start; }
+  .region-board { padding: 14px 14px 15px; }
+  .region-grid { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; }
+  .region-card { padding: 8px 10px; }
+  .apply-channels { padding: 20px 18px; }
+  .apply-form { padding: 18px 16px 16px; }
+  .apply-row { grid-template-columns: 1fr; gap: 0; }
+  .apply-row .apply-field { margin-bottom: 12px; }
+  .apply-tab { padding: 12px 6px; font-size: 12.5px; }
+}

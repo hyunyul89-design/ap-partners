@@ -133,6 +133,15 @@ var LEAD_ENDPOINT = '';   // 예: https://script.google.com/macros/s/xxxx/exec
 * 입력: 브랜드/업종, 지역, 월 평균 매출(만 원), 희망 권리금(만 원), 연락처 + 수집·이용 동의.
 * 접수번호와 함께 `apPartnerSellRequests`에 저장되고, 관리자 **양도 의뢰** 탭에서 조회·CSV 다운로드할 수 있습니다.
 
+## 홈 화면 빠른 동선 (2026-11-28 추가)
+
+* **빠른 조건 칩**: 히어로 바로 아래 `총비용 1억 이하 / 1억~2억 / 2억~3억 / 3억 이상 / 월 순수익 500만↑ / 수도권`. 누르면 목록 필터(`?` 없이 화면 안에서)가 바로 걸리고, 지역·예산 선택·초기화와 같은 상태를 씁니다. 월 순수익 기준은 `profit.avg_manwon`, 수도권은 서울·경기·인천입니다.
+* **지역별 점포 현황**: `data/listings.json`을 그대로 집계해 시·도별 건수(전체 138곳)를 카드로 보여 주고, 누르면 그 지역으로 목록이 좁혀집니다. 데이터가 바뀌면 자동으로 따라갑니다(하드코딩 없음).
+* **공식 채널 + 양수·양도 접수 폼**: 페이지 하단 `#apply`에 네이버 블로그 3곳(에이피파트너·창업의 법칙·창업의 시선, 각 최신 글 링크)과 인스타그램·스레드, 그리고 `매장 인수·양수` / `내 매장 매각·양도` 2갈래 폼을 두었습니다.
+  - 인수: `type:"lead"`, `source:"site"`, `form_version:"lead-gate-v1"` — 4항목 게이트와 같은 `buildLeadPayload`를 씁니다.
+  - 양도: `type:"sell_request"`, `source:"sell"`, `form_version:"sell-request-v1"` — 기존 양도 의뢰 모달과 같은 페이로드(brand·region·area·monthly_sales·key_money·monthly_sales_manwon·premium_manwon·contact)에 희망 조건 메모(`message`·`memo`)를 더해 보냅니다. 접수는 `apPartnerSellRequests`에도 쌓입니다.
+  - 히어로의 `내 매장 양도 접수`·빠른 조건 옆 `양도 접수`를 누르면 이 폼으로 스크롤되며 양도 모드로 바뀝니다.
+
 ## 관리자 페이지 (`admin.html`)
 
 * **로그인(아이디 + 비밀번호)**: 기본 최종관리자 아이디는 `hyunyul89`(김현율 · `master`)이고, 최초 비밀번호는 기존 관리자 비밀번호입니다.

@@ -1305,7 +1305,7 @@
 
   var state = {
     listings: [],
-    filters: { q: '', region: '', category: '', budget: '' },
+    filters: { q: '', region: '', category: '', budget: '', metro: false, profitMin: 0 },
     chips: { region: '', budget: '' },
     lastFocus: null,
     currentListing: null,
@@ -2618,6 +2618,14 @@
     ].join(' ').toLowerCase();
   }
 
+  /* 빠른 조건 칩(수도권 · 월 순수익)은 목록 필터와 함께 적용됩니다. */
+  function matchesQuickFilters(L) {
+    var f = state.filters;
+    if (f.metro && ['서울', '경기', '인천'].indexOf(L.region) === -1) return false;
+    if (f.profitMin && Number((L.profit && L.profit.avg_manwon) || 0) < Number(f.profitMin)) return false;
+    return true;
+  }
+
   function filteredListings() {
     var f = state.filters;
     var q = f.q.trim().toLowerCase();
@@ -2629,6 +2637,7 @@
         if (f.region && L.region !== f.region) return false;
         if (f.category && L.category !== f.category) return false;
         if (f.budget && budgetBand(L.initial_cost.total_manwon) !== f.budget) return false;
+        if (!matchesQuickFilters(L)) return false;
         return codeOf(L) === codeQ;
       });
       if (codeHits.length) return codeHits;
@@ -2643,6 +2652,7 @@
       if (f.region && L.region !== f.region) return false;
       if (f.category && L.category !== f.category) return false;
       if (f.budget && budgetBand(L.initial_cost.total_manwon) !== f.budget) return false;
+      if (!matchesQuickFilters(L)) return false;
       if (tokens.length) {
         var blob = searchBlob(L);
         for (var i = 0; i < tokens.length; i++) {
@@ -2721,6 +2731,7 @@
           '매출 규모 · 인건비 비중 · 매장 규모를 보고 그 계획이 통할 점포부터 보여드립니다.';
       }
     }
+    syncQuickChips();
   }
 
   function initListingFilters() {
@@ -2738,12 +2749,16 @@
         t = setTimeout(function () { state.filters.q = v; renderListings(); }, 120);
       });
     }
-    if (region) region.addEventListener('change', function () { state.filters.region = region.value; renderListings(); });
+    if (region) region.addEventListener('change', function () {
+      state.filters.region = region.value;
+      if (region.value) state.filters.metro = false;
+      renderListings();
+    });
     if (category) category.addEventListener('change', function () { state.filters.category = category.value; renderListings(); });
     if (budget) budget.addEventListener('change', function () { state.filters.budget = budget.value; renderListings(); });
     if (reset) {
       reset.addEventListener('click', function () {
-        state.filters = { q: '', region: '', category: '', budget: '' };
+        state.filters = { q: '', region: '', category: '', budget: '', metro: false, profitMin: 0 };
         if (search) search.value = '';
         if (region) region.value = '';
         if (category) category.value = '';
@@ -3901,6 +3916,271 @@
     }
   }
 
+  /* ---------------- 빠른 조건 칩 · 지역별 현황 ----------------
+     2026-11-28 추가: 히어로 아래 빠른 조건 칩과 시·도별 점포 건수 보드.
+     둘 다 같은 state.filters 를 고치므로 목록·지역 선택·예산 선택과 항상 같이 움직입니다. */
+  var REGION_ORDER = ['서울', '경기', '인천', '대전', '충남', '충북', '강원', '경북', '경남', '전북', '광주', '부산', '세종', '울산', '제주'];
+
+  function syncQuickChips() {
+    var f = state.filters;
+    $all('#quickChips .quick-chip').forEach(function (chip) {
+      var on = false;
+      if (chip.hasAttribute('data-quick-budget')) on = f.budget === chip.getAttribute('data-quick-budget');
+      else if (chip.hasAttribute('data-quick-profit')) on = String(f.profitMin) === chip.getAttribute('data-quick-profit');
+      else if (chip.hasAttribute('data-quick-metro')) on = !!f.metro;
+      chip.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    var budget = $('#filterBudget');
+    if (budget) budget.value = f.budget || '';
+    var region = $('#filterRegion');
+    if (region) region.value = f.region || '';
+    syncRegionBoard();
+  }
+
+  function syncRegionBoard() {
+    $all('#regionGrid [data-region]').forEach(function (card) {
+      var r = card.getAttribute('data-region') || '';
+      var on = r ? (state.filters.region === r) : (!state.filters.region && !state.filters.metro);
+      card.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  }
+
+  function renderRegionBoard() {
+    var grid = $('#regionGrid');
+    if (!grid) return;
+    var counts = {};
+    var total = 0;
+    state.listings.forEach(function (L) {
+      if (L.visible === false || L.status === 'closed') return;
+      var r = L.region || '기타';
+      counts[r] = (counts[r] || 0) + 1;
+      total++;
+    });
+    var keys = Object.keys(counts).sort(function (a, b) {
+      if (counts[b] !== counts[a]) return counts[b] - counts[a];
+      return REGION_ORDER.indexOf(a) - REGION_ORDER.indexOf(b);
+    });
+    var html = '<button class="region-card" type="button" data-region="" aria-pressed="false">' +
+      '<span class="rc-name">전체</span><span class="rc-count">' + total + '<em>곳</em></span></button>';
+    html += keys.map(function (r) {
+      return '<button class="region-card" type="button" data-region="' + esc(r) + '" aria-pressed="false">' +
+        '<span class="rc-name">' + esc(r) + '</span><span class="rc-count">' + counts[r] + '<em>곳</em></span></button>';
+    }).join('');
+    grid.innerHTML = html;
+    syncRegionBoard();
+  }
+
+  function initQuickChips() {
+    var wrap = $('#quickChips');
+    if (!wrap) return;
+    wrap.addEventListener('click', function (e) {
+      var chip = e.target.closest('.quick-chip');
+      if (!chip) return;
+      var f = state.filters;
+      var b = chip.getAttribute('data-quick-budget');
+      var p = chip.getAttribute('data-quick-profit');
+      var m = chip.getAttribute('data-quick-metro');
+      if (b !== null) f.budget = (f.budget === b) ? '' : b;
+      else if (p !== null) f.profitMin = (Number(f.profitMin) === Number(p)) ? 0 : Number(p);
+      else if (m !== null) { f.metro = !f.metro; if (f.metro) f.region = ''; }
+      renderListings();
+      var target = $('#listings');
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+
+  function initRegionBoard() {
+    var grid = $('#regionGrid');
+    if (!grid) return;
+    grid.addEventListener('click', function (e) {
+      var card = e.target.closest('[data-region]');
+      if (!card) return;
+      var r = card.getAttribute('data-region') || '';
+      state.filters.region = r;
+      if (r) state.filters.metro = false;
+      renderListings();
+      var list = $('#listingGrid');
+      if (list) list.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+
+  /* ---------------- 하단 상담 폼 (매장 인수 / 내 매장 매각) ----------------
+     인수는 기존 4항목 게이트와 같은 type:'lead' 페이로드,
+     매각은 기존 양도 의뢰와 같은 type:'sell_request' 페이로드를 그대로 보냅니다.
+     (Apps Script · 텔레그램 · 관리자 손님 DB/양도 의뢰 탭과 호환) */
+  var applyState = { mode: 'buy' };
+
+  function setApplyMode(mode) {
+    var m = mode === 'sell' ? 'sell' : 'buy';
+    applyState.mode = m;
+    $all('.apply-tab').forEach(function (t) {
+      var on = t.getAttribute('data-apply-mode') === m;
+      t.classList.toggle('is-active', on);
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    $all('#applyForm .apply-panel').forEach(function (p) {
+      p.hidden = p.getAttribute('data-panel') !== m;
+    });
+    var submit = $('#applySubmit');
+    if (submit) submit.textContent = m === 'sell' ? '양도 접수하기' : '상담 접수하기';
+    var err = $('#applyError');
+    if (err) err.hidden = true;
+  }
+
+  function goApply(mode) {
+    setApplyMode(mode);
+    var target = $('#apply');
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(function () {
+      var first = mode === 'sell' ? $('#applySellBrand') : $('#applyCategory');
+      if (first && first.focus) { try { first.focus({ preventScroll: true }); } catch (e) { /* 무시 */ } }
+    }, 360);
+  }
+
+  function applyReceiptHTML(payload, mode) {
+    var rows = mode === 'sell'
+      ? [['브랜드 / 업종', payload.brand],
+         ['지역', payload.area],
+         ['월 평균 매출', payload.monthly_sales_manwon ? manwonLabel(payload.monthly_sales_manwon) : '상담 시 확인'],
+         ['희망 시설·영업권', payload.premium_manwon ? manwonLabel(payload.premium_manwon) : '상담 시 협의'],
+         ['연락처', payload.contact.phone]]
+      : [['희망 업종', payload.criteria.industry || '전체'],
+         ['희망 지역', payload.criteria.region || '전체'],
+         ['초기 인수 예산', payload.criteria.budget || '미지정'],
+         ['연락처', payload.contact.phone]];
+    return '<div class="receipt">' +
+      '<div class="receipt-icon" aria-hidden="true">' + checkIcon() + '</div>' +
+      '<h3>' + (mode === 'sell' ? '양도 접수가 완료됐습니다' : '상담 접수가 완료됐습니다') + '</h3>' +
+      '<p class="no">접수번호 <b>' + esc(displayReceiptNo(payload.request_id || payload.lead_id)) + '</b></p>' +
+      '<div class="receipt-summary">' + rows.map(function (r) {
+        return '<div><span>' + esc(r[0]) + '</span><b>' + esc(r[1]) + '</b></div>';
+      }).join('') + '</div>' +
+      '<div class="receipt-note"><b>다음 단계</b><br />접수 내용은 담당자에게 바로 전달되었습니다. 김현율 팀장이 확인 후 남겨주신 번호로 연락드립니다.</div>' +
+      '<div class="form-actions">' +
+        '<a class="btn btn-navy" href="' + PHONE_TEL + '">전화 상담</a>' +
+        '<button class="btn btn-quiet" type="button" data-apply-restart>새로 접수하기</button>' +
+      '</div>' +
+      '</div>';
+  }
+
+  function onApplySubmit(e) {
+    e.preventDefault();
+    var mode = applyState.mode;
+    var phoneEl = $('#applyPhone');
+    var phone = formatPhone(phoneEl ? phoneEl.value : '');
+    if (phoneEl) phoneEl.value = phone;
+    var consent = $('#applyConsent');
+    var err = $('#applyError');
+    var problem = '';
+    var brand = '';
+    var area = '';
+
+    if (mode === 'sell') {
+      brand = (($('#applySellBrand') || {}).value || '').trim();
+      area = (($('#applySellArea') || {}).value || '').trim();
+      if (brand.length < 2) problem = '브랜드나 업종을 입력해 주세요.';
+      else if (area.length < 2) problem = '지역을 입력해 주세요. (예: 서울 종로구)';
+    }
+    if (!problem && !/^01[016789]-?[0-9]{3,4}-?[0-9]{4}$/.test(phone)) problem = '연락처를 정확히 입력해 주세요. (예: 010-1234-5678)';
+    if (!problem && (!consent || !consent.checked)) problem = '연락처 수집·이용에 동의해 주세요.';
+
+    if (problem) {
+      if (err) { err.textContent = problem; err.hidden = false; }
+      return;
+    }
+    if (err) err.hidden = true;
+
+    var now = new Date();
+    var payload;
+
+    if (mode === 'sell') {
+      var sales = Number((($('#applySellSales') || {}).value) || 0);
+      var premium = Number((($('#applySellPremium') || {}).value) || 0);
+      var note = (($('#applySellNote') || {}).value || '').trim().slice(0, 200);
+      payload = {
+        type: 'sell_request',
+        source: 'sell',
+        form_version: 'sell-request-v1',
+        request_id: 'SELL-' + leadStamp(now) + '-' + String(Math.floor(Math.random() * 9000) + 1000),
+        submitted_at: now.toISOString(),
+        brand: brand,
+        region: area,
+        area: area,
+        phone: phone,
+        monthly_sales: sales > 0 ? '월 ' + manwonLabel(sales) : '미입력',
+        key_money: premium > 0 ? '시설·영업권 ' + manwonLabel(premium) : '상담 시 협의',
+        monthly_sales_manwon: Math.round(sales),
+        premium_manwon: Math.round(premium),
+        message: note,
+        memo: note,
+        page_location: 'home_apply',
+        contact: { phone: phone, consent: true, consent_at: now.toISOString() },
+        page: location.href
+      };
+      try {
+        var list = safeParse(localStorage.getItem(SELL_KEY));
+        if (!(list instanceof Array)) list = [];
+        list.unshift(payload);
+        localStorage.setItem(SELL_KEY, JSON.stringify(list.slice(0, 200)));
+      } catch (e2) { /* 무시 */ }
+    } else {
+      var cat = (($('#applyCategory') || {}).value) || '';
+      var region = (($('#applyRegion') || {}).value) || '';
+      var band = (($('#applyBudget') || {}).value) || '';
+      var brandText = (($('#applyBrand') || {}).value || '').trim();
+      payload = buildLeadPayload({
+        category: cat ? [cat] : [],
+        brand: brandText,
+        area: region ? [region] : [],
+        budget: band ? bandLabel(band) : '',
+        phone: phone
+      }, { source: 'site' });
+      recordLeadEntry(payload);
+    }
+
+    sendLead(payload);
+    var form = $('#applyForm');
+    var done = $('#applyDone');
+    if (form) form.hidden = true;
+    if (done) {
+      done.innerHTML = applyReceiptHTML(payload, mode);
+      done.hidden = false;
+      $all('[data-apply-restart]', done).forEach(function (b) {
+        b.addEventListener('click', function () {
+          done.hidden = true;
+          done.innerHTML = '';
+          if (form) form.hidden = false;
+          var first = mode === 'sell' ? $('#applySellBrand') : $('#applyCategory');
+          if (first && first.focus) { try { first.focus(); } catch (e) { /* 무시 */ } }
+        });
+      });
+    }
+    toast(mode === 'sell' ? '양도 접수가 완료되었습니다. 담당자가 확인합니다.' : '상담 접수가 완료되었습니다. 담당자가 확인합니다.');
+  }
+
+  function initApplyForm() {
+    $all('[data-apply-mode]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var mode = btn.getAttribute('data-apply-mode');
+        /* 폼 안의 탭은 페이지만 움직이지 않고 모드만 바꿉니다. */
+        if (btn.closest('.apply-card')) { setApplyMode(mode); return; }
+        goApply(mode);
+      });
+    });
+    var form = $('#applyForm');
+    if (!form) return;
+    form.addEventListener('submit', onApplySubmit);
+    var phone = $('#applyPhone');
+    if (phone) {
+      phone.addEventListener('input', function () {
+        var atEnd = phone.selectionStart === phone.value.length;
+        phone.value = formatPhone(phone.value);
+        if (atEnd) { try { phone.setSelectionRange(phone.value.length, phone.value.length); } catch (e) { /* 무시 */ } }
+      });
+    }
+    setApplyMode('buy');
+  }
+
   /* ---------------- boot ---------------- */
   document.addEventListener('DOMContentLoaded', function () {
     initHeader();
@@ -3914,6 +4194,9 @@
     initConcierge();
     initAiJump();
     initListingFilters();
+    initQuickChips();
+    initRegionBoard();
+    initApplyForm();
     initPwa();
 
     loadListings().then(function (result) {
@@ -3930,6 +4213,7 @@
         if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(notice, anchor.nextSibling);
       }
       renderListings();
+      renderRegionBoard();
       /* 텔레그램 링크로 들어온 경우 해당 물건 상세 창을 바로 연다. */
       openListingFromUrl();
     });
