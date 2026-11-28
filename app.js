@@ -4030,7 +4030,23 @@
   function goApply(mode) {
     setApplyMode(mode);
     var target = $('#apply');
-    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (target) {
+      /* 페이지가 길어(점포 138곳) 부드러운 스크롤이 몇 초씩 걸립니다.
+         두 화면 이상 떨어져 있으면 바로 이동하고, 가까우면 부드럽게 움직입니다. */
+      var top = target.getBoundingClientRect().top + window.pageYOffset;
+      var far = Math.abs(top - window.pageYOffset) > window.innerHeight * 2.2;
+      if (far) {
+        /* html{scroll-behavior:smooth} 때문에 'auto'도 부드럽게 움직입니다.
+           긴 페이지에서 몇 초씩 흘러가는 것을 막으려고 잠깐 즉시 이동으로 바꿉니다. */
+        var docEl = document.documentElement;
+        var prev = docEl.style.scrollBehavior;
+        docEl.style.scrollBehavior = 'auto';
+        window.scrollTo(0, top - 90);
+        window.requestAnimationFrame(function () { docEl.style.scrollBehavior = prev || ''; });
+      } else {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
     setTimeout(function () {
       var first = mode === 'sell' ? $('#applySellBrand') : $('#applyCategory');
       if (first && first.focus) { try { first.focus({ preventScroll: true }); } catch (e) { /* 무시 */ } }
