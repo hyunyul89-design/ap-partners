@@ -3,7 +3,7 @@
    배포 위치: https://apchangup.com/sw.js
    스코프    : /  (이 파일이 있는 폴더가 그대로 스코프가 됩니다)
 
-   캐시 정책 (v1.1.32 — AP-139 본우리반상 등록)
+   캐시 정책 (v1.1.33 — AP-139 본우리반상 수치를 1~8월 POS·식권 실매출 기준으로 정정)
    - HTML(index.html · 점포/브랜드 페이지) : 네트워크 우선 → 오프라인일 때 캐시
    - CSS · JS · data/listings.json         : 네트워크 우선 → 오프라인일 때 캐시
      (예전에는 CSS/JS 를 캐시 우선으로 두어, 새 index.html + 옛 styles.css 가
@@ -17,7 +17,7 @@
      열려 있는 화면까지 즉시 넘겨받습니다.
    ========================================================================== */
 
-var SW_VERSION = 'v1.1.32';
+var SW_VERSION = 'v1.1.33';
 var CACHE_PREFIX = 'ap-';
 var STATIC_CACHE = 'ap-static-' + SW_VERSION;
 var DATA_CACHE = 'ap-data-' + SW_VERSION;
