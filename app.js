@@ -4038,29 +4038,57 @@
   }
 
   function applyReceiptHTML(payload, mode) {
-    var rows = mode === 'sell'
-      ? [['브랜드 / 업종', payload.brand],
-         ['지역', payload.area],
-         ['월 평균 매출', payload.monthly_sales_manwon ? manwonLabel(payload.monthly_sales_manwon) : '상담 시 확인'],
-         ['희망 시설·영업권', payload.premium_manwon ? manwonLabel(payload.premium_manwon) : '상담 시 협의'],
-         ['연락처', payload.contact.phone]]
-      : [['희망 업종', payload.criteria.industry || '전체'],
-         ['희망 지역', payload.criteria.region || '전체'],
-         ['초기 인수 예산', payload.criteria.budget || '미지정'],
-         ['연락처', payload.contact.phone]];
+    var rows;
+    if (mode === 'sell') {
+      var rentTotal = (Number(payload.rent_manwon) || 0) + (Number(payload.maintenance_manwon) || 0);
+      rows = [
+        ['이름', payload.owner_name],
+        ['브랜드 / 지역', (payload.brand || '') + ' · ' + (payload.area || '')],
+        ['월 매출', manwonLabel(payload.monthly_sales_manwon)],
+        ['점포 예치금', manwonLabel(payload.deposit_manwon)],
+        ['월 임차료 · 관리비', manwonLabel(rentTotal)],
+        ['희망 시설·영업권', manwonLabel(payload.premium_manwon)],
+        ['연락처', payload.contact.phone]
+      ];
+    } else {
+      rows = [
+        ['희망 업종', payload.criteria.industry || '전체'],
+        ['희망 지역', payload.criteria.region || '전체'],
+        ['초기 인수 예산', payload.criteria.budget || '미지정'],
+        ['연락처', payload.contact.phone]
+      ];
+    }
+    var extra = mode === 'sell' && payload.detail_count
+      ? '<p class="apply-receipt-extra">실평수·층·순수익·인건비·재료비·공과금 등 세부 항목 ' + payload.detail_count + '개도 함께 접수됐습니다.</p>'
+      : '';
     return '<div class="receipt">' +
       '<div class="receipt-icon" aria-hidden="true">' + checkIcon() + '</div>' +
       '<h3>' + (mode === 'sell' ? '양도 접수가 완료됐습니다' : '상담 접수가 완료됐습니다') + '</h3>' +
       '<p class="no">접수번호 <b>' + esc(displayReceiptNo(payload.request_id || payload.lead_id)) + '</b></p>' +
       '<div class="receipt-summary">' + rows.map(function (r) {
         return '<div><span>' + esc(r[0]) + '</span><b>' + esc(r[1]) + '</b></div>';
-      }).join('') + '</div>' +
+      }).join('') + '</div>' + extra +
       '<div class="receipt-note"><b>다음 단계</b><br />접수 내용은 담당자에게 바로 전달되었습니다. 김현율 팀장이 확인 후 남겨주신 번호로 연락드립니다.</div>' +
       '<div class="form-actions">' +
         '<a class="btn btn-navy" href="' + PHONE_TEL + '">전화 상담</a>' +
         '<button class="btn btn-quiet" type="button" data-apply-restart>새로 접수하기</button>' +
       '</div>' +
       '</div>';
+  }
+
+  /* 숫자 입력칸: 빈 칸은 null, 숫자가 아니면 NaN */
+  function applyNum(id) {
+    var el = $('#' + id);
+    if (!el) return null;
+    var raw = String(el.value == null ? '' : el.value).trim();
+    if (raw === '') return null;
+    var n = Number(raw.replace(/,/g, ''));
+    return isFinite(n) ? n : null;
+  }
+
+  function applyText(id) {
+    var el = $('#' + id);
+    return el ? String(el.value || '').trim() : '';
   }
 
   function onApplySubmit(e) {
@@ -4076,10 +4104,23 @@
     var area = '';
 
     if (mode === 'sell') {
-      brand = (($('#applySellBrand') || {}).value || '').trim();
-      area = (($('#applySellArea') || {}).value || '').trim();
-      if (brand.length < 2) problem = '브랜드나 업종을 입력해 주세요.';
-      else if (area.length < 2) problem = '지역을 입력해 주세요. (예: 서울 종로구)';
+      brand = applyText('applySellBrand');
+      area = applyText('applySellArea');
+      if (applyText('applySellName').length < 1) problem = '이름을 입력해 주세요.';
+      else if (brand.length < 2) problem = '브랜드나 업종을 입력해 주세요.';
+      else if (area.length < 2) problem = '지역과 지점명을 입력해 주세요. (예: 서울 마포구 ○○점)';
+      else if (applyNum('applySellPyeong') === null) problem = '실평수를 숫자로 입력해 주세요.';
+      else if (!applyText('applySellFloor')) problem = '층수를 입력해 주세요. (예: 1층)';
+      else if (applyNum('applySellSales') === null) problem = '월 매출을 만 원 단위로 입력해 주세요.';
+      else if (applyNum('applySellDeposit') === null) problem = '점포 예치금을 입력해 주세요. (없으면 0)';
+      else if (applyNum('applySellRent') === null) problem = '월 임차료를 입력해 주세요. (없으면 0)';
+      else if (applyNum('applySellMaintenance') === null) problem = '관리비를 입력해 주세요. (없으면 0)';
+      else if (applyNum('applySellPremium') === null) problem = '희망 시설·영업권 금액을 입력해 주세요. (없으면 0)';
+      else if (applyNum('applySellProfit') === null) problem = '월 순수익을 입력해 주세요. (없으면 0)';
+      else if (applyNum('applySellLabor') === null) problem = '인건비를 입력해 주세요. (없으면 0)';
+      else if (applyNum('applySellMaterial') === null) problem = '재료비 비율(%)을 입력해 주세요. (없으면 0)';
+      else if (!(applyNum('applySellMaterial') >= 0 && applyNum('applySellMaterial') <= 100)) problem = '재료비 비율은 0~100 사이로 입력해 주세요.';
+      else if (applyNum('applySellUtility') === null) problem = '공과금을 입력해 주세요. (없으면 0)';
     }
     if (!problem && !/^01[016789]-?[0-9]{3,4}-?[0-9]{4}$/.test(phone)) problem = '연락처를 정확히 입력해 주세요. (예: 010-1234-5678)';
     if (!problem && (!consent || !consent.checked)) problem = '연락처 수집·이용에 동의해 주세요.';
@@ -4094,25 +4135,88 @@
     var payload;
 
     if (mode === 'sell') {
-      var sales = Number((($('#applySellSales') || {}).value) || 0);
-      var premium = Number((($('#applySellPremium') || {}).value) || 0);
-      var note = (($('#applySellNote') || {}).value || '').trim().slice(0, 200);
+      var owner = applyText('applySellName');
+      var pyeong = applyNum('applySellPyeong');
+      var floor = applyText('applySellFloor');
+      var sales = applyNum('applySellSales');
+      var deposit = applyNum('applySellDeposit');
+      var rent = applyNum('applySellRent');
+      var maintenance = applyNum('applySellMaintenance');
+      var premium = applyNum('applySellPremium');
+      var profit = applyNum('applySellProfit');
+      var labor = applyNum('applySellLabor');
+      var material = applyNum('applySellMaterial');
+      var utility = applyNum('applySellUtility');
+      var delivery = applyNum('applySellDelivery') || 0;
+      var etcCost = applyNum('applySellEtc') || 0;
+      var openYm = applyText('applySellOpenYm');
+      var reason = applyText('applySellReason');
+      var when = applyText('applySellWhen');
+      var note = applyText('applySellNote').slice(0, 300);
+      var rentTotal = (rent || 0) + (maintenance || 0);
+
+      /* 물건표 순서대로 한 줄씩 — 텔레그램·시트에 그대로 옮겨 쓸 수 있게 */
+      var detail = [];
+      var line = function (label, value) {
+        if (value !== '' && value !== null && value !== undefined) detail.push('· ' + label + ': ' + value);
+      };
+      line('이름', owner);
+      line('브랜드 / 지역', brand + ' · ' + area);
+      line('실평수', pyeong + '평');
+      line('층수', floor);
+      line('월 매출', manwonLabel(sales));
+      line('점포 예치금', manwonLabel(deposit));
+      line('월 임차료', manwonLabel(rent));
+      line('관리비', manwonLabel(maintenance));
+      line('희망 시설·영업권', manwonLabel(premium));
+      line('월 순수익', manwonLabel(profit));
+      line('인건비', manwonLabel(labor));
+      line('재료비', material + '%');
+      line('공과금', manwonLabel(utility));
+      line('배달비', manwonLabel(delivery));
+      line('기타비용', manwonLabel(etcCost));
+      line('오픈연월', openYm);
+      line('양도 사유', reason);
+      line('희망 양도 시기', when);
+      line('시설 · 운영 특이사항', note);
+      var detailText = detail.join('\n');
+      var messageLine = detail.map(function (s) { return s.replace(/^· /, ''); }).join(' | ');
+
       payload = {
         type: 'sell_request',
         source: 'sell',
-        form_version: 'sell-request-v1',
+        form_version: 'sell-request-v2',
         request_id: 'SELL-' + leadStamp(now) + '-' + String(Math.floor(Math.random() * 9000) + 1000),
         submitted_at: now.toISOString(),
+        owner_name: owner,
+        name: owner,
         brand: brand,
         region: area,
         area: area,
         phone: phone,
-        monthly_sales: sales > 0 ? '월 ' + manwonLabel(sales) : '미입력',
-        key_money: premium > 0 ? '시설·영업권 ' + manwonLabel(premium) : '상담 시 협의',
+        monthly_sales: '월 ' + manwonLabel(sales),
+        key_money: '시설·영업권 ' + manwonLabel(premium) + ' / 예치금 ' + manwonLabel(deposit) + ' / 월 ' + manwonLabel(rentTotal),
         monthly_sales_manwon: Math.round(sales),
         premium_manwon: Math.round(premium),
-        message: note,
+        deposit_manwon: Math.round(deposit),
+        rent_manwon: Math.round(rent),
+        maintenance_manwon: Math.round(maintenance),
+        profit_manwon: Math.round(profit),
+        labor_manwon: Math.round(labor),
+        material_pct: material,
+        utility_manwon: Math.round(utility),
+        delivery_manwon: Math.round(delivery),
+        etc_manwon: Math.round(etcCost),
+        store_pyeong: Math.round(pyeong),
+        store_floor: floor,
+        open_ym: openYm,
+        sell_reason: reason,
+        sell_when: when,
+        facility_note: note,
+        message: messageLine,
         memo: note,
+        detail_text: detailText,
+        detail_count: detail.length,
         page_location: 'home_apply',
         contact: { phone: phone, consent: true, consent_at: now.toISOString() },
         page: location.href
@@ -4170,6 +4274,15 @@
     var form = $('#applyForm');
     if (!form) return;
     form.addEventListener('submit', onApplySubmit);
+    /* 한 번 안내한 오류는 고치는 즉시 내립니다(오래된 오류 문구가 남지 않게). */
+    form.addEventListener('input', function () {
+      var err = $('#applyError');
+      if (err && !err.hidden) err.hidden = true;
+    });
+    form.addEventListener('change', function () {
+      var err = $('#applyError');
+      if (err && !err.hidden) err.hidden = true;
+    });
     var phone = $('#applyPhone');
     if (phone) {
       phone.addEventListener('input', function () {

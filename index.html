@@ -1447,7 +1447,7 @@
       <header class="section-head center">
         <p class="eyebrow dark"><span class="eyebrow-line"></span>TAKE THE NEXT STEP</p>
         <h2>받을 때도, 내놓을 때도<br /><em class="apply-accent">숫자로</em> 정리해 드립니다</h2>
-        <p class="section-lead">인수는 조건을, 양도는 브랜드와 지역만 남겨 주세요. 담당자가 확인해 바로 연락드립니다.</p>
+        <p class="section-lead">인수는 조건을, 양도는 매장 정보를 남겨 주세요. 담당자가 확인해 바로 연락드립니다.</p>
       </header>
 
       <div class="apply-layout">
@@ -1509,8 +1509,8 @@
 
         <div class="apply-card" id="applyCard">
           <div class="apply-tabs" role="tablist" aria-label="상담 종류">
-            <button class="apply-tab is-active" type="button" role="tab" id="applyTabBuy" aria-selected="true" aria-controls="applyForm" data-apply-mode="buy">매장 인수 · 양수</button>
-            <button class="apply-tab" type="button" role="tab" id="applyTabSell" aria-selected="false" aria-controls="applyForm" data-apply-mode="sell">내 매장 매각 · 양도</button>
+            <button class="apply-tab is-active" type="button" role="tab" id="applyTabBuy" aria-selected="true" aria-controls="applyForm" data-apply-mode="buy">운영 매장 인수 (양수)</button>
+            <button class="apply-tab" type="button" role="tab" id="applyTabSell" aria-selected="false" aria-controls="applyForm" data-apply-mode="sell">내 매장 매각 (양도)</button>
           </div>
 
           <form class="apply-form" id="applyForm" novalidate>
@@ -1566,29 +1566,110 @@
             </div>
 
             <div class="apply-panel" data-panel="sell" hidden>
+              <p class="apply-hint">물건표로 바로 쓸 수 있게 받습니다. 금액은 모두 <b>만 원</b> 단위이고, 해당 없는 칸은 <b>0</b>으로 적어 주세요.</p>
+
+              <p class="apply-group-title">매장 정보</p>
               <div class="apply-row">
                 <label class="apply-field">
-                  <span>브랜드 / 업종 <b>*</b></span>
-                  <input id="applySellBrand" type="text" autocomplete="off" maxlength="40" placeholder="예: 메가커피" />
+                  <span>이름 <b>*</b></span>
+                  <input id="applySellName" type="text" autocomplete="name" maxlength="20" placeholder="예: 김현율" required />
                 </label>
                 <label class="apply-field">
-                  <span>지역 <b>*</b></span>
-                  <input id="applySellArea" type="text" autocomplete="off" maxlength="40" placeholder="예: 서울 종로구" />
+                  <span>브랜드 / 업종 <b>*</b></span>
+                  <input id="applySellBrand" type="text" autocomplete="off" maxlength="40" placeholder="예: 메가커피" required />
                 </label>
               </div>
               <div class="apply-row">
                 <label class="apply-field">
-                  <span>월 평균 매출 (만 원) <em>선택</em></span>
-                  <input id="applySellSales" type="number" min="0" step="10" inputmode="numeric" placeholder="3200" />
+                  <span>지역 · 지점명 <b>*</b></span>
+                  <input id="applySellArea" type="text" autocomplete="off" maxlength="40" placeholder="예: 서울 마포구 ○○점" required />
                 </label>
                 <label class="apply-field">
-                  <span>희망 시설·영업권 (만 원) <em>선택</em></span>
-                  <input id="applySellPremium" type="number" min="0" step="10" inputmode="numeric" placeholder="20000" />
+                  <span>오픈연월 <em>선택</em></span>
+                  <input id="applySellOpenYm" type="text" autocomplete="off" maxlength="7" inputmode="numeric" placeholder="예: 2021.03" />
+                </label>
+              </div>
+              <div class="apply-row apply-row-3">
+                <label class="apply-field">
+                  <span>실평수 (평) <b>*</b></span>
+                  <input id="applySellPyeong" type="number" min="0" step="1" inputmode="numeric" placeholder="예: 15" required />
+                </label>
+                <label class="apply-field">
+                  <span>층수 <b>*</b></span>
+                  <input id="applySellFloor" type="text" autocomplete="off" maxlength="10" placeholder="예: 1층" required />
+                </label>
+                <label class="apply-field">
+                  <span>월 매출 (만 원) <b>*</b></span>
+                  <input id="applySellSales" type="number" min="0" step="10" inputmode="numeric" placeholder="예: 3200" required />
+                </label>
+              </div>
+
+              <p class="apply-group-title">계약 조건</p>
+              <div class="apply-row">
+                <label class="apply-field">
+                  <span>점포 예치금 (만 원) <b>*</b></span>
+                  <input id="applySellDeposit" type="number" min="0" step="10" inputmode="numeric" placeholder="예: 3000" required />
+                </label>
+                <label class="apply-field">
+                  <span>월 임차료 (만 원) <b>*</b></span>
+                  <input id="applySellRent" type="number" min="0" step="10" inputmode="numeric" placeholder="예: 250" required />
+                </label>
+              </div>
+              <div class="apply-row">
+                <label class="apply-field">
+                  <span>관리비 (만 원) <b>*</b></span>
+                  <input id="applySellMaintenance" type="number" min="0" step="1" inputmode="numeric" placeholder="예: 30 (없으면 0)" required />
+                </label>
+                <label class="apply-field">
+                  <span>희망 시설·영업권 (만 원) <b>*</b></span>
+                  <input id="applySellPremium" type="number" min="0" step="10" inputmode="numeric" placeholder="예: 20000" required />
+                </label>
+              </div>
+
+              <p class="apply-group-title">수익 · 지출 <span>월 기준, 모르면 0</span></p>
+              <div class="apply-row">
+                <label class="apply-field">
+                  <span>월 순수익 (만 원) <b>*</b></span>
+                  <input id="applySellProfit" type="number" min="0" step="10" inputmode="numeric" placeholder="예: 600" required />
+                </label>
+                <label class="apply-field">
+                  <span>인건비 (만 원) <b>*</b></span>
+                  <input id="applySellLabor" type="number" min="0" step="10" inputmode="numeric" placeholder="예: 500" required />
+                </label>
+              </div>
+              <div class="apply-row apply-row-4">
+                <label class="apply-field">
+                  <span>재료비 (%) <b>*</b></span>
+                  <input id="applySellMaterial" type="number" min="0" max="100" step="0.1" inputmode="decimal" placeholder="예: 35" required />
+                </label>
+                <label class="apply-field">
+                  <span>공과금 (만 원) <b>*</b></span>
+                  <input id="applySellUtility" type="number" min="0" step="1" inputmode="numeric" placeholder="예: 95" required />
+                </label>
+                <label class="apply-field">
+                  <span>배달비 (만 원)</span>
+                  <input id="applySellDelivery" type="number" min="0" step="1" inputmode="numeric" placeholder="없으면 0" />
+                </label>
+                <label class="apply-field">
+                  <span>기타비용 (만 원)</span>
+                  <input id="applySellEtc" type="number" min="0" step="1" inputmode="numeric" placeholder="없으면 0" />
+                </label>
+              </div>
+
+              <p class="apply-group-title">양도 조건</p>
+              <div class="apply-row">
+                <label class="apply-field">
+                  <span>양도 사유</span>
+                  <input id="applySellReason" type="text" autocomplete="off" maxlength="60" placeholder="예: 본업 집중, 이전, 가족 사정" />
+                </label>
+                <label class="apply-field">
+                  <span>희망 양도 시기</span>
+                  <input id="applySellWhen" type="text" autocomplete="off" maxlength="30" placeholder="예: 12월 초, 협의 가능" />
                 </label>
               </div>
               <label class="apply-field apply-field-wide">
-                <span>희망 조건 <em>선택</em></span>
-                <textarea id="applySellNote" rows="2" maxlength="200" placeholder="양도 시기, 인수 조건, 직원·재고 승계 등 편하게 적어 주세요."></textarea>
+                <span>시설 · 운영 특이사항</span>
+                <textarea id="applySellNote" rows="2" maxlength="300" placeholder="주차, 배달 비중, 직원 승계, 재고, 시설 상태 등 편하게 적어 주세요."></textarea>
               </label>
             </div>
 
