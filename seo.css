@@ -218,6 +218,69 @@ a.sx-chip:hover { border-color: var(--gold); color: var(--gold-deep); background
 .sx-brand-card dt { color: var(--muted); }
 .sx-brand-card dd { color: var(--ink); font-weight: 600; }
 
+/* ---------- 신뢰 신호 (브랜드·비교 페이지 히어어) ---------- */
+.sx-trust {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 0;
+  margin-top: 22px; font-size: 12px; line-height: 1.5;
+  color: rgba(255, 255, 255, .56);
+}
+.sx-trust span { display: inline-flex; align-items: center; white-space: nowrap; }
+.sx-trust span + span::before {
+  content: ""; display: inline-block; width: 3px; height: 3px; border-radius: 50%;
+  background: rgba(200, 164, 93, .7); margin: 0 10px;
+}
+.sx-trust b { color: rgba(255, 255, 255, .88); font-weight: 600; }
+.sx-trust a { color: var(--gold-soft); }
+.sx-trust a:hover { text-decoration: underline; }
+
+/* ---------- 시세 요약 (브랜드 페이지 상단) ---------- */
+.sx-sise { background: var(--bg); border-bottom: 1px solid var(--line); padding: 40px 0 36px; }
+.sx-sise-head {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  gap: 24px; align-items: end; margin-bottom: 22px;
+}
+.sx-sise-eyebrow { font-size: 10.5px; letter-spacing: .18em; font-weight: 700; color: var(--gold-deep); text-transform: uppercase; }
+.sx-sise h2 { margin-top: 8px; font-size: clamp(21px, 2.2vw, 26px); font-weight: 700; color: var(--navy); letter-spacing: -0.03em; }
+.sx-sise-asof { margin-top: 6px; font-size: 12px; color: var(--muted); }
+.sx-sise-lead { font-size: 13.5px; line-height: 1.78; color: var(--ink-2); word-break: keep-all; }
+.sx-sise-grid {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px;
+  background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden;
+}
+.sx-sise-fact { background: #fff; padding: 14px 16px; }
+.sx-sise-fact dt { font-size: 11.5px; letter-spacing: .03em; color: var(--muted); }
+.sx-sise-fact dd { margin-top: 6px; font-size: 16px; font-weight: 700; color: var(--navy); letter-spacing: -0.02em; line-height: 1.4; }
+.sx-sise-sub { margin-top: 28px; font-size: 15px; font-weight: 700; color: var(--navy); letter-spacing: -0.02em; }
+.sx-region { margin-top: 12px; min-width: 620px; }
+.sx-region thead th:first-child { width: 14%; }
+
+/* ---------- 회수 기간 계산기 ---------- */
+.sx-calc-band { background: #fff; border-bottom: 1px solid var(--line); padding: 32px 0 34px; }
+.sx-calc {
+  display: grid; gap: 20px; padding: 22px 24px;
+  border: 1px solid var(--line); border-radius: 12px; background: linear-gradient(180deg, #fff 0%, #FBFCFD 100%);
+  box-shadow: var(--shadow-sm);
+}
+.sx-calc-copy h2 { margin-top: 6px; font-size: 18px; font-weight: 700; color: var(--navy); letter-spacing: -0.02em; }
+.sx-calc-lead { margin-top: 6px; font-size: 13px; color: var(--muted); word-break: keep-all; }
+.sx-calc-body { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; align-items: stretch; }
+.sx-calc-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.sx-calc-fields label { display: grid; gap: 6px; }
+.sx-calc-fields span { font-size: 11.5px; color: var(--muted); }
+.sx-calc-fields input {
+  width: 100%; padding: 11px 12px; font: inherit; font-size: 15px; font-weight: 600;
+  color: var(--navy); background: #fff; border: 1px solid var(--line); border-radius: 8px;
+}
+.sx-calc-fields input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(200, 164, 93, .18); }
+.sx-calc-result {
+  display: grid; align-content: center; gap: 4px; padding: 14px 18px;
+  border-radius: 10px; background: var(--navy); color: #fff;
+}
+.sx-calc-result span { font-size: 10.5px; letter-spacing: .06em; color: rgba(255, 255, 255, .55); }
+.sx-calc-result b { font-size: 24px; font-weight: 700; color: var(--gold-soft); letter-spacing: -0.02em; line-height: 1.2; }
+.sx-calc-result em { font-style: normal; font-size: 12px; color: rgba(255, 255, 255, .62); }
+.sx-calc-note { font-size: 11.5px; line-height: 1.7; color: var(--muted); word-break: keep-all; }
+
 /* ---------- FAQ ---------- */
 .sx-faq { display: grid; gap: 12px; }
 .sx-faq-item { padding: 16px 18px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
@@ -239,6 +302,9 @@ a.sx-chip:hover { border-color: var(--gold); color: var(--gold-deep); background
   .sx-body { grid-template-columns: 1fr; gap: 34px; padding-top: 40px; }
   .sx-side .sx-card { position: static; }
   .sx-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sx-sise-head { grid-template-columns: 1fr; gap: 14px; align-items: start; }
+  .sx-sise-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sx-calc-body { grid-template-columns: 1fr; }
 }
 @media (max-width: 760px) {
   .sx-crumbs { padding: 14px 20px 0; font-size: 11.5px; }
@@ -251,7 +317,14 @@ a.sx-chip:hover { border-color: var(--gold); color: var(--gold-deep); background
   .sx-lock { padding: 20px 18px; }
   .sx-lock-actions .btn { width: 100%; }
   .main-nav { display: none; }
+  .sx-sise { padding: 30px 0 28px; }
+  .sx-calc-band { padding: 26px 0 28px; }
+  .sx-calc { padding: 18px 16px; }
+  .sx-calc-fields { grid-template-columns: 1fr; }
+  .sx-calc-result b { font-size: 21px; }
+  .sx-trust { font-size: 11.5px; }
 }
 @media (max-width: 420px) {
   .sx-facts { grid-template-columns: 1fr; }
+  .sx-sise-grid { grid-template-columns: 1fr; }
 }

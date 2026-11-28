@@ -196,6 +196,21 @@ li { list-style: none; }
 }
 .hero-cta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
 
+/* 신뢰 신호 — 공개 점포 수·실사 기준·등록번호·담당·상담·갱신일 */
+.hero-trust {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 0;
+  margin-top: 22px; font-size: 12px; line-height: 1.5;
+  color: rgba(255,255,255,.56);
+}
+.hero-trust span { display: inline-flex; align-items: center; white-space: nowrap; }
+.hero-trust span + span::before {
+  content: ""; display: inline-block; width: 3px; height: 3px; border-radius: 50%;
+  background: rgba(200,164,93,.7); margin: 0 10px;
+}
+.hero-trust b { color: rgba(255,255,255,.88); font-weight: 600; }
+.hero-trust a { color: var(--gold-soft); text-decoration: none; }
+.hero-trust a:hover { text-decoration: underline; }
+
 /* 내 조건 매장 찾기 바로가기 — 히어로 버튼 */
 .btn-ai {
   background: linear-gradient(180deg, #FFFDF7 0%, #F5EBD7 100%);

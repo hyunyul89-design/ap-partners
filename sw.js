@@ -3,7 +3,7 @@
    배포 위치: https://apchangup.com/sw.js
    스코프    : /  (이 파일이 있는 폴더가 그대로 스코프가 됩니다)
 
-   캐시 정책 (v1.1.36 — 양도 접수 폼 선택항목(영업시간·계약 기간·부가세·주차·시설 상태·최근 월별 매출) 추가, 관리자 양도 의뢰 탭을 비공개 Drive 연동)
+   캐시 정책 (v1.1.37 — 브랜드 페이지 시세 요약·지역별 중앙값·회수 기간 계산기, 검색 질문형 FAQ 확장, 홈·브랜드 상단 신뢰 신호, 브랜드 비교 3종 추가)
    - HTML(index.html · 점포/브랜드 페이지) : 네트워크 우선 → 오프라인일 때 캐시
    - CSS · JS · data/listings.json         : 네트워크 우선 → 오프라인일 때 캐시
      (예전에는 CSS/JS 를 캐시 우선으로 두어, 새 index.html + 옛 styles.css 가
@@ -17,7 +17,7 @@
      열려 있는 화면까지 즉시 넘겨받습니다.
    ========================================================================== */
 
-var SW_VERSION = 'v1.1.36';
+var SW_VERSION = 'v1.1.37';
 var CACHE_PREFIX = 'ap-';
 var STATIC_CACHE = 'ap-static-' + SW_VERSION;
 var DATA_CACHE = 'ap-data-' + SW_VERSION;

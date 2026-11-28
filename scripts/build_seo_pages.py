@@ -26,7 +26,9 @@ from __future__ import annotations
 import argparse
 import html
 import json
+import math
 import re
+import statistics
 import sys
 from datetime import date
 from pathlib import Path
@@ -38,7 +40,8 @@ BASE_URL = "https://apchangup.com"
 PAGE_UPDATED = "2026-11-28"
 # 정적 자산(styles.css·seo.css) 버전 쿼리. CSS 를 고치면 index.html 의 ?v= 와 함께 올립니다.
 # (모바일 PWA 가 옛 styles.css 를 물고 있지 않도록 브라우저 HTTP 캐시까지 무효화)
-ASSET_VERSION = "2026112827"
+# 2026112828 — 브랜드 시세 요약·회수 기간 계산기·신뢰 신호 스타일 추가
+ASSET_VERSION = "2026112828"
 PHONE = "010-2885-5553"
 PHONE_TEL = "tel:010-2885-5553"
 KAKAO = "hyunyul89"
@@ -307,12 +310,17 @@ GUIDE_BRANDS = [
 GUIDE_BY_SLUG = {B["slug"]: B for B in GUIDE_BRANDS}
 
 # ---------------------------------------------------------------- 브랜드 비교
-# 양쪽 모두 공개 점포가 4곳 이상이라 매물 수·비용·매출·순수익 범위를 나란히 놓을 수 있는 쌍.
-# (한쪽 점포가 1~2곳뿐이면 범위가 사실상 한 매장의 값이라 비교 페이지를 만들지 않습니다.)
+# 양쪽 공개 점포 수·비용·매출·순수익 범위를 나란히 놓을 쌍과, 그 쌍을 만들 최소 점포 수.
+# 기본은 양쪽 4곳 이상(한쪽이 1~2곳뿐이면 범위가 사실상 한 매장의 값이라 비교가 흐려집니다).
+# 다만 검색 수요가 큰 조합은 최소 점포 수를 낮춰 만들고, 점포가 적은 쪽은 페이지에 그 사실을 밝힙니다.
 COMPARE_PAIRS = [
-    ("메가커피", "컴포즈커피"),
-    ("투썸플레이스", "이디야커피"),
-    ("본죽", "서브웨이"),
+    ("메가커피", "컴포즈커피", 4),
+    ("투썸플레이스", "이디야커피", 4),
+    ("본죽", "서브웨이", 4),
+    # 2026-11-28 추가 — 저가 카페·치킨 대표 조합
+    ("메가커피", "이디야커피", 4),
+    ("컴포즈커피", "빽다방", 4),
+    ("교촌치킨", "BHC치킨", 2),
 ]
 
 # ---------------------------------------------------------------- 계약 전 리스크 체크리스트
@@ -369,6 +377,10 @@ def profit_basis_html(as_of: str, scope: str = "store") -> str:
         rows.append(("범위 읽는 법",
                      "두 브랜드의 금액 범위는 각 브랜드 공개 점포 가운데 가장 낮은 값과 가장 높은 값입니다. "
                      "브랜드 전체 평균이 아니고, 공개 점포 수가 서로 달라 범위의 폭도 다르게 보일 수 있습니다."))
+        rows.append(("회수 기간 계산",
+                     "회수 기간은 각 브랜드 공개 점포의 초기 인수 비용 중앙값을 예상 월 순수익 중앙값으로 나눠 올림한 값입니다. "
+                     "매장별 금액과 인력 운영, 본사 로열티·가맹비에 따라 실제 회수 기간은 달라질 수 있고, "
+                     "예상 월 순수익이 0 이하인 브랜드는 표기하지 않습니다."))
     rows.append(("기준 시점",
                  f"수치는 목록 갱신일 {as_of}에 정리한 값입니다. 그 뒤 매출·비용·영업 조건은 달라질 수 있으므로 "
                  "계약 전에 최신 자료로 다시 확인합니다."))
@@ -445,6 +457,96 @@ def range_label(low, high) -> str:
     if int(low) == int(high):
         return fmt_manwon(low)
     return f"{fmt_manwon(low)} ~ {fmt_manwon(high)}"
+
+
+def parse_manwon(text) -> int | None:
+    """'2억 2,000만 원' → 22000, '3억 원' → 30000, '5,000만 원' → 5000"""
+    s = str(text or "").replace(" ", "")
+    m = re.match(r"^(?:(\d+)억)?(?:(\d[\d,]*)만원)?원?$", s)
+    if not m or not (m.group(1) or m.group(2)):
+        return None
+    eok = int(m.group(1) or 0)
+    man = int((m.group(2) or "0").replace(",", ""))
+    return eok * 10000 + man
+
+
+def median_int(values) -> int:
+    return int(round(statistics.median(values))) if values else 0
+
+
+def percentile_int(values, q: float) -> int:
+    """선형 보간 백분위수(q=0.25 → 1사분위). 표시용으로 만원 단위 정수로 반올림."""
+    vals = sorted(values)
+    if not vals:
+        return 0
+    if len(vals) == 1:
+        return int(vals[0])
+    pos = (len(vals) - 1) * q
+    lo, hi = math.floor(pos), math.ceil(pos)
+    if lo == hi:
+        return int(vals[lo])
+    return int(round(vals[lo] + (vals[hi] - vals[lo]) * (pos - lo)))
+
+
+def premium_of(L: dict) -> int:
+    """초기 인수 비용 중 '시설·영업권' 금액(만 원). 항목이 없으면 0."""
+    for item in L["initial_cost"].get("items", []):
+        if "시설" in str(item.get("label", "")) and "영업권" in str(item.get("label", "")):
+            value = parse_manwon(item.get("value"))
+            if value is not None:
+                return value
+    return 0
+
+
+def brand_stats(items: list) -> dict:
+    """브랜드 공개 점포의 시세 통계 — 중앙값·중간 50% 구간·범위·지역 분포.
+
+    모두 listings.json 원본 값으로만 계산합니다(추정·보정 없음).
+    """
+    n = len(items)
+    costs = [L["initial_cost"]["total_manwon"] for L in items]
+    prems = [premium_of(L) for L in items if premium_of(L) > 0]
+    sales = [L["monthly_sales"]["avg_manwon"] for L in items]
+    profits = [L["profit"]["avg_manwon"] for L in items]
+    region_counts = {}
+    for L in items:
+        region_counts[L["region"]] = region_counts.get(L["region"], 0) + 1
+    district_groups = {}
+    for L in items:
+        d = L.get("district", "")
+        district_groups.setdefault(d, []).append(L)
+    return {
+        "n": n,
+        "cost_min": min(costs), "cost_max": max(costs),
+        "cost_med": median_int(costs),
+        "prem_med": median_int(prems),
+        "prem_lo": percentile_int(prems, 0.25),
+        "prem_hi": percentile_int(prems, 0.75),
+        "sales_med": median_int(sales),
+        "sales_lo": percentile_int(sales, 0.25),
+        "sales_hi": percentile_int(sales, 0.75),
+        "profit_med": median_int(profits),
+        "profit_lo": percentile_int(profits, 0.25),
+        "profit_hi": percentile_int(profits, 0.75),
+        "show_iqr": n >= 4,   # 매장 수가 충분할 때만 중간 50% 구간을 보여 줍니다.
+        "region_counts": dict(sorted(region_counts.items(), key=lambda kv: (-kv[1], kv[0]))),
+        "districts": sorted(district_groups, key=lambda d: (-len(district_groups[d]), d)),
+    }
+
+
+def payback_label(cost_med: int, profit_med: int) -> str:
+    """초기 인수 비용 중앙값 ÷ 예상 월 순수익 중앙값 = 약 O개월(올림).
+    순수익이 0 이하면 회수 기간을 표시하지 않습니다."""
+    if profit_med <= 0 or cost_med <= 0:
+        return "–"
+    months = math.ceil(cost_med / profit_med)
+    return f"약 {months}개월"
+
+
+def months_text(months: int) -> str:
+    if months >= 12:
+        return f"{months // 12}년 {months % 12}개월" if months % 12 else f"{months // 12}년"
+    return f"{months}개월"
 
 
 def slug_for(brand: str) -> str:
@@ -645,7 +747,151 @@ def contact_card(title: str, code: str | None) -> str:
 """
 
 
-# ---------------------------------------------------------------- store page
+# ---------------------------------------------------------------- 신뢰 신호 · 시세 요약
+TRUST_DATE_LABEL = "목록 갱신일"
+
+
+def trust_items(total: int, as_of: str, count_text: str | None = None) -> list:
+    """홈·브랜드·비교 페이지 상단에 같은 순서로 노출하는 신뢰 신호."""
+    return [
+        f"<b>{count_text or f'전체 공개 점포 {total}곳'}</b>",
+        "현장 실사 기준",
+        f"등록 {REGISTER_NO}",
+        f"담당 {MANAGER}",
+        f'<a href="{PHONE_TEL}">상담 {PHONE}</a>',
+        f"{TRUST_DATE_LABEL} {as_of}",
+    ]
+
+
+def trust_strip_html(total: int, as_of: str, cls: str = "sx-trust", indent: str = "      ",
+                     count_text: str | None = None) -> str:
+    parts = "".join(f"\n{indent}  <span>{item}</span>" for item in trust_items(total, as_of, count_text))
+    return f'<div class="{cls}" aria-label="신뢰 정보">{parts}\n{indent}</div>'
+
+
+def sise_block_html(brand: str, items: list, as_of: str) -> str:
+    """브랜드 페이지 상단 '시세 요약' — 공개 실사 매물만으로 계산한 중앙값·범위·지역 분포."""
+    st = brand_stats(items)
+    rows = [
+        ("공개 매장 수", f"{st['n']}곳"),
+        ("시설·영업권 중앙값", fmt_manwon(st["prem_med"])),
+    ]
+    if st["show_iqr"]:
+        rows.append(("시설·영업권 중간 50% 구간", range_label(st["prem_lo"], st["prem_hi"])))
+    rows += [
+        ("초기 인수 비용 범위", range_label(st["cost_min"], st["cost_max"])),
+        ("월 평균 매출 중앙값", fmt_manwon(st["sales_med"])),
+        ("예상 순수익 중앙값", f"월 약 {fmt_manwon(st['profit_med'])}"),
+    ]
+    facts = "".join(
+        f'<div class="sx-sise-fact"><dt>{esc(label)}</dt><dd>{esc(value)}</dd></div>'
+        for label, value in rows
+    )
+
+    region_rows = []
+    for region, _count in st["region_counts"].items():
+        group = [L for L in items if L["region"] == region]
+        region_rows.append(
+            f'<tr><th scope="row">{esc(region)}</th><td>{len(group)}곳</td>'
+            f'<td>{esc(fmt_manwon(median_int([premium_of(L) for L in group if premium_of(L) > 0])))}</td>'
+            f'<td>{esc(fmt_manwon(median_int([L["initial_cost"]["total_manwon"] for L in group])))}</td>'
+            f'<td>{esc(fmt_manwon(median_int([L["profit"]["avg_manwon"] for L in group])))}</td></tr>'
+        )
+    region_table = "".join(region_rows)
+
+    return f"""
+  <section class="sx-sise" aria-labelledby="siseTitle">
+    <div class="wrap">
+      <div class="sx-sise-head">
+        <div>
+          <p class="sx-sise-eyebrow">MARKET PRICE</p>
+          <h2 id="siseTitle">{esc(brand)} 시세 요약</h2>
+          <p class="sx-sise-asof">에이피파트너 공개 실사 매물 기준 · {esc(as_of)} 기준</p>
+        </div>
+        <p class="sx-sise-lead">현장 실사를 마치고 공개한 {esc(brand)} 매장 {st['n']}곳만 모아 계산했습니다. 시설·영업권은 초기 인수 비용 중 점포 예치금을 뺀 금액이고, 예상 순수익은 점주 제시 자료를 기준으로 정리한 값입니다.</p>
+      </div>
+      <dl class="sx-sise-grid">{facts}</dl>
+      <h3 class="sx-sise-sub">지역별 건수 · 중앙값</h3>
+      <div class="sx-compare-wrap">
+        <table class="sx-compare sx-region">
+          <caption>{esc(brand)} 공개 매장 지역 분포 · 금액은 점주 제시 자료 기준</caption>
+          <thead>
+            <tr><th scope="col">지역</th><th scope="col">매장 수</th><th scope="col">시설·영업권 중앙값</th><th scope="col">초기 인수 비용 중앙값</th><th scope="col">예상 순수익 중앙값</th></tr>
+          </thead>
+          <tbody>{region_table}</tbody>
+        </table>
+      </div>
+      <p class="sx-note">지역별 값은 그 지역에 공개된 매장만 모아 계산했고, 1곳뿐인 지역은 그 매장의 값입니다. 본사 로열티·가맹비처럼 점주 자료에 없는 비용은 순수익에 반영되지 않았을 수 있습니다.</p>
+    </div>
+  </section>
+"""
+
+
+CALC_SCRIPT = """
+<script>
+(function () {
+  var cost = document.getElementById('calcCost');
+  var profit = document.getElementById('calcProfit');
+  var out = document.getElementById('calcOut');
+  var sub = document.getElementById('calcSub');
+  if (!cost || !profit || !out) return;
+  function num(el) {
+    var v = parseFloat(String(el.value).replace(/,/g, ''));
+    return isFinite(v) ? v : NaN;
+  }
+  function run() {
+    var c = num(cost), p = num(profit);
+    if (!(c > 0) || !(p > 0)) {
+      out.textContent = '회수 기간을 표시하지 않습니다';
+      if (sub) sub.textContent = '초기 인수 비용과 예상 월 순수익을 0보다 크게 입력해 주세요.';
+      return;
+    }
+    var m = Math.ceil(c / p);
+    out.textContent = '약 ' + m + '개월';
+    if (sub) sub.textContent = m >= 12 ? (Math.floor(m / 12) + '년 ' + (m % 12 ? (m % 12) + '개월' : '')) : '';
+  }
+  cost.addEventListener('input', run);
+  profit.addEventListener('input', run);
+  run();
+})();
+</script>
+"""
+
+
+def payback_calculator_html(brand: str, cost_med: int, profit_med: int) -> str:
+    months = math.ceil(cost_med / profit_med) if cost_med > 0 and profit_med > 0 else None
+    out = f"약 {months}개월" if months else "회수 기간을 표시하지 않습니다"
+    sub = months_text(months) if months else ""
+    return f"""
+  <section class="sx-calc-band" aria-labelledby="calcTitle">
+    <div class="wrap">
+      <div class="sx-calc">
+        <div class="sx-calc-copy">
+          <p class="sx-sise-eyebrow">PAYBACK</p>
+          <h2 id="calcTitle">초기 인수 비용 회수 기간 계산기</h2>
+          <p class="sx-calc-lead">{esc(brand)} 공개 매장의 중앙값을 채워 두었습니다. 인수 예정 금액으로 바꿔 보세요.</p>
+        </div>
+        <div class="sx-calc-body">
+          <div class="sx-calc-fields">
+            <label for="calcCost"><span>초기 인수 비용 (만 원)</span>
+              <input id="calcCost" name="calcCost" type="number" inputmode="numeric" min="0" step="100" value="{cost_med}" /></label>
+            <label for="calcProfit"><span>예상 월 순수익 (만 원)</span>
+              <input id="calcProfit" name="calcProfit" type="number" inputmode="numeric" min="0" step="10" value="{profit_med}" /></label>
+          </div>
+          <div class="sx-calc-result" role="status" aria-live="polite">
+            <span>초기 인수 비용 ÷ 예상 월 순수익</span>
+            <b id="calcOut">{esc(out)}</b>
+            <em id="calcSub">{esc(sub)}</em>
+          </div>
+        </div>
+        <p class="sx-calc-note">산정 전제 — 초기 인수 비용을 예상 월 순수익으로 나눠 올림한 값입니다. 본사 로열티·가맹비·교육비처럼 점주 자료에 없는 비용과 인력 운영 방식에 따라 실제 회수 기간은 달라질 수 있습니다. 매출·비용은 {esc(MANAGER)}이 현장 실사에서 점주 제시 자료로 확인한 값입니다.</p>
+      </div>
+    </div>
+  </section>
+"""
+
+
+
 def build_store_page(L: dict, brand_links: list, siblings: list, as_of: str) -> str:
     code = L["code"]
     brand = L["brand"]
@@ -783,32 +1029,58 @@ def build_store_page(L: dict, brand_links: list, siblings: list, as_of: str) -> 
 
 
 # ---------------------------------------------------------------- brand FAQ
-def brand_faqs(brand: str, items: list) -> list:
+def region_summary(st: dict, limit: int = 6) -> str:
+    """{"서울": 15, ...} → '서울 15곳, 경기 11곳, 인천 2곳 · 그 밖 2곳'"""
+    parts = [f"{r} {n}곳" for r, n in st["region_counts"].items()]
+    if len(parts) <= limit:
+        return ", ".join(parts)
+    head = ", ".join(parts[:limit])
+    rest = sum(n for _r, n in list(st["region_counts"].items())[limit:])
+    return f"{head} 등 그 밖 {rest}곳"
+
+
+def brand_faqs(brand: str, items: list, as_of: str) -> list:
     """공개 점포가 있는 브랜드 페이지의 질문·답변.
 
-    listings.json 에 있는 값(비용·매출 범위, 지역)만 인용하고,
+    listings.json 에 있는 값(비용·매출·순수익·지역·시설·영업권)만 인용하고,
     가맹비·로열티 같은 확인되지 않은 수치는 쓰지 않습니다.
     """
-    n = len(items)
+    st = brand_stats(items)
+    n = st["n"]
     costs = [L["initial_cost"]["total_manwon"] for L in items]
     sales = [L["monthly_sales"]["avg_manwon"] for L in items]
     districts = unique([L.get("district", "") for L in items])
+    district_text = ", ".join(districts[:8]) + (" 등" if len(districts) > 8 else "")
+
+    sise = (
+        f"{as_of} 기준 에이피파트너가 공개한 {brand} 실사 매장 {n}곳을 모아 보면, "
+        f"시설·영업권 중앙값은 {fmt_manwon(st['prem_med'])}"
+    )
+    if st["show_iqr"]:
+        sise += f" (중간 50% 구간 {range_label(st['prem_lo'], st['prem_hi'])})"
+    sise += (
+        f"입니다. 초기 인수 비용은 {range_label(st['cost_min'], st['cost_max'])}, "
+        f"예상 월 순수익 중앙값은 약 {fmt_manwon(st['profit_med'])}입니다. "
+        f"시설·영업권은 초기 인수 비용 중 점포 예치금을 뺀 값이고, 같은 브랜드라도 평수·상권·시설 상태에 따라 달라집니다."
+    )
     return [
+        (f"{brand} 양도 시세는 어느 정도인가요?", sise),
         (f"{brand} 양도양수 비용은 얼마인가요?",
          f"지금 공개된 {brand} 매장은 {n}곳이고, 초기 인수 비용은 {range_label(min(costs), max(costs))}입니다. "
          f"비용은 점포 예치금과 시설·영업권으로 나뉘고, 같은 브랜드라도 평수·상권·시설 상태에 따라 달라집니다. "
          f"매장별 구성은 각 점포 상세 페이지의 '초기 인수 비용 구성'에서 확인할 수 있습니다."),
         (f"{brand} 매장은 어느 지역에 있나요?",
-         f"{', '.join(districts)}에서 현장 실사를 마친 {brand} 매장을 등록해 두었습니다. "
+         f"공개된 {brand} 매장 {n}곳은 {region_summary(st)}에 있고, 지역은 {district_text}입니다. "
          f"지점명과 상세 위치는 점주 보호를 위해 공개하지 않고 상담에서 안내합니다."),
         (f"{brand} 매장의 월 매출과 예상 순수익은 어떻게 확인하나요?",
          f"표시된 월 평균 매출 {range_label(min(sales), max(sales))}과 예상 순수익은 점주 제시 자료를 기준으로 정리한 값입니다. "
          f"상담에서 최근 12개월 포스·카드 정산 자료와 실제 근무표를 함께 대조하고, "
          f"항목별 지출은 사이트에서 희망 조건을 한 번 남기면 바로 확인할 수 있습니다."),
-        (f"{brand} 가맹 승계는 어떤 순서로 진행되나요?",
+        (f"{brand} 가맹 승계는 어떻게 진행되나요?",
          "후보 매장을 정한 뒤 본사 승계 심사와 교육 일정을 확인하고, 재계약 시점·교육 비용·시설 기준을 서면으로 받아 진행합니다. "
          "필요한 서류와 일정은 본사 기준에 따라 다르므로, 매장을 정한 뒤 본사에 직접 확인하는 것이 정확합니다."),
     ]
+
 
 
 # ---------------------------------------------------------------- cards
@@ -881,9 +1153,11 @@ def compare_card(a: str, items_a: list, b: str, items_b: list) -> str:
 
 
 # ---------------------------------------------------------------- brand page
-def build_brand_page(brand: str, items: list, store_links: list, pairs: list, as_of: str) -> str:
+def build_brand_page(brand: str, items: list, store_links: list, pairs: list, as_of: str,
+                     total: int = 0) -> str:
     slug = slug_for(brand)
     n = len(items)
+    st = brand_stats(items)
     costs = [L["initial_cost"]["total_manwon"] for L in items]
     sales = [L["monthly_sales"]["avg_manwon"] for L in items]
     profits = [L["profit"]["avg_manwon"] for L in items]
@@ -893,14 +1167,15 @@ def build_brand_page(brand: str, items: list, store_links: list, pairs: list, as
     note = items[0].get("brand_note", "")
     kw_all = unique([k for L in items for k in L.get("keywords", [])])
 
-    title = f"{brand} 양도양수 창업 · 실사 매장 {n}곳 비용·매출 비교 | 에이피파트너"
+    title = f"{brand} 양도양수 창업 · 시세·비용·실사 매장 {n}곳 비교 | 에이피파트너"
     description = (
-        f"{brand}{('(' + note + ')') if note else ''} 양도양수·창업 매장 {n}곳을 실사 수치로 비교합니다. "
-        f"{', '.join(regions)} · 초기 인수 비용 {range_label(min(costs), max(costs))}, "
-        f"월 매출·예상 순수익 공개. 상세 지출은 상담에서 안내합니다."
+        f"{brand}{('(' + note + ')') if note else ''} 양도 시세와 창업 비용을 실사 매장 {n}곳으로 비교합니다. "
+        f"시설·영업권 중앙값 {fmt_manwon(st['prem_med'])}, 초기 인수 비용 {range_label(min(costs), max(costs))}, "
+        f"예상 순수익 중앙값 월 약 {fmt_manwon(st['profit_med'])}. {as_of} 기준 에이피파트너 공개 실사 매물 기준."
     )
     keywords = ",".join(unique(
         [f"{brand} 양도양수", f"{brand} 창업", f"{brand} 창업비용", f"{brand} 인수",
+         f"{brand} 시세", f"{brand} 양도 시세", f"{brand} 인수 비용",
          f"{brand} 매장", f"{brand} 프랜차이즈"]
         + [f"{d} {brand} 창업" for d in districts]
         + [f"{c} 창업" for c in categories]
@@ -908,7 +1183,7 @@ def build_brand_page(brand: str, items: list, store_links: list, pairs: list, as
 
     canonical = f"{BASE_URL}/brands/{slug}.html"
 
-    faqs = brand_faqs(brand, items)
+    faqs = brand_faqs(brand, items, as_of)
 
     ld = {
         "@context": "https://schema.org",
@@ -976,8 +1251,9 @@ def build_brand_page(brand: str, items: list, store_links: list, pairs: list, as
   <section class="sx-hero">
     <div class="wrap">
       <p class="eyebrow light"><span class="eyebrow-line"></span>BRAND · {esc(brand)}</p>
-      <h1>{esc(brand)} 양도양수 창업<br /><em>실사 마친 매장 {n}곳</em></h1>
+      <h1>{esc(brand)} 양도양수 창업<br /><em>시세·비용·실사 매장 {n}곳 비교</em></h1>
       {vat}
+      {trust_strip_html(total or n, as_of)}
       <div class="sx-tags">
         <span>{esc(', '.join(categories))}</span>
         <span>{esc(', '.join(regions))}</span>
@@ -986,12 +1262,14 @@ def build_brand_page(brand: str, items: list, store_links: list, pairs: list, as
       </div>
       <div class="sx-facts">
         <div class="sx-fact"><span>등록 매장</span><b class="gold">{n}곳</b></div>
+        <div class="sx-fact"><span>시설·영업권 중앙값</span><b>{esc(fmt_manwon(st['prem_med']))}</b></div>
         <div class="sx-fact"><span>초기 인수 비용</span><b>{esc(range_label(min(costs), max(costs)))}</b></div>
         <div class="sx-fact"><span>월 평균 매출</span><b>{esc(range_label(min(sales), max(sales)))}</b></div>
       </div>
     </div>
   </section>
-
+{sise_block_html(brand, items, as_of)}
+{payback_calculator_html(brand, st['cost_med'], st['profit_med'])}
   <div class="wrap sx-body">
     <div class="sx-main">
       <h2>{esc(brand)} 매장 {n}곳 한눈에</h2>
@@ -1029,7 +1307,7 @@ def build_brand_page(brand: str, items: list, store_links: list, pairs: list, as
     </aside>
   </div>
 </main>
-"""
+{CALC_SCRIPT}"""
     html_out += page_foot(store_links + [(B["brand"], B["slug"]) for B in GUIDE_BRANDS])
     return html_out
 
@@ -1223,10 +1501,10 @@ def compare_slug(a: str, b: str) -> str:
 
 
 def compare_pairs(groups: dict) -> list:
-    """양쪽 모두 공개 점포가 4곳 이상인 쌍만 비교 페이지로 만듭니다."""
+    """COMPARE_PAIRS 중 양쪽 공개 점포 수가 기준(기본 4곳) 이상인 쌍만 비교 페이지로 만듭니다."""
     return [
-        (a, b) for a, b in COMPARE_PAIRS
-        if len(groups.get(a, [])) >= 4 and len(groups.get(b, [])) >= 4
+        (a, b) for a, b, min_n in COMPARE_PAIRS
+        if len(groups.get(a, [])) >= min_n and len(groups.get(b, [])) >= min_n
     ]
 
 
@@ -1234,18 +1512,23 @@ def compare_metrics(items: list) -> dict:
     costs = [L["initial_cost"]["total_manwon"] for L in items]
     sales = [L["monthly_sales"]["avg_manwon"] for L in items]
     profits = [L["profit"]["avg_manwon"] for L in items]
+    cost_med, profit_med = median_int(costs), median_int(profits)
     return {
         "n": len(items),
         "cost": range_label(min(costs), max(costs)),
         "sales": range_label(min(sales), max(sales)),
         "profit": range_label(min(profits), max(profits)),
+        "prem_med": median_int([premium_of(L) for L in items if premium_of(L) > 0]),
+        "cost_med": cost_med,
+        "profit_med": profit_med,
+        "payback": payback_label(cost_med, profit_med),
         "category": items[0]["category"],
         "regions": unique([L["region"] for L in items]),
     }
 
 
 def compare_faqs(a: str, ma: dict, b: str, mb: dict) -> list:
-    return [
+    faqs = [
         (f"{a}와 {b}의 초기 인수 비용은 얼마나 차이 나나요?",
          f"공개된 점포 기준으로 {a} {ma['n']}곳은 {ma['cost']}, {b} {mb['n']}곳은 {mb['cost']}입니다. "
          f"이 범위는 매장마다 평수·상권·시설 상태가 달라 생긴 차이라, 낮은 금액 하나만 보고 고르기보다 "
@@ -1260,6 +1543,14 @@ def compare_faqs(a: str, ma: dict, b: str, mb: dict) -> list:
          f"이 페이지는 각 브랜드 공개 점포 전체의 가장 낮은 값과 가장 높은 값을 나란히 둔 것이고, 브랜드 전체 평균이 아닙니다. "
          f"실제 후보를 고를 때는 같은 지역·같은 예산의 점포끼리 비교하는 편이 더 정확합니다."),
     ]
+    if ma["payback"] != "–" or mb["payback"] != "–":
+        faqs.append((
+            f"{a}와 {b}의 초기 인수 비용 회수 기간은 얼마나 걸리나요?",
+            f"공개 점포의 중앙값으로 계산하면 {a}는 {ma['payback']}, {b}는 {mb['payback']}입니다. "
+            f"초기 인수 비용 중앙값을 예상 월 순수익 중앙값으로 나눈 값이라, 매장별 금액과 인력 운영에 따라 달라질 수 있고 "
+            f"본사 로열티·가맹비는 반영되지 않았습니다. 매장 하나를 정했다면 그 매장의 비용·순수익으로 다시 계산하는 것이 정확합니다.",
+        ))
+    return faqs
 
 
 def build_compare_page(a: str, items_a: list, b: str, items_b: list,
@@ -1269,15 +1560,16 @@ def build_compare_page(a: str, items_a: list, b: str, items_b: list,
     ma, mb = compare_metrics(items_a), compare_metrics(items_b)
     faqs = compare_faqs(a, ma, b, mb)
 
-    title = f"{a} vs {b} 양도양수 비교 · 점포 수·인수 비용·매출·순수익 | 에이피파트너"
+    title = f"{a} vs {b} 양도양수 비교 · 점포 수·인수 비용·매출·순수익·회수 기간 | 에이피파트너"
     description = (
         f"{a} {ma['n']}곳와 {b} {mb['n']}곳의 공개 점포를 같은 기준으로 비교했습니다. "
-        f"초기 인수 비용 {ma['cost']}({a}) / {mb['cost']}({b}), 월 매출·예상 순수익 범위와 산정 기준, "
-        f"계약 전 확인할 4가지를 한 페이지에 정리했습니다."
+        f"초기 인수 비용 {ma['cost']}({a}) / {mb['cost']}({b}), 월 매출·예상 순수익 범위와 회수 기간({ma['payback']} / {mb['payback']}), "
+        f"산정 기준과 계약 전 확인할 4가지를 한 페이지에 정리했습니다."
     )
     keywords = ",".join(unique([
         f"{a} {b} 비교", f"{a} {b} 창업", f"{a} 양도양수", f"{b} 양도양수",
         f"{a} 인수 비용", f"{b} 인수 비용", f"{a} {b} 순수익",
+        f"{a} {b} 회수 기간", f"{a} 시세", f"{b} 시세",
         f"{ma['category']} 창업 비교",
     ]))
 
@@ -1286,10 +1578,26 @@ def build_compare_page(a: str, items_a: list, b: str, items_b: list,
         for label, va, vb in [
             ("공개 점포 수", f"{ma['n']}곳", f"{mb['n']}곳"),
             ("초기 인수 비용 범위", ma['cost'], mb['cost']),
+            ("초기 인수 비용 중앙값", fmt_manwon(ma['cost_med']), fmt_manwon(mb['cost_med'])),
+            ("시설·영업권 중앙값", fmt_manwon(ma['prem_med']), fmt_manwon(mb['prem_med'])),
             ("월 평균 매출 범위", ma['sales'], mb['sales']),
             ("예상 월 순수익 범위", ma['profit'], mb['profit']),
+            ("예상 월 순수익 중앙값", f"월 약 {fmt_manwon(ma['profit_med'])}", f"월 약 {fmt_manwon(mb['profit_med'])}"),
         ]
     )
+    if ma["payback"] != "–" or mb["payback"] != "–":
+        rows += (
+            f'<tr><th scope="row">초기 인수 비용 회수 기간</th>'
+            f'<td>{esc(ma["payback"])}</td><td>{esc(mb["payback"])}</td></tr>'
+        )
+
+    thin_note = ""
+    if min(ma["n"], mb["n"]) < 4:
+        name, cnt = (a, ma["n"]) if ma["n"] <= mb["n"] else (b, mb["n"])
+        thin_note = (
+            f'<p class="sx-note">{esc(name)}은 공개 점포가 {cnt}곳뿐이라 금액 범위가 사실상 그 매장들의 값입니다. '
+            f'브랜드 전체 시세로 해석하지 말고, 후보 매장을 정한 뒤 그 매장의 비용과 순수익으로 다시 비교하세요.</p>'
+        )
 
     faq_html = "".join(
         f'<div class="sx-faq-item"><h3>{esc(q)}</h3><p>{esc(ans)}</p></div>' for q, ans in faqs
@@ -1338,6 +1646,7 @@ def build_compare_page(a: str, items_a: list, b: str, items_b: list,
         <span>공개 {ma['n'] + mb['n']}곳</span>
         <span>기준일 {esc(as_of)}</span>
       </div>
+      {trust_strip_html(ma['n'] + mb['n'], as_of, count_text=f"비교 점포 {ma['n'] + mb['n']}곳")}
       <div class="sx-facts">
         <div class="sx-fact"><span>{esc(a)} 공개 점포</span><b class="gold">{ma['n']}곳</b></div>
         <div class="sx-fact"><span>{esc(b)} 공개 점포</span><b class="gold">{mb['n']}곳</b></div>
@@ -1358,6 +1667,7 @@ def build_compare_page(a: str, items_a: list, b: str, items_b: list,
           <tbody>{rows}</tbody>
         </table>
       </div>
+      {thin_note}
 
       <h2>산정 전제</h2>
       {profit_basis_html(as_of, 'compare')}
@@ -1678,6 +1988,36 @@ def update_index_store_links(listings: list) -> bool:
     return False
 
 
+# ---------------------------------------------------------------- index trust strip
+TRUST_START = "<!-- SEO:TRUST:START -->"
+TRUST_END = "<!-- SEO:TRUST:END -->"
+
+
+def update_index_trust(listings: list, as_of: str) -> bool:
+    """메인 index.html 히어로의 신뢰 신호 줄(공개 점포 수·실사 기준·등록번호·담당·전화·갱신일)을
+    마커 사이에 다시 쑴니다. 점포 수와 갱신일이 데이터와 어김없이 맞도록 생성기가 고칩니다."""
+    if not INDEX_FILE.exists():
+        return False
+    source = INDEX_FILE.read_text(encoding="utf-8")
+    if TRUST_START not in source or TRUST_END not in source:
+        return False
+    block = (
+        f'{TRUST_START}\n'
+        f'      <div class="hero-trust" aria-label="신뢰 정보">\n'
+        + "".join(f"        <span>{item}</span>\n" for item in trust_items(len(listings), as_of))
+        + f'      </div>\n'
+        f'      {TRUST_END}'
+    )
+    new_source = re.sub(
+        re.escape(TRUST_START) + r".*?" + re.escape(TRUST_END), lambda _m: block,
+        source, count=1, flags=re.S
+    )
+    if new_source != source:
+        INDEX_FILE.write_text(new_source, encoding="utf-8")
+        return True
+    return False
+
+
 # ---------------------------------------------------------------- llms.txt
 def build_llms_txt(groups: dict, listings: list, updated_at: str) -> str:
     """AI 검색·요약 도구가 읽기 좋은 사이트 안내(llms.txt).
@@ -1702,10 +2042,36 @@ def build_llms_txt(groups: dict, listings: list, updated_at: str) -> str:
         f"- 담당: {MANAGER} · 전화 {PHONE} · 카카오톡 {KAKAO} · 등록 {REGISTER_NO}",
         f"- 최종 갱신: {updated_at}",
         "",
+    ]
+
+    # 브랜드별 시세 요약 — 공개 점포 원본 데이터만으로 계산한 중앙값·범위.
+    out += [
+        f"## 브랜드별 시세 요약 ({updated_at} 기준 · 에이피파트너 공개 실사 매물 {total}곳)",
+        "",
+        "브랜드별 공개 매장 수와 시설·영업권(초기 인수 비용 중 점포 예치금을 뺀 금액)의 중앙값·범위입니다. "
+        "중앙값은 그 브랜드 공개 점포를 순서대로 놓았을 때 가운데 값이고, 범위는 가장 낮은 값과 가장 높은 값입니다. "
+        "브랜드 전체 평균이 아니며, 본사 로열티·가맹비처럼 점주 자료에 없는 비용은 반영되지 않았습니다.",
+        "",
+        "| 브랜드 | 공개 매장 | 시설·영업권 중앙값 | 시설·영업권 범위 | 초기 인수 비용 범위 | 예상 순수익 중앙값 |",
+        "| --- | --- | --- | --- | --- | --- |",
+    ]
+    for brand, items in groups.items():
+        st = brand_stats(items)
+        prems = [premium_of(L) for L in items if premium_of(L) > 0]
+        out.append(
+            f"| {brand} | {st['n']}곳 | {fmt_manwon(st['prem_med'])} | "
+            f"{range_label(min(prems), max(prems))} | "
+            f"{range_label(st['cost_min'], st['cost_max'])} | 월 약 {fmt_manwon(st['profit_med'])} |"
+        )
+    out += [
+        "",
+        f"집계 시점: {updated_at} · 에이피파트너가 현장 실사를 마치고 공개한 매물만 집계했습니다.",
+        "",
         "## 사이트 지도",
         "",
         f"- [홈]({BASE_URL}/): 점포 카드 · 조건 입력 후 상세 지출 확인 · 상담 접수",
         f"- [브랜드별 보기]({BASE_URL}/brands/index.html): 브랜드 {len(GUIDE_BRANDS) + len(groups)}개 색인",
+        f"- [브랜드 비교]({BASE_URL}/brands/index.html): {len(compare_pairs(groups))}개 조합 비교표",
         f"- [전체 점포 색인]({BASE_URL}/stores/index.html): 공개 점포 {total}곳 목록",
         f"- [사이트맵]({BASE_URL}/sitemap.xml)",
         "",
@@ -1740,18 +2106,21 @@ def build_llms_txt(groups: dict, listings: list, updated_at: str) -> str:
     out += [f"## 공개 점포가 있는 브랜드 {len(groups)}개", ""]
     for brand, items in groups.items():
         costs = [L["initial_cost"]["total_manwon"] for L in items]
+        st = brand_stats(items)
         out.append(
             f"- [{brand}]({BASE_URL}/brands/{slug_for(brand)}.html) — {items[0]['category']} · "
-            f"{len(items)}곳 · 초기 인수 비용 {range_label(min(costs), max(costs))}"
+            f"{len(items)}곳 · 시설·영업권 중앙값 {fmt_manwon(st['prem_med'])} · "
+            f"초기 인수 비용 {range_label(min(costs), max(costs))} · 예상 순수익 중앙값 월 약 {fmt_manwon(st['profit_med'])}"
         )
     out += [f"## 브랜드 비교 {len(compare_pairs(groups))}개", "",
-            "공개 점포가 4곳 이상인 브랜드 쌍을 점포 수·초기 인수 비용·월 매출·예상 순수익 범위로 비교합니다. "
+            "두 브랜드의 점포 수·초기 인수 비용·시설·영업권 중앙값·월 매출·예상 순수익 범위와 회수 기간을 비교합니다. "
             "범위는 각 브랜드 공개 점포의 가장 낮은 값과 가장 높은 값이며, 브랜드 전체 평균이 아닙니다.", ""]
     for x, y in compare_pairs(groups):
         mx, my = compare_metrics(groups[x]), compare_metrics(groups[y])
         out.append(
             f"- [{x} vs {y}]({BASE_URL}/brands/{compare_slug(x, y)}.html) — 공개 {mx['n']}곳 vs {my['n']}곳 · "
-            f"초기 인수 비용 {mx['cost']} / {my['cost']} · 예상 월 순수익 {mx['profit']} / {my['profit']}"
+            f"초기 인수 비용 {mx['cost']} / {my['cost']} · 예상 월 순수익 {mx['profit']} / {my['profit']} · "
+            f"회수 기간 {mx['payback']} / {my['payback']}"
         )
     out += [""]
 
@@ -1798,7 +2167,7 @@ def main() -> int:
 
     for brand, items in groups.items():
         outputs[BRANDS_DIR / f"{slug_for(brand)}.html"] = build_brand_page(
-            brand, items, store_links, pairs, today)
+            brand, items, store_links, pairs, today, len(listings))
     for B in GUIDE_BRANDS:
         outputs[BRANDS_DIR / f"{B['slug']}.html"] = build_guide_page(B, store_links, GUIDE_BRANDS)
     outputs[BRANDS_DIR / "index.html"] = build_brand_index(brand_links, groups)
@@ -1840,6 +2209,8 @@ def main() -> int:
         print("index.html 푸터 브랜드 링크 갱신")
     if update_index_store_links(listings):
         print("index.html 점포 상세 링크 갱신")
+    if update_index_trust(listings, today):
+        print("index.html 신뢰 신호 갱신")
     if missing:
         print("⚠ 슬러그 매핑이 없는 브랜드(대체 슬러그 사용): " + ", ".join(missing))
     print(f"생성 완료 — 점포 {len(listings)}곳 · 브랜드 {len(groups)}개 · 파일 {len(outputs) + 1}개")
