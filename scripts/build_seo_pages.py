@@ -34,7 +34,7 @@ BASE_URL = "https://apchangup.com"
 
 # 페이지 구조(생성기·마크업)를 바꾼 날. sitemap lastmod·llms.txt 갱신일에 쓰고,
 # 내용을 바꾸면 이 값을 직접 올립니다(매 실행일로 자동 변경하지 않아 --check 가 흔들리지 않습니다).
-PAGE_UPDATED = "2026-11-27"
+PAGE_UPDATED = "2026-11-28"
 PHONE = "010-2885-5553"
 PHONE_TEL = "tel:010-2885-5553"
 KAKAO = "hyunyul89"
@@ -71,6 +71,16 @@ BRAND_SLUGS = {
     "한솥도시락": "hansot",
     "본죽": "bonjuk",
     "명랑핫도그": "myeongrang",
+    "파리바게뜨": "paris-baguette",
+    "설빙": "seolbing",
+    "서브웨이": "subway",
+    "이삭토스트": "isaac-toast",
+    "BBQ치킨": "bbq",
+    "BHC치킨": "bhc",
+    "더벤티": "theventi",
+    "백소정": "baeksojeong",
+    "동대문엽기떡볶이": "yeopgi-tteokbokki",
+    "역전할머니맥주": "halmaebeer",
 }
 
 # ---------------------------------------------------------------- 브랜드 가이드
