@@ -3822,11 +3822,21 @@
         return { ok: true };
       }
       var reason = (r && r.reason) || 'error';
+      var why = wlReasonText(reason);
       wlNote(cache
-        ? '이 기기에 저장된 목록을 보여 줍니다. Drive 동기화는 실패했습니다(' + reason + ').'
-        : 'Drive에서 대기 손님 목록을 받지 못했습니다(' + reason + '). [알림 설정 → 물건카드 연동]의 주소·키를 확인해 주세요.', 'warn');
+        ? '이 기기에 저장된 목록을 보여 줍니다. Drive 동기화는 실패했습니다(' + why + ').'
+        : 'Drive에서 대기 손님 목록을 받지 못했습니다(' + why + '). [알림 설정 → 물건카드 연동]의 주소·키를 확인해 주세요.', 'warn');
       return { ok: false, reason: reason };
     });
+  }
+
+  /* 실패 이유를 사람이 읽을 문구로 */
+  function wlReasonText(reason) {
+    if (reason === 'no-secret') return '연동 키가 저장되지 않음 — 알림 설정 → 물건카드 연동에서 키를 넣고 저장';
+    if (reason === 'unauthorized') return '연동 키가 서버 값과 다름 — 알림 설정 → 물건카드 연동에서 키를 다시 확인';
+    if (reason === 'network') return '서버에 연결하지 못함';
+    if (reason === 'no-endpoint') return '웹훅 주소가 비어 있음';
+    return reason;
   }
 
   /* ---- 손님 저장·삭제 (화면 먼저 반영 → Drive 저장, 실패하면 대기열에 남김) ---- */
