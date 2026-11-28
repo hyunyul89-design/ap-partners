@@ -711,7 +711,9 @@
       }
       if (note) {
         note.hidden = false;
-        note.textContent = branchSyncLabel() + ' 이번 로그인에서는 받지 못했습니다(' + ((res && res.reason) || 'error') + ').';
+        var why = (res && res.reason) || 'error';
+        if (why === 'no-secret') why = '연동 키 미입력 — 알림 설정 → 물건카드 연동에 키를 저장하면 다시 받아옵니다';
+        note.textContent = branchSyncLabel() + ' 이번 로그인에서는 받지 못했습니다(' + why + ').';
       }
     });
   }
