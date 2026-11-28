@@ -81,6 +81,7 @@ BRAND_SLUGS = {
     "백소정": "baeksojeong",
     "동대문엽기떡볶이": "yeopgi-tteokbokki",
     "역전할머니맥주": "halmaebeer",
+    "정관장": "jeonggwanjang",
 }
 
 # ---------------------------------------------------------------- 브랜드 가이드
@@ -312,6 +313,7 @@ CATEGORY_LABEL = {
     "음식점": "음식점",
     "패스트푸드": "패스트푸드",
     "치킨": "치킨",
+    "판매·서비스": "판매·서비스",
 }
 
 # 공식 채널 (푸터) — 새 탭으로 열립니다.
@@ -1040,7 +1042,7 @@ def build_guide_page(B: dict, store_links: list, guide_links: list) -> str:
       <div class="sx-lock">
         <p class="sx-lock-badge">우선 알림</p>
         <h3>{esc(brand)} 비공개 매물 · 신규 입고 우선 알림 신청</h3>
-        <p>희망 지역과 예산, 운영 형태(직접 운영·반오토·풀오토)를 남겨 주시면 {esc(brand)} 점포가 비공개로 들어오는 순서대로 먼저 연락드립니다. {esc(brand)} 외에 조건에 맞는 다른 브랜드 점포도 함께 추려 안내합니다.</p>
+        <p>희망 지역과 예산을 남겨 주시면 {esc(brand)} 점포가 비공개로 들어오는 순서대로 먼저 연락드립니다. {esc(brand)} 외에 조건에 맞는 다른 브랜드 점포도 함께 추려 안내합니다.</p>
         <div class="sx-lock-actions">
           <a class="btn btn-gold btn-lg" href="{BASE_URL}/#concierge">우선 알림 · 조건 상담 신청</a>
           <a class="btn btn-outline-navy btn-lg" href="{PHONE_TEL}">전화 상담 {PHONE}</a>
@@ -1172,10 +1174,11 @@ def build_brand_index(brand_links: list, groups: dict) -> str:
 
 
 def build_store_index(groups: dict, brand_links: list) -> str:
-    title = "전체 점포 색인 · 프랜차이즈 양도양수 창업 실사 매장 12곳 | 에이피파트너"
+    total = sum(len(v) for v in groups.values())
+    title = f"전체 점포 색인 · 프랜차이즈 양도양수 창업 실사 매장 {total}곳 | 에이피파트너"
     description = (
-        "현장 실사를 마친 프랜차이즈 양도양수 창업 매장 전체 목록입니다. 카페·디저트·치킨·패스트푸드 "
-        "12곳의 초기 인수 비용, 월 매출, 예상 순수익, 상권, 규모를 고유번호(AP-001~)로 확인하세요."
+        "현장 실사를 마친 프랜차이즈 양도양수 창업 매장 전체 목록입니다. 카페·디저트·치킨·패스트푸드·판매·서비스 "
+        f"{total}곳의 초기 인수 비용, 월 매출, 예상 순수익, 상권, 규모를 고유번호(AP-001~)로 확인하세요."
     )
     keywords = ",".join(unique(
         ["전체 점포", "프랜차이즈 양도양수", "양도양수 창업", "카페 창업"]
@@ -1373,7 +1376,7 @@ def build_llms_txt(groups: dict, listings: list, updated_at: str) -> str:
         f"현장 실사를 마친 공개 점포 {total}곳의 초기 인수 비용·월 매출·예상 순수익과, "
         f"브랜드 {len(GUIDE_BRANDS) + len(groups)}개의 인수 전 확인 항목을 정리했습니다.",
         "",
-        "에이피파트너는 카페·디저트·치킨·패스트푸드 프랜차이즈 매장의 양도양수(점포 인수)를 "
+        "에이피파트너는 카페·디저트·치킨·패스트푸드·판매·서비스 프랜차이즈 매장의 양도양수(점포 인수)를 "
         "중개하고 상담하는 1인 컨설팅 사무소입니다. 지점명과 상세 위치는 점주 보호를 위해 "
         "공개하지 않고 상담에서 안내하며, 게시된 수치는 점주 제시 자료를 기준으로 정리한 값입니다. "
         "확인되지 않은 가맹비·로열티·매출 수치는 게시하지 않습니다.",
