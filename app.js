@@ -4176,6 +4176,12 @@
       var delivery = applyNum('applySellDelivery') || 0;
       var etcCost = applyNum('applySellEtc') || 0;
       var openYm = applyText('applySellOpenYm');
+      var hours = applyText('applySellHours');
+      var lease = applyText('applySellLease');
+      var vat = applyText('applySellVat');
+      var parking = applyText('applySellParking');
+      var facility = applyText('applySellFacility');
+      var recentSales = applyText('applySellRecentSales');
       var reason = applyText('applySellReason');
       var when = applyText('applySellWhen');
       var note = applyText('applySellNote').slice(0, 300);
@@ -4201,7 +4207,13 @@
       line('공과금', manwonLabel(utility));
       line('배달비', manwonLabel(delivery));
       line('기타비용', manwonLabel(etcCost));
-      line('오픈연월', openYm);
+      line('오픈 시기', openYm);
+      line('영업시간', hours);
+      line('계약 기간', lease);
+      line('부가세', vat);
+      line('주차', parking);
+      line('시설 상태', facility);
+      line('최근 월별 매출', recentSales);
       line('양도 사유', reason);
       line('희망 양도 시기', when);
       line('시설 · 운영 특이사항', note);
@@ -4211,7 +4223,7 @@
       payload = {
         type: 'sell_request',
         source: 'sell',
-        form_version: 'sell-request-v2',
+        form_version: 'sell-request-v3',
         request_id: 'SELL-' + leadStamp(now) + '-' + String(Math.floor(Math.random() * 9000) + 1000),
         submitted_at: now.toISOString(),
         owner_name: owner,
@@ -4236,6 +4248,12 @@
         store_pyeong: Math.round(pyeong),
         store_floor: floor,
         open_ym: openYm,
+        business_hours: hours,
+        lease_term: lease,
+        vat: vat,
+        parking: parking,
+        facility_state: facility,
+        monthly_sales_recent: recentSales,
         sell_reason: reason,
         sell_when: when,
         facility_note: note,

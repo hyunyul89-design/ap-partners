@@ -43,6 +43,7 @@
   var LEAD_STATUS_KEY = 'apPartnerLeadStatus';
   var LEAD_DELETED_KEY = 'apPartnerLeadsDeleted';   /* 관리자가 지운 접수 번호 — 단일 접수(apPartnerLead)가 다시 섞이지 않게 */
   var SELL_KEY = 'apPartnerSellRequests';
+  var SELL_CACHE_KEY = 'apPartnerSellCache';   /* 비공개 Drive에서 받은 양도 의뢰 마지막 사본 */
   var TG_KEY = 'apTelegramConfig';
 
   /* ---------------- 물건카드 (비공개 Google Drive) ----------------
@@ -65,6 +66,7 @@
     leadStatus: {},
     leadFilter: 'all',
     sell: [],
+    sellSyncedAt: '',
     tg: null,
     editingId: null,
     bulk: null,
@@ -684,12 +686,11 @@
     selectTab(0);
     renderAccounts();
     loadData().then(function () {
-      loadSell();
       loadTelegram();
       renderStats();
       renderStores();
       renderLeads();
-      renderSell();
+      sellLoad();
       wlLoad(false);
       if (state.deepCode) focusStoreByCode(state.deepCode);
       syncBranchBadges();
@@ -1180,6 +1181,8 @@
     if (index === 4) renderAccounts();
     /* 매장 DB로 돌아올 때마다 담당 컨설턴트·필터 선택지를 최신 계정 기준으로 다시 그립니다. */
     if (index === 0) renderStores();
+    /* 양도 의뢰 탭을 열 때마다 비공개 Drive에서 최신 접수를 다시 받아옵니다. */
+    if (index === 3) sellLoad();
   }
 
   /* 최종관리자 전용 탭은 일반 컨설턴트 화면에서 아예 감춥니다. */
@@ -2889,40 +2892,217 @@
     if (csv) csv.addEventListener('click', downloadCsv);
   }
 
-  /* ---------------- 양도 의뢰 ---------------- */
+  /* ---------------- 양도 의뢰 ----------------
+     접수 원본은 사이트 → Apps Script → 비공개 Drive(ap-waitlist-sells.json)에 모입니다.
+     이 화면은 getSell 로 Drive의 **모든** 접수를 받아 오고, Drive에 닿지 못할 때만
+     이 브라우저에 남은 사본을 보여 줍니다. */
+  function sellNum(v) {
+    if (v === null || v === undefined || v === '') return null;
+    var n = Number(String(v).replace(/[^0-9.\-]/g, ''));
+    return isFinite(n) ? n : null;
+  }
+
+  function sellStr(v) { return String(v == null ? '' : v).trim(); }
+
+  /* 사이트 원본(localStorage, camel)과 Drive 기록(snake_case)을 같은 모양으로 맞춥니다. */
+  function sellNormalize(R) {
+    if (!R || typeof R !== 'object') return null;
+    var c = R.contact || {};
+    var id = sellStr(R.sell_id || R.request_id || R.lead_id || '');
+    var rec = {
+      id: id,
+      submitted_at: sellStr(R.submitted_at),
+      source: sellStr(R.source || 'sell'),
+      form_version: sellStr(R.form_version),
+      owner: sellStr(R.owner_name || R.name),
+      brand: sellStr(R.brand),
+      area: sellStr(R.area || R.region),
+      phone: sellStr(R.phone || c.phone),
+      sales: sellNum(R.monthly_sales_manwon),
+      deposit: sellNum(R.deposit_manwon),
+      rent: sellNum(R.rent_manwon),
+      maintenance: sellNum(R.maintenance_manwon),
+      premium: sellNum(R.premium_manwon),
+      profit: sellNum(R.profit_manwon),
+      labor: sellNum(R.labor_manwon),
+      material: sellNum(R.material_pct),
+      utility: sellNum(R.utility_manwon),
+      delivery: sellNum(R.delivery_manwon),
+      etcCost: sellNum(R.etc_manwon),
+      pyeong: sellNum(R.store_pyeong),
+      floor: sellStr(R.store_floor),
+      openYm: sellStr(R.open_ym),
+      hours: sellStr(R.business_hours),
+      lease: sellStr(R.lease_term),
+      vat: sellStr(R.vat),
+      parking: sellStr(R.parking),
+      facility: sellStr(R.facility_state),
+      recentSales: sellStr(R.monthly_sales_recent),
+      reason: sellStr(R.sell_reason),
+      when: sellStr(R.sell_when),
+      note: sellStr(R.facility_note || R.memo),
+      detail_text: sellStr(R.detail_text)
+    };
+    if (!rec.phone) return null;              // 연락처 없는 기록은 상담에 쓸 수 없어 건너뜁니다
+    return rec;
+  }
+
+  function sellSort(list) {
+    return list.sort(function (a, b) {
+      return String(b.submitted_at || '').localeCompare(String(a.submitted_at || ''));
+    });
+  }
+
+  /* 이 브라우저에 남은 사본(사이트 접수 원본 + 마지막 Drive 사본)부터 그리고, Drive로 갱신합니다. */
   function loadSell() {
-    var list = safeParse(readStore(SELL_KEY));
-    state.sell = (list instanceof Array) ? list.filter(function (x) {
-      return x && x.contact && x.contact.phone;
-    }) : [];
-    state.sell.sort(function (a, b) { return String(b.submitted_at || '').localeCompare(String(a.submitted_at || '')); });
+    var cache = safeParse(readStore(SELL_CACHE_KEY));
+    var raw = (cache && cache.sells instanceof Array) ? cache.sells : null;
+    var fromCache = raw !== null;
+    if (!fromCache) {
+      var local = safeParse(readStore(SELL_KEY));
+      raw = (local instanceof Array) ? local : [];
+    }
+    state.sell = sellSort((raw || []).map(sellNormalize).filter(function (x) { return x; }));
+    state.sellSyncedAt = (cache && cache.at) || '';
+    return fromCache;
+  }
+
+  function sellLoad(force) {
+    var cached = loadSell();
+    renderSell();
+    renderStats();
+    var note = $('#sellSyncNote');
+    var busyText = '비공개 Drive에서 양도 의뢰를 받아오는 중…';
+    if (note) {
+      note.innerHTML = cached && state.sellSyncedAt
+        ? '<b>표시 범위 안내</b> · 접수 원본은 비공개 Google Drive(<code>ap-waitlist-sells.json</code>)에 저장됩니다. <b>Drive에서 다시 받는 중…</b>'
+        : '<b>표시 범위 안내</b> · ' + busyText;
+    }
+    return cardGet('getSell', '').then(function (r) {
+      if (note) {
+        if (r && r.ok) {
+          var items = (r.sells instanceof Array) ? r.sells : [];
+          state.sell = sellSort(items.map(sellNormalize).filter(function (x) { return x; }));
+          state.sellSyncedAt = r.updated || new Date().toISOString();
+          try { writeStore(SELL_CACHE_KEY, JSON.stringify({ at: state.sellSyncedAt, sells: items })); } catch (e) { /* 무시 */ }
+          note.innerHTML = '<b>표시 범위 안내</b> · 접수 원본은 비공개 Google Drive(<code>ap-waitlist-sells.json</code>)에 저장됩니다. '
+            + '지금 <b>' + state.sell.length + '건</b>을 Drive에서 받았습니다 (' + esc(kst(state.sellSyncedAt, true)) + '). 텔레그램 알림도 함께 도착합니다.';
+        } else {
+          var why = (r && r.reason) || 'error';
+          note.innerHTML = '<b>표시 범위 안내</b> · Drive에서 접수를 받지 못했습니다 (' + esc(wlReasonText(why)) + '). '
+            + (state.sell.length
+              ? '이 브라우저에 남은 <b>' + state.sell.length + '건</b>만 보입니다. [알림 설정 → 물건카드 연동]의 주소·키를 확인해 주세요.'
+              : '[알림 설정 → 물건카드 연동]의 주소·키를 확인해 주세요.');
+        }
+      }
+      renderSell();
+      renderStats();
+      return r;
+    });
+  }
+
+  function sellMoney(v) { return (v === null || v === undefined) ? '' : wonLabel(v); }
+
+  function sellCardHTML(R) {
+    var figs = [
+      ['월 매출', sellMoney(R.sales)],
+      ['점포 예치금', sellMoney(R.deposit)],
+      ['월 임차료', sellMoney(R.rent)],
+      ['관리비', sellMoney(R.maintenance)],
+      ['희망 시설·영업권', sellMoney(R.premium)],
+      ['월 순수익', sellMoney(R.profit)]
+    ].filter(function (f) { return f[1]; });
+    var rows = [
+      ['이름', esc(R.owner)],
+      ['실평수', R.pyeong === null ? '' : esc(R.pyeong + '평')],
+      ['층수', esc(R.floor)],
+      ['오픈 시기', esc(R.openYm)],
+      ['영업시간', esc(R.hours)],
+      ['계약 기간', esc(R.lease)],
+      ['부가세', esc(R.vat)],
+      ['주차', esc(R.parking)],
+      ['시설 상태', esc(R.facility)],
+      ['인건비', sellMoney(R.labor)],
+      ['재료비', R.material === null ? '' : esc(R.material + '%')],
+      ['공과금', sellMoney(R.utility)],
+      ['배달비', sellMoney(R.delivery)],
+      ['기타비용', sellMoney(R.etcCost)],
+      ['최근 월별 매출', esc(R.recentSales)],
+      ['양도 사유', esc(R.reason)],
+      ['희망 양도 시기', esc(R.when)]
+    ].filter(function (f) { return f[1]; });
+    var telHref = R.phone ? 'tel:' + String(R.phone).replace(/[^0-9+]/g, '') : '';
+    return '' +
+      '<article class="sell-card" data-sell-id="' + esc(R.id) + '">' +
+        '<div class="sell-card-head">' +
+          '<div class="sell-card-title"><b>' + esc(R.brand || '브랜드 미기재') + '</b>' +
+            '<span>' + esc(R.area || '지역 미기재') + '</span></div>' +
+          '<div class="sell-card-meta">' +
+            '<span class="sell-no" title="' + esc(R.id) + '">' + esc(displayReceiptNo(R.id)) + '</span>' +
+            '<span>' + esc(kst(R.submitted_at, true)) + '</span>' +
+            (R.source === 'sell' ? '<span class="sell-tag">사이트 접수</span>' : '<span class="sell-tag is-quiet">' + esc(R.source || '-') + '</span>') +
+          '</div>' +
+        '</div>' +
+        '<div class="sell-contact">' +
+          (telHref ? '<a href="' + esc(telHref) + '">' + esc(R.phone) + '</a>' : '<span>연락처 없음</span>') +
+          (R.owner ? '<span>' + esc(R.owner) + '</span>' : '') +
+        '</div>' +
+        (figs.length ? '<div class="sell-figs">' + figs.map(function (f) {
+          return '<span>' + esc(f[0]) + ' <b>' + esc(f[1]) + '</b></span>';
+        }).join('') + '</div>' : '') +
+        (rows.length ? '<dl class="sell-grid">' + rows.map(function (f) {
+          return '<div><dt>' + esc(f[0]) + '</dt><dd>' + f[1] + '</dd></div>';
+        }).join('') + '</dl>' : '') +
+        (R.note ? '<p class="sell-note">' + esc(R.note).replace(/\n/g, '<br />') + '</p>' : '') +
+        '<div class="sell-actions">' +
+          (telHref ? '<a class="btn btn-quiet btn-sm" href="' + esc(telHref) + '">전호 걸기</a>' : '') +
+          '<button class="btn btn-quiet btn-sm is-danger" type="button" data-sell-del="' + esc(R.id) + '">접수 삭제</button>' +
+        '</div>' +
+      '</article>';
   }
 
   function renderSell() {
-    var body = $('#sellRows');
-    if (!body) return;
-    var wrap = $('#sellTableWrap');
+    var box = $('#sellList');
     var empty = $('#sellEmpty');
+    if (!box) return;
     if (!state.sell.length) {
-      if (wrap) wrap.hidden = true;
+      box.innerHTML = '';
       if (empty) empty.hidden = false;
       return;
     }
-    if (wrap) wrap.hidden = false;
     if (empty) empty.hidden = true;
-    body.innerHTML = state.sell.map(function (R) {
-      return '' +
-        '<tr>' +
-          '<td data-label="접수"><div class="cell-main"><b>' + esc(kst(R.submitted_at, true)) + '</b>' +
-            '<span class="lead-detail-sub" title="' + esc(R.request_id) + '">' + esc(displayReceiptNo(R.request_id)) + '</span></div></td>' +
-          '<td data-label="브랜드"><div class="cell-main"><b>' + esc(R.brand) + '</b>' +
-            '<span>' + esc(kst(R.submitted_at)) + '</span></div></td>' +
-          '<td data-label="지역">' + esc(R.area) + '</td>' +
-          '<td data-label="월 매출" class="num">' + wonLabel(R.monthly_sales_manwon) + '</td>' +
-          '<td data-label="희망 권리금" class="num">' + wonLabel(R.premium_manwon) + '</td>' +
-          '<td data-label="연락처" class="phone">' + esc(R.contact.phone) + '</td>' +
-        '</tr>';
-    }).join('');
+    box.innerHTML = state.sell.map(sellCardHTML).join('');
+    $all('[data-sell-del]', box).forEach(function (btn) {
+      btn.addEventListener('click', function () { sellDelete(btn.getAttribute('data-sell-del')); });
+    });
+  }
+
+  function sellDelete(id) {
+    if (!id) return;
+    var R = null;
+    state.sell.forEach(function (x) { if (x && x.id === id) R = x; });
+    var label = R ? ((R.brand || '') + ' · ' + (R.area || '')) : id;
+    if (!window.confirm('이 양도 의뢰를 삭제할까요?\n' + label + '\n비공개 Drive 접수 원본에서도 지워집니다.')) return;
+    state.sell = state.sell.filter(function (x) { return x && x.id !== id; });
+    renderSell();
+    renderStats();
+    try {
+      var cache = safeParse(readStore(SELL_CACHE_KEY));
+      if (cache && cache.sells instanceof Array) {
+        cache.sells = cache.sells.filter(function (x) {
+          var rid = sellStr(x && (x.sell_id || x.request_id || x.lead_id || x.id));
+          return rid !== id;
+        });
+        writeStore(SELL_CACHE_KEY, JSON.stringify(cache));
+      }
+    } catch (e2) { /* 무시 */ }
+    wlPost({ action: 'deleteSell', sell_id: id }).then(function (r) {
+      if (r && r.ok) {
+        toast('양도 의뢰를 삭제했습니다. 비공개 Drive에서도 지웠습니다.');
+      } else {
+        toast('이 화면에서 지웠습니다. Drive 삭제는 다시 시도해 주세요 (' + wlReasonText((r && r.reason) || 'error') + ').');
+      }
+    });
   }
 
   /* ---------------- 물건카드 (비공개 Google Drive) ----------------
@@ -3529,18 +3709,22 @@
   }
 
   function initSellActions() {
+    var reload = $('#btnSellReload');
+    if (reload) reload.addEventListener('click', function () {
+      reload.disabled = true;
+      sellLoad(true).then(function () { reload.disabled = false; });
+    });
     var btn = $('#btnSellCsv');
     if (btn) btn.addEventListener('click', function () {
       loadSell();
       if (!state.sell.length) { toast('내려받을 양도 의뢰가 아직 없습니다.'); return; }
-      var head = ['접수번호', '접수일시(KST)', '브랜드', '지역', '월 매출(만원)', '희망 권리금(만원)', '연락처', '동의', '페이지'];
+      var head = ['접수번호', '접수일시(KST)', '이름', '브랜드', '지역', '월 매출(만원)', '점포 예치금(만원)', '월 임차료(만원)', '관리비(만원)', '희망 시설·영업권(만원)', '월 순수익(만원)', '인건비(만원)', '재료비(%)', '공과금(만원)', '배달비(만원)', '기타비용(만원)', '실평수(평)', '층수', '오픈 시기', '영업시간', '계약 기간', '부가세', '주차', '시설 상태', '최근 월별 매출', '양도 사유', '희망 양도 시기', '시설·운영 특이사항', '연락처'];
       var rows = state.sell.map(function (R) {
         return [
-          R.request_id, kst(R.submitted_at), R.brand, R.area,
-          R.monthly_sales_manwon, R.premium_manwon,
-          R.contact && R.contact.phone ? R.contact.phone : '',
-          R.contact && R.contact.consent ? 'Y' : 'N',
-          R.page || ''
+          R.id, kst(R.submitted_at), R.owner, R.brand, R.area,
+          R.sales, R.deposit, R.rent, R.maintenance, R.premium, R.profit, R.labor, R.material,
+          R.utility, R.delivery, R.etcCost, R.pyeong, R.floor, R.openYm, R.hours, R.lease, R.vat,
+          R.parking, R.facility, R.recentSales, R.reason, R.when, R.note, R.phone
         ].map(csvCell).join(',');
       });
       saveCsv('ap-sell-requests-' + todayStamp() + '.csv', head, rows);
