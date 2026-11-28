@@ -41,6 +41,7 @@
   var LEAD_ALL_KEY = 'apPartnerLeads';
   var LEAD_ONE_KEY = 'apPartnerLead';
   var LEAD_STATUS_KEY = 'apPartnerLeadStatus';
+  var LEAD_DELETED_KEY = 'apPartnerLeadsDeleted';   /* 관리자가 지운 접수 번호 — 단일 접수(apPartnerLead)가 다시 섞이지 않게 */
   var SELL_KEY = 'apPartnerSellRequests';
   var TG_KEY = 'apTelegramConfig';
 
@@ -2709,6 +2710,13 @@
   }
 
   /* ---------------- 손님 DB ---------------- */
+  /* 지운 접수 번호 목록 — 이 기기의 단일 접수(apPartnerLead)·다른 탭의 옛 목록에서
+     같은 접수가 다시 올라오지 않게 막습니다. */
+  function leadDeletedIds() {
+    var ids = safeParse(readStore(LEAD_DELETED_KEY));
+    return (ids instanceof Array) ? ids.map(String) : [];
+  }
+
   function loadLeads() {
     var all = safeParse(readStore(LEAD_ALL_KEY));
     if (!(all instanceof Array)) all = [];
@@ -2717,7 +2725,9 @@
       var dup = all.some(function (x) { return x && x.lead_id === one.lead_id; });
       if (!dup) all = [one].concat(all);
     }
+    var gone = leadDeletedIds();
     all = all.filter(function (x) { return x && x.contact && x.contact.phone; });
+    if (gone.length) all = all.filter(function (x) { return gone.indexOf(String(x.lead_id)) === -1; });
     all.sort(function (a, b) { return String(b.submitted_at || '').localeCompare(String(a.submitted_at || '')); });
     var map = safeParse(readStore(LEAD_STATUS_KEY));
     state.leadStatus = (map && typeof map === 'object') ? map : {};
@@ -2798,6 +2808,7 @@
             '<option value="new"' + (st !== 'done' ? ' selected' : '') + '>신규</option>' +
             '<option value="done"' + (st === 'done' ? ' selected' : '') + '>상담완료</option>' +
           '</select></td>' +
+          '<td data-label="삭제" class="cell-del"><button type="button" class="lead-del" data-lead-del="' + esc(L.lead_id) + '" title="' + esc(displayReceiptNo(L.lead_id)) + ' 접수 삭제">삭제</button></td>' +
         '</tr>';
     }).join('');
 
@@ -2813,7 +2824,58 @@
       });
     });
 
+    $all('[data-lead-del]', body).forEach(function (btn) {
+      btn.addEventListener('click', function () { deleteLead(btn.getAttribute('data-lead-del')); });
+    });
+
     renderStats();
+  }
+
+  /* 접수 1건 삭제 — 이 브라우저 목록에서 지우고, 비공개 Drive 원본이 있으면 함께 지웁니다.
+     지운 번호는 LEAD_DELETED_KEY에 남겨 단일 접수(apPartnerLead)로 다시 올라오지 않게 합니다. */
+  function deleteLead(id) {
+    id = String(id || '');
+    if (!id) return;
+    var target = null;
+    state.leads.forEach(function (L) { if (L && L.lead_id === id) target = L; });
+    var phone = (target && target.contact && target.contact.phone) || '';
+    var head = displayReceiptNo(id) + (phone ? ' · ' + phone : '');
+    if (!window.confirm('"' + head + '" 접수를 삭제할까요?\n삭제 후에는 되돌릴 수 없습니다.')) return;
+
+    var all = safeParse(readStore(LEAD_ALL_KEY));
+    all = (all instanceof Array) ? all.filter(function (x) { return !x || String(x.lead_id) !== id; }) : [];
+    writeStore(LEAD_ALL_KEY, JSON.stringify(all));
+    var gone = leadDeletedIds();
+    if (gone.indexOf(id) === -1) {
+      gone.push(id);
+      writeStore(LEAD_DELETED_KEY, JSON.stringify(gone.slice(-500)));
+    }
+    delete state.leadStatus[id];
+    saveLeadStatus();
+    state.leads = state.leads.filter(function (L) { return !L || String(L.lead_id) !== id; });
+
+    /* 대기 손님 탭의 접수 목록에 같은 번호가 있으면 함께 지웁니다. */
+    if (state.wl && state.wl.leads instanceof Array) {
+      var before = state.wl.leads.length;
+      state.wl.leads = state.wl.leads.filter(function (x) { return !x || String(x.lead_id) !== id; });
+      if (state.wl.leads.length !== before) {
+        wlCache();
+        wlRenderLeads();
+      }
+    }
+
+    renderLeads();
+    renderStats();
+
+    /* 비공개 Drive 접수 원본도 지웁니다(연동 키가 저장된 경우에만 시도). */
+    if (!cardConfig().secret) {
+      toast('접수를 삭제했습니다.');
+      return;
+    }
+    wlPost({ action: 'deleteLead', lead_id: id }).then(function (r) {
+      if (r && r.ok) toast('접수를 삭제했습니다.');
+      else toast('이 화면에서 지웠습니다. 비공개 Drive 원본은 [대기 손님] 탭의 접수 삭제로 지워 주세요.');
+    });
   }
 
   function initLeadFilters() {
