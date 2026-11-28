@@ -86,6 +86,7 @@ BRAND_SLUGS = {
     "동대문엽기떡볶이": "yeopgi-tteokbokki",
     "역전할머니맥주": "halmaebeer",
     "정관장": "jeonggwanjang",
+    "본우리반상": "bonwooribansang",
 }
 
 # ---------------------------------------------------------------- 브랜드 가이드
