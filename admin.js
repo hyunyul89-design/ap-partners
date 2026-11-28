@@ -3102,6 +3102,11 @@
     } catch (e2) { /* 무시 */ }
     wlPost({ action: 'deleteSell', sell_id: id }).then(function (r) {
       if (r && r.ok) {
+        var note = $('#sellSyncNote');
+        if (note) {
+          note.innerHTML = '<b>표시 범위 안내</b> · 접수 원본은 비공개 Google Drive(<code>ap-waitlist-sells.json</code>)에 저장됩니다. '
+            + '지금 <b>' + state.sell.length + '건</b>입니다.';
+        }
         toast('양도 의뢰를 삭제했습니다. 비공개 Drive에서도 지웠습니다.');
       } else {
         toast('이 화면에서 지웠습니다. Drive 삭제는 다시 시도해 주세요 (' + wlReasonText((r && r.reason) || 'error') + ').');
