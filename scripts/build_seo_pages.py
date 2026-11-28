@@ -1441,6 +1441,9 @@ def main() -> int:
 
     listings = load_listings()
     groups = group_by_brand(listings)
+    # 공개 점포가 생긴 브랜드는 가이드(0곳 안내) 페이지를 만들지 않는다.
+    global GUIDE_BRANDS
+    GUIDE_BRANDS = [B for B in GUIDE_BRANDS if B["brand"] not in groups]
     store_links = [(b, slug_for(b)) for b in groups]
     guide_links = [(B["brand"], B["slug"]) for B in GUIDE_BRANDS]
     brand_links = store_links + guide_links
