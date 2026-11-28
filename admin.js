@@ -2984,14 +2984,18 @@
           var items = (r.sells instanceof Array) ? r.sells : [];
           state.sell = sellSort(items.map(sellNormalize).filter(function (x) { return x; }));
           state.sellSyncedAt = r.updated || new Date().toISOString();
-          try { writeStore(SELL_CACHE_KEY, JSON.stringify({ at: state.sellSyncedAt, sells: items })); } catch (e) { /* 무시 */ }
+          try {
+            writeStore(SELL_CACHE_KEY, JSON.stringify({ at: state.sellSyncedAt, sells: items }));
+            /* Drive가 정본이므로, 이 브라우저에 남아 있던 예전 접수 사본도 Drive 내용으로 맞춥니다. */
+            writeStore(SELL_KEY, JSON.stringify(items));
+          } catch (e) { /* 무시 */ }
           note.innerHTML = '<b>표시 범위 안내</b> · 접수 원본은 비공개 Google Drive(<code>ap-waitlist-sells.json</code>)에 저장됩니다. '
             + '지금 <b>' + state.sell.length + '건</b>을 Drive에서 받았습니다 (' + esc(kst(state.sellSyncedAt, true)) + '). 텔레그램 알림도 함께 도착합니다.';
         } else {
           var why = (r && r.reason) || 'error';
           note.innerHTML = '<b>표시 범위 안내</b> · Drive에서 접수를 받지 못했습니다 (' + esc(wlReasonText(why)) + '). '
             + (state.sell.length
-              ? '이 브라우저에 남은 <b>' + state.sell.length + '건</b>만 보입니다. [알림 설정 → 물건카드 연동]의 주소·키를 확인해 주세요.'
+              ? '이 브라우저에 남은 <b>' + state.sell.length + '건</b>만 보입니다.'
               : '[알림 설정 → 물건카드 연동]의 주소·키를 확인해 주세요.');
         }
       }
@@ -3055,7 +3059,7 @@
         }).join('') + '</dl>' : '') +
         (R.note ? '<p class="sell-note">' + esc(R.note).replace(/\n/g, '<br />') + '</p>' : '') +
         '<div class="sell-actions">' +
-          (telHref ? '<a class="btn btn-quiet btn-sm" href="' + esc(telHref) + '">전호 걸기</a>' : '') +
+          (telHref ? '<a class="btn btn-quiet btn-sm" href="' + esc(telHref) + '">전화 걸기</a>' : '') +
           '<button class="btn btn-quiet btn-sm is-danger" type="button" data-sell-del="' + esc(R.id) + '">접수 삭제</button>' +
         '</div>' +
       '</article>';
