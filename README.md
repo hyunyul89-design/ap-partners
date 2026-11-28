@@ -209,7 +209,7 @@ var LEAD_ENDPOINT = '';   // 예: https://script.google.com/macros/s/xxxx/exec
 | `apPartnerCompare` | 비교 담은 점포(세션) |
 | `apPartnerCatalog` | 관리자가 저장한 점포 목록 |
 | `apTelegramConfig` | 텔레그램 Bot Token · Chat ID 설정 |
-| `apPropertyCardConfig` | 물건카드 연동 설정(웹훅 주소·연동 키). 없으면 `admin.js`의 기본값(LEAD_ENDPOINT · `apcard-2026`) 사용 |
+| `apPropertyCardConfig` | 물건카드 연동 설정(웹훅 주소·연동 키). 없으면 웹훅 주소만 기본값(LEAD_ENDPOINT)을 쓰고, 연동 키는 비어 있어 관리자 화면에서 직접 입력해야 합니다 |
 | `apAdminAccounts` | 관리자 계정 목록(아이디·이름·권한·SHA-256 비밀번호 해시·등록일) |
 | `apAdminBranches` | 관리자 전용 비공개 지점명(`{ "AP-001": "○○점", … }`). 로그인 직후 Drive `ap-admin-branches.json`에서 받아 채움. 손님 화면에서는 읽지 않음 |
 | `apAdminBranchInfo` | 비공개 원가 참고값(`{ "AP-013": { lnd_seq, orig_premium, up_premium } }`). 카드의 `창업물건 참고` 줄에만 사용 |
@@ -266,10 +266,14 @@ python3 scripts/ap_waitlist_match.py --customer "김민수"        # 손님 → 
 
 작업 공간 캐시(`documents/ap-waitlist-local.json`)에는 손님 연락처가 들어 있으므로 공개 저장소로 복사하지 않습니다.
 
-### 남은 위험
+### 연동 키 관리 (2026-11-28 교체)
 
-연동 키(`apcard-2026`)가 공개 `admin.js`에 기본값으로 들어 있어, 소스를 읽은 사람은 `getWaitlistAll`을 호출해 손님 정보를 받아갈 수 있습니다.
-실서비스 전에는 ① Apps Script `CARD_SECRET_KEY`와 관리자 `알림 설정 → 물건카드 연동 키`를 새 값으로 바꾸고, ② 손님 조회 전용 키를 따로 두는 것이 좋습니다.
+연동 키는 공개 저장소 어디에도 두지 않습니다. 관리자 화면(`admin.html` → 알림 설정 → 물건카드 연동)에 한 번 입력하면 그 브라우저(localStorage `apPropertyCardConfig`)에만 저장되고, Apps Script의 `CARD_SECRET_KEY`와 같아야 `getCard`·`getBranches`·`getWaitlistAll` 등이 응답합니다.
+
+- `admin.js`의 기본값은 빈 문자열(`CARD_SECRET_DEFAULT = ''`)입니다. 키가 없으면 물건카드·비공개 지점명·대기 손님 DB를 읽지 않고 `물건카드 연동 키가 저장되지 않았습니다` 안내를 띄웁니다.
+- 키 값은 비공개 작업 공간(`documents/ap-card-secret-key.txt`, 권한 600)과 Apps Script 편집기에만 있습니다. 저장소·화면·문서에 적지 않습니다.
+- 2026-11-28 이전에 쓰던 기본 키는 폐기했습니다(그 값으로 호출하면 `{"ok":false,"reason":"unauthorized"}`).
+- 남은 것: 관리자 인증이 여전히 클라이언트 측 해시 비교이고, 손님 조회 전용 키를 따로 두는 편이 좋습니다.
 
 ## 물건카드 (비공개 Google Drive) · 2026-11-26 추가
 
@@ -278,7 +282,7 @@ python3 scripts/ap_waitlist_match.py --customer "김민수"        # 손님 → 
 - **드라이브 폴더**: `AP파트너_물건카드_비공개` (hyunyul89@gmail.com 소유)
   - 폴더 ID `1reQLNvYQJSMhi6W2iTC3wUaT_AQ2XVEG` · 파일 이름은 매물 고유번호와 1:1 (`AP-001.jpg` ~ `AP-012.jpg`)
 - **화면**: 매장 DB 카드의 `수정`·`삭제` 옆 **`물건카드`** 버튼 → 모달에서 원본 크게 보기·확대·첨부/교체. 새 매장 등록·수정 폼에서도 선택적으로 첨부할 수 있습니다.
-- **설정**: 관리자 **알림 설정** 탭의 `물건카드 연동` 카드에서 웹훅 주소와 연동 키(`CARD_SECRET`, 기본 `apcard-2026`)를 확인·저장합니다. `연결 테스트`는 `?action=ping`, `응답 미리 보기 ↗`는 브라우저 새 창에서 원본 JSON을 보여 줍니다(CORS 진단용).
+- **설정**: 관리자 **알림 설정** 탭의 `물건카드 연동` 카드에서 웹훅 주소와 연동 키(`CARD_SECRET`)를 확인·저장합니다. 키의 기본값은 없으므로 처음 한 번은 직접 입력해야 합니다. `연결 테스트`는 `?action=ping`, `응답 미리 보기 ↗`는 브라우저 새 창에서 원본 JSON을 보여 줍니다(CORS 진단용).
 - **웹훅 규격** (`LEAD_ENDPOINT` = Google Apps Script):
   - `GET ?action=getCard&id=AP-006&key=****` → `{ok:true, dataUrl:"data:image/jpeg;base64,...", updated, size}` 또는 `{ok:false, reason:"not_found"}`, `&callback=함수명`을 붙이면 JSONP(자바스크립트)로 응답
   - `GET ?action=getBranches&key=****` → `{ok:true, count, updated, data:{ schema, branches:[{code,branch,lnd_seq,orig_premium,up_premium,…}] }}` — 같은 폴더의 `ap-admin-branches.json`(관리자 전용 지점명·원가 매핑)을 그대로 돌려줌
@@ -287,7 +291,7 @@ python3 scripts/ap_waitlist_match.py --customer "김민수"        # 손님 → 
 - **스크립트**: `docs/apps-script-property-cards.gs` — 기존 텔레그램 `doPost`는 그대로 두고 `[1]` 상수 + `doPost` 첫 줄 한 줄 + `[2]` 블록(doGet·헬퍼)만 붙이는 방식과, 통째로 쓰는 전체 템플릿(`[3]`)을 함께 담았습니다.
 - **이미지 축소**: 업로드 시 브라우저에서 긴 변 1600px · JPEG(품질 0.85)로 줄여 전송합니다(원본이 그보다 작으면 그대로).
 - **CORS 대비**: Apps Script 웹 앱 응답에 CORS 헤더가 없을 때를 대비해, 읽기는 `callback=` JSONP를 먼저 시도하고 안 되면 fetch로 물러납니다. 저장(POST)은 응답을 읽지 못해도 `getCard`로 실제 저장 여부를 확인한 뒤에만 다시 보냅니다.
-- **권한**: `CARD_SECRET`은 간단한 게이트입니다. 공개 저장소의 `admin.js`에 기본값이 들어 있으므로, 실제 운영에서는 관리자 화면에서 키를 바꾸고 스크립트의 `CARD_SECRET_KEY`도 같은 값으로 바꿔 주세요.
+- **권한**: `CARD_SECRET`은 간단한 게이트입니다. 2026-11-28부터 공개 소스에 기본값이 없고, 관리자 화면에서 1회 입력한 값이 그 브라우저에만 저장됩니다. Apps Script의 `CARD_SECRET_KEY`와 같은 값이어야 합니다.
 
 ## 텔레그램 알림 연결 (배포 시)
 

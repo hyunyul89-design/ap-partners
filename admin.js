@@ -50,10 +50,11 @@
      공개 저장소(site/)에는 이미지를 올리지 않습니다. */
   var CARD_CONFIG_KEY = 'apPropertyCardConfig';
   var CARD_ENDPOINT_DEFAULT = 'https://script.google.com/macros/s/AKfycby46wERwxPPkkGeOXVO0zyerX4DWgua0tqBRbtgN3eh-aDJGLJ7ggNewUUY8sTl7EGHUA/exec';
-  var CARD_SECRET_DEFAULT = 'apcard-2026';
+  var CARD_SECRET_DEFAULT = '';   /* 공개 소스에 키를 두지 않습니다. 관리자 화면에서 1회 입력해 이 브라우저에만 저장합니다. */
   var CARD_FOLDER_LABEL = 'AP파트너_물건카드_비공개';
   var CARD_MAX_SIDE = 1600;
   var CARD_CACHE_MS = 60000;
+  var cardSecretPrompted = false;
 
   var state = {
     accounts: [],
@@ -2868,7 +2869,7 @@
     if (!cfg || typeof cfg !== 'object') cfg = {};
     return {
       endpoint: String(cfg.endpoint || CARD_ENDPOINT_DEFAULT).trim(),
-      secret: String(cfg.secret == null ? CARD_SECRET_DEFAULT : cfg.secret),
+      secret: String(cfg.secret == null ? CARD_SECRET_DEFAULT : cfg.secret).trim(),
       stored: !!(cfg.endpoint || cfg.secret),
       updated_at: cfg.updated_at || ''
     };
@@ -2898,6 +2899,7 @@
     if (reason === 'bad_data_url') return '이미지 형식을 읽지 못했습니다. jpg·png 파일로 다시 시도해 주세요.';
     if (reason === 'bad_id') return '물건카드 번호(AP-000)를 확인해 주세요.';
     if (reason === 'no-endpoint') return '웹훅 주소가 비어 있습니다. [알림 설정 → 물건카드 연동]에서 주소를 저장해 주세요.';
+    if (reason === 'no-secret') return '물건카드 연동 키가 저장되지 않았습니다. Apps Script의 CARD_SECRET_KEY와 같은 키를 [알림 설정 → 물건카드 연동]에 넣고 저장해 주세요.';
     if (reason === 'no_doget') return 'Apps Script에 물건카드 조회(doGet)가 아직 배포되지 않았습니다. docs/apps-script-property-cards.gs의 [2] 블록을 붙이고 새 버전으로 배포해 주세요.';
     if (reason === 'auth') return 'Apps Script 배포가 공개되지 않았습니다. [배포 관리]에서 액세스 권한을 모든 사용자로 바꿔 주세요.';
     if (reason === 'network') return '웹훅에 연결하지 못했습니다. Apps Script에 물건카드 코드(doGet)를 붙여 새 버전으로 배포했는지, 배포 액세스 권한이 "모든 사용자"인지 확인해 주세요. [알림 설정 → 응답 미리 보기 ↗]로 실제 응답을 볼 수 있습니다.';
@@ -2919,6 +2921,7 @@
   function cardJsonpGet(action, extra) {
     var cfg = cardConfig();
     if (!cfg.endpoint) return Promise.resolve({ ok: false, reason: 'no-endpoint' });
+    if (!cfg.secret) return Promise.resolve({ ok: false, reason: 'no-secret' });
     return new Promise(function (resolve) {
       var name = 'apCardCb_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
       var done = false;
@@ -2943,6 +2946,7 @@
   function cardFetchGet(action, extra) {
     var cfg = cardConfig();
     if (!cfg.endpoint) return Promise.resolve({ ok: false, reason: 'no-endpoint' });
+    if (!cfg.secret) return Promise.resolve({ ok: false, reason: 'no-secret' });
     return fetch(cardQueryString(action, extra, ''), { method: 'GET', cache: 'no-store' }).then(function (res) {
       return res.text().then(function (t) {
         var body = safeParse(t);
@@ -3274,8 +3278,13 @@
     if (raw) raw.href = cardFetchUrl('ping', '') || '#';
     var status = $('#cardStatus');
     if (status) {
-      status.textContent = cfg.stored ? '저장됨' : '기본값';
-      status.className = 'status-badge ' + (cfg.stored ? 'live' : 'sample');
+      var hasSecret = !!cfg.secret;
+      status.textContent = hasSecret ? '저장됨' : '미설정';
+      status.className = 'status-badge ' + (hasSecret ? 'live' : 'sample');
+    }
+    if (!cfg.secret && !cardSecretPrompted) {
+      cardSecretPrompted = true;
+      if (typeof toast === 'function') toast('물건카드 연동 키가 없습니다. 알림 설정의 [물건카드 연동]에 키를 입력하고 저장해 주세요.');
     }
   }
 
@@ -3295,7 +3304,7 @@
         return;
       }
       if (!secret) {
-        if (err) { err.textContent = '물건카드 연동 키를 입력해 주세요. 기본값은 apcard-2026 입니다.'; err.hidden = false; }
+        if (err) { err.textContent = '물건카드 연동 키를 입력해 주세요. Apps Script의 CARD_SECRET_KEY와 같은 값이어야 합니다.'; err.hidden = false; }
         return;
       }
       saveCardConfig(endpoint, secret);

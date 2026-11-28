@@ -654,13 +654,13 @@
                 <input id="cardEndpoint" type="url" autocomplete="off" spellcheck="false" placeholder="https://script.google.com/macros/s/.../exec" />
               </label>
               <label>물건카드 연동 키 (CARD_SECRET)
-                <input id="cardSecret" type="text" autocomplete="off" spellcheck="false" placeholder="apcard-2026" />
+                <input id="cardSecret" type="text" autocomplete="off" spellcheck="false" placeholder="연동 키를 입력해 주세요" />
               </label>
               <label>드라이브 폴더
                 <input id="cardFolder" type="text" readonly value="AP파트너_물건카드_비공개" />
               </label>
             </div>
-            <p class="admin-hint">기본 키는 <code>apcard-2026</code> 입니다. Apps Script의 <code>CARD_SECRET_KEY</code> 값과 같아야 물건카드를 읽고 저장할 수 있습니다. 키를 바꾸면 스크립트도 같은 값으로 고쳐 주세요.</p>
+            <p class="admin-hint">연동 키는 Apps Script의 <code>CARD_SECRET_KEY</code> 값과 같아야 물건카드를 읽고 저장할 수 있습니다. 키는 이 브라우저에만 저장되며 공개 페이지에는 들어가지 않습니다.</p>
             <p class="admin-error" id="cardFormError" hidden></p>
             <p class="admin-hint" id="cardFormResult" hidden></p>
             <div class="admin-form-actions">
@@ -797,6 +797,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="admin.js?v=2026112829"></script>
+<script src="admin.js?v=2026112830"></script>
 </body>
 </html>
