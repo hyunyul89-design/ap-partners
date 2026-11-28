@@ -1265,6 +1265,8 @@ def build_brand_page(brand: str, items: list, store_links: list, pairs: list, as
         <div class="sx-fact"><span>시설·영업권 중앙값</span><b>{esc(fmt_manwon(st['prem_med']))}</b></div>
         <div class="sx-fact"><span>초기 인수 비용</span><b>{esc(range_label(min(costs), max(costs)))}</b></div>
         <div class="sx-fact"><span>월 평균 매출</span><b>{esc(range_label(min(sales), max(sales)))}</b></div>
+        <div class="sx-fact"><span>예상 순수익 중앙값</span><b>월 약 {esc(fmt_manwon(st['profit_med']))}</b></div>
+        <div class="sx-fact"><span>회수 기간(중앙값 기준)</span><b>{esc(payback_label(st['cost_med'], st['profit_med']))}</b></div>
       </div>
     </div>
   </section>
