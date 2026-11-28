@@ -130,8 +130,8 @@ var LEAD_ENDPOINT = '';   // 예: https://script.google.com/macros/s/xxxx/exec
 ## 내 매장 양도 접수
 
 * 2026-11-28부터 헤더(데스크톱) · 히어로 · 빠른 조건 줄 · 상담 섹션 · 모바일 하단 바의 양도 버튼이 모두 **페이지 하단 `#apply` 폼의 `내 매장 매각(양도)` 모드**로 스크롤·전환됩니다(물건표 항목을 빠짐없이 받기 위해 한 경로로 통일).
-* 입력: 이름, 브랜드/업종, 지역·지점명, 오픈연월(선택), 실평수, 층수, 월 매출 / 점포 예치금, 월 임차료, 관리비, 희망 시설·영업권 / 월 순수익, 인건비, 재료비(%), 공과금 / 배달비·기타비용·양도 사유·희망 시기·시설 특이사항(선택) + 연락처·동의. 해당 없는 금액 칸은 0으로 적습니다.
-* 접수번호와 함께 `apPartnerSellRequests`에 저장되고, 관리자 **양도 의뢰** 탭에서 조회·CSV 다운로드할 수 있습니다.
+* 입력: 이름, 브랜드/업종, 지역·지점명, 오픈 시기(선택), 실평수, 층수, 월 매출 / 점포 예치금, 월 임차료, 관리비, 희망 시설·영업권 / 월 순수익, 인건비, 재료비(%), 공과금 / 배달비·기타비용(선택) + **운영·시설(선택)** 영업시간·계약 기간·부가세·주차·시설 상태·최근 월별 매출 + 양도 사유·희망 시기·시설 특이사항(선택) + 연락처·동의. 해당 없는 금액 칸은 0으로 적습니다.
+* 접수번호와 함께 사이트(Apps Script `doPost`)를 거쳐 **비공개 Google Drive `ap-waitlist-sells.json`**에 저장되고, 텔레그램 알림도 함께 갑니다. 관리자 **양도 의뢰** 탭이 `getSell`로 Drive의 모든 접수를 불러와 보여 주고, 카드의 `접수 삭제`가 `deleteSell`로 Drive 원본까지 지웁니다. 브라우저 `apPartnerSellRequests`는 Drive에 닿지 못할 때의 예비 사본입니다.
 * 기존 팝업 양도 의뢰 모달(`#sellModal`)은 코드에 남아 있지만 지금은 여는 버튼이 없습니다(되돌릴 때 재사용).
 
 ## 홈 화면 빠른 동선 (2026-11-28 추가)
@@ -140,8 +140,8 @@ var LEAD_ENDPOINT = '';   // 예: https://script.google.com/macros/s/xxxx/exec
 * **지역별 점포 현황**: `data/listings.json`을 그대로 집계해 시·도별 건수(전체 139곳)를 카드로 보여 주고, 누르면 그 지역으로 목록이 좁혀집니다. 데이터가 바뀌면 자동으로 따라갑니다(하드코딩 없음).
 * **공식 채널 + 양수·양도 접수 폼**: 페이지 하단 `#apply`에 네이버 블로그 3곳(에이피파트너·창업의 법칙·창업의 시선, 각 최신 글 링크)과 인스타그램·스레드, 그리고 `운영 매장 인수(양수)` / `내 매장 매각(양도)` 2갈래 폼을 두었습니다. 기본 선택은 항상 **인수(양수)** 입니다.
   - 인수(손님용, 가볍게): 희망 업종·지역·예산·브랜드(선택) + 연락처/동의 → `type:"lead"`, `source:"site"`, `form_version:"lead-gate-v1"` — 4항목 게이트와 같은 `buildLeadPayload`를 씁니다.
-  - 양도(점주용, 물건표 그대로): **필수** 이름·브랜드·지역/지점명·실평수·층수·월 매출·점포 예치금·월 임차료·관리비·희망 시설·영업권·월 순수익·인건비·재료비(%)·공과금 / **선택** 오픈연월·배달비·기타비용·양도 사유·희망 양도 시기·시설·운영 특이사항. 접이식 없이 처음부터 모두 보이며, 빈 칸은 오류 안내로 막습니다(해당 없으면 0).
-  - 양도 payload: `type:"sell_request"`, `source:"sell"`, `form_version:"sell-request-v2"`. 기존 키(`brand`·`region`·`area`·`phone`·`monthly_sales`·`key_money`·`monthly_sales_manwon`·`premium_manwon`·`contact`)를 그대로 채우고, `deposit_manwon`·`rent_manwon`·`maintenance_manwon`·`profit_manwon`·`labor_manwon`·`material_pct`·`utility_manwon`·`delivery_manwon`·`etc_manwon`·`store_pyeong`·`store_floor`·`open_ym`·`sell_reason`·`sell_when`·`facility_note`를 더합니다. 텔레그램/시트로 옮겨 쓰기 쉽게 사람이 읽는 `detail_text`(줄바꿈)와 `message`(한 줄)도 함께 보냅니다. 접수는 `apPartnerSellRequests`에도 쌓입니다.
+  - 양도(점주용, 물건표 그대로): **필수** 이름·브랜드·지역/지점명·실평수·층수·월 매출·점포 예치금·월 임차료·관리비·희망 시설·영업권·월 순수익·인건비·재료비(%)·공과금 / **선택** 오픈 시기·배달비·기타비용·**운영·시설**(영업시간·계약 기간·부가세·주차·시설 상태·최근 월별 매출)·양도 사유·희망 양도 시기·시설·운영 특이사항. 접이식 없이 처음부터 모두 보이며, 빈 칸은 오류 안내로 막습니다(해당 없으면 0). 선택 칸은 비워도 접수됩니다.
+  - 양도 payload: `type:"sell_request"`, `source:"sell"`, `form_version:"sell-request-v3"`. 기존 키(`brand`·`region`·`area`·`phone`·`monthly_sales`·`key_money`·`monthly_sales_manwon`·`premium_manwon`·`contact`)를 그대로 채우고, `deposit_manwon`·`rent_manwon`·`maintenance_manwon`·`profit_manwon`·`labor_manwon`·`material_pct`·`utility_manwon`·`delivery_manwon`·`etc_manwon`·`store_pyeong`·`store_floor`·`open_ym`·`business_hours`·`lease_term`·`vat`·`parking`·`facility_state`·`monthly_sales_recent`·`sell_reason`·`sell_when`·`facility_note`를 더합니다. 텔레그램/시트로 옮겨 쓰기 쉽게 사람이 읽는 `detail_text`(줄바꿈)와 `message`(한 줄)도 함께 보냅니다. 접수는 비공개 Drive `ap-waitlist-sells.json`에 쌓입니다(예비로 `apPartnerSellRequests`에도).
   - 히어로의 `내 매장 양도 접수`·빠른 조건 옆 `양도 접수`를 누르면 이 폼으로 스크롤되며 양도 모드로 바뀝니다.
 
 ## 관리자 페이지 (`admin.html`)
@@ -193,7 +193,7 @@ var LEAD_ENDPOINT = '';   // 예: https://script.google.com/macros/s/xxxx/exec
   - 손님을 누르면 그 손님 조건에 맞는 매물 상위 15곳(점수·지역/업종/예산/수익 충족 표시), 매물을 고르면 그 매물에 맞는 손님 목록이 나옵니다.
   - 매장 카드의 `손님 N` 버튼으로 그 매물에 맞는 대기 손님을 바로 열 수 있고, 새 매물을 저장하면 맞는 손님 수를 토스트로 알려 줍니다.
   - 손님 정보는 **비공개 Google Drive**(`ap-waitlist-customers.json`)에만 저장하고, 공개 저장소에는 이름·연락처·메모를 한 건도 두지 않습니다. 자세한 구조는 아래 **대기 손님 조건 DB · 자동 매칭**을 보세요.
-* **양도 의뢰**: 점주 의뢰 목록, CSV 다운로드.
+* **양도 의뢰**: 비공개 Drive(`ap-waitlist-sells.json`)의 점주 의뢰 **전체**를 `getSell`로 불러와 카드로 보여 줍니다(브랜드·지역·접수번호·연락처·금액 6종·세부 항목·특이사항), `Drive에서 다시 받기`·CSV 다운로드·카드별 `접수 삭제`(`deleteSell`). 탭을 열 때마다 Drive에서 최신 접수를 다시 받습니다. Drive에 닿지 못하면 이 브라우저에 남은 사본과 이유를 안내합니다.
 * **알림 설정**: 텔레그램 Bot Token · Chat ID · 알림 대상(전체/손님 DB/양도 의뢰) 저장, 테스트 전송, 알림 문구 미리보기.
 
 ### 브라우저 저장 키
@@ -205,7 +205,8 @@ var LEAD_ENDPOINT = '';   // 예: https://script.google.com/macros/s/xxxx/exec
 | `apPartnerLeads` | 손님 DB 전체 목록 (관리자 화면) |
 | `apPartnerLeadStatus` | 손님 DB 상태(신규/상담완료) |
 | `apPartnerLeadQueue` | 전송 대기열 |
-| `apPartnerSellRequests` | 양도 의뢰 목록 |
+| `apPartnerSellRequests` | 양도 의뢰 목록(Drive에 닿지 못할 때의 예비 사본) |
+| `apPartnerSellCache` | 비공개 Drive에서 마지막으로 받은 양도 의뢰 사본 |
 | `apPartnerCompare` | 비교 담은 점포(세션) |
 | `apPartnerCatalog` | 관리자가 저장한 점포 목록 |
 | `apTelegramConfig` | 텔레그램 Bot Token · Chat ID 설정 |
@@ -448,7 +449,7 @@ AI 매칭 섹션 이름을 `AP 매칭 컨시어지`에서 **`내 조건 매장 �
 
 1. ~~`listings.sample.json`을 실제 점포로 교체~~ → 완료: `listings.json`에 실사 점포 6곳(AP-001 ~ AP-006) 반영, `SAMPLE` 배지·샘플 안내 문구 제거
 2. 관리자 로그인(현재는 브라우저 SHA-256 해시 검증)을 서버 인증으로 교체하고, `admin.html`을 검색엔진에서 막기 (`noindex` 유지)
-3. 손님 DB·양도 의뢰 접수를 Formspree · Google Apps Script · 서버 API로 실제 전송 (현재는 브라우저 저장)
+3. ~~손님 DB·양도 의뢰 접수를 Formspree · Google Apps Script · 서버 API로 실제 전송 (현재는 브라우저 저장)~~ → 완료: 손님 DB·양도 의뢰 모두 Apps Script(`doPost`)를 거쳐 비공개 Drive JSON에 저장하고 텔레그램으로 알립니다(2026-11-28)
 4. 개인정보 수집·이용 동의 문구를 실제 수집 항목·보관 기간에 맞춰 법률 검토 후 확정하기
 5. 텔레그램 Bot Token은 서버 쪽에 보관하고, 브라우저 저장 설정은 배포 전 제거하기
 6. 수익·매출 수치는 점주 제시 자료 기준임을 계속 표시하기 (표시 없이 단정하지 않기)
