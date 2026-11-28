@@ -4041,7 +4041,7 @@
     setApplyMode(mode);
     var target = $('#apply');
     if (target) {
-      /* 페이지가 길어(점포 138곳) 부드러운 스크롤이 몇 초씩 걸립니다.
+      /* 페이지가 길어(점포 139곳) 부드러운 스크롤이 몇 초씩 걸립니다.
          두 화면 이상 떨어져 있으면 바로 이동하고, 가까우면 부드럽게 움직입니다. */
       var top = target.getBoundingClientRect().top + window.pageYOffset;
       var far = Math.abs(top - window.pageYOffset) > window.innerHeight * 2.2;
