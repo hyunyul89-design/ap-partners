@@ -3823,9 +3823,10 @@
       }
       var reason = (r && r.reason) || 'error';
       var why = wlReasonText(reason);
+      var hint = (reason === 'no-secret' || reason === 'unauthorized') ? '' : ' [알림 설정 → 물건카드 연동]의 주소·키를 확인해 주세요.';
       wlNote(cache
         ? '이 기기에 저장된 목록을 보여 줍니다. Drive 동기화는 실패했습니다(' + why + ').'
-        : 'Drive에서 대기 손님 목록을 받지 못했습니다(' + why + '). [알림 설정 → 물건카드 연동]의 주소·키를 확인해 주세요.', 'warn');
+        : 'Drive에서 대기 손님 목록을 받지 못했습니다(' + why + ').' + hint, 'warn');
       return { ok: false, reason: reason };
     });
   }
